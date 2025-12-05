@@ -1,0 +1,138 @@
+/* index.css */
+:root {
+  /* Variables dinámicas por tenant (se actualizan desde JS) */
+  --primary-color: #1e2c56;
+  --secondary-color: #3b82f6;
+  --sidebar-bg: #1e2c56;
+  --sidebar-text: #ffffff;
+  --accent-color: #10b981;
+
+  /* Variables fijas del sistema */
+  --border-radius: 8px;
+  --border-radius-lg: 12px;
+  --transition: all 0.3s ease;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Roboto", "Segoe UI", "Arial", sans-serif;
+  background-color: #f5f5f5;
+  color: #333;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Scrollbar personalizado con color primario */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 4px;
+  opacity: 0.5;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  opacity: 1;
+}
+
+/* Clases utilitarias con variables */
+.bg-primary {
+  background-color: var(--primary-color) !important;
+}
+
+.text-primary {
+  color: var(--primary-color) !important;
+}
+
+.bg-accent {
+  background-color: var(--accent-color) !important;
+}
+
+.border-primary {
+  border-color: var(--primary-color) !important;
+}
+
+/* Sidebar con tema dinámico */
+.tenant-sidebar {
+  background-color: var(--sidebar-bg) !important;
+  color: var(--sidebar-text) !important;
+}
+
+.tenant-sidebar .MuiListItemButton-root {
+  color: var(--sidebar-text) !important;
+}
+
+.tenant-sidebar .MuiListItemButton-root:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.tenant-sidebar .MuiListItemButton-root.Mui-selected {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.tenant-sidebar .MuiListItemIcon-root {
+  color: var(--sidebar-text) !important;
+}
+
+.tenant-sidebar .MuiDivider-root {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Botones con tema dinámico */
+.MuiButton-containedPrimary {
+  background-color: var(--primary-color) !important;
+}
+
+.MuiButton-containedPrimary:hover {
+  background-color: var(--primary-color) !important;
+  opacity: 0.9;
+}
+
+.MuiButton-outlinedPrimary {
+  border-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
+}
+
+/* Chips y badges */
+.MuiChip-colorPrimary {
+  background-color: var(--primary-color) !important;
+}
+
+/* Links */
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+a:hover {
+  opacity: 0.8;
+}
+.MuiLinearProgress-bar1Determinate,
+.MuiLinearProgress-bar2Determinate,
+.MuiLinearProgress-barColorPrimary {
+  background-color: var(--primary-color) !important;
+}
+
+.MuiLinearProgress-root {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+}
