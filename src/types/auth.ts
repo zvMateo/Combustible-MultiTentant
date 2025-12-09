@@ -115,6 +115,7 @@ export interface User {
   role: UserRole;
   empresaId: number | null;
   empresaSubdomain?: string | null;
+  empresaNombre?: string;
   
   /**
    * IDs de unidades de negocio asignadas al usuario

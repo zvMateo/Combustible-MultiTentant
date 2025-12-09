@@ -3,26 +3,36 @@ import type { ApiResponse, PaginatedResponse, ApiErrorResponse } from "@/types";
 
 /**
  * Configuración del cliente API
+ * La API de producción está en: https://apicombustibles.ubiko.com.ar
  */
 const API_CONFIG = {
-  baseUrl: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  baseUrl: import.meta.env.VITE_API_URL || "https://apicombustibles.ubiko.com.ar/api",
   timeout: 30000,
 };
 
 /**
- * Obtiene el token de autenticación
+ * Obtiene el token de autenticación almacenado
  */
 function getAuthToken(): string | null {
-  const user = sessionStorage.getItem("user") || localStorage.getItem("user");
-  if (user) {
-    try {
-      const parsed = JSON.parse(user);
-      return parsed.token || null;
-    } catch {
-      return null;
-    }
+  return sessionStorage.getItem("token") || localStorage.getItem("token");
+}
+
+/**
+ * Guarda el token de autenticación
+ */
+export function setAuthToken(token: string, persistent = false): void {
+  sessionStorage.setItem("token", token);
+  if (persistent) {
+    localStorage.setItem("token", token);
   }
-  return null;
+}
+
+/**
+ * Limpia el token de autenticación
+ */
+export function clearAuthToken(): void {
+  sessionStorage.removeItem("token");
+  localStorage.removeItem("token");
 }
 
 /**
@@ -31,6 +41,7 @@ function getAuthToken(): string | null {
 function getDefaultHeaders(): HeadersInit {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
+    "Accept": "application/json",
   };
 
   const token = getAuthToken();
@@ -61,21 +72,30 @@ async function handleResponse<T>(response: Response): Promise<T> {
       };
     }
 
-    // Si es 401, limpiar sesión y redirigir
+    // Si es 401 (no autorizado), limpiar sesión y redirigir al login
     if (response.status === 401) {
+      clearAuthToken();
       sessionStorage.removeItem("user");
       localStorage.removeItem("user");
-      window.location.href = "/a/login";
+      // Solo redirigir si no estamos ya en login
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
     }
 
     throw errorData;
+  }
+
+  // Si la respuesta está vacía (204 No Content)
+  if (response.status === 204) {
+    return {} as T;
   }
 
   return response.json();
 }
 
 /**
- * Cliente HTTP genérico
+ * Cliente HTTP genérico para comunicación con la API
  */
 export const apiClient = {
   /**
@@ -157,10 +177,12 @@ export const apiClient = {
   },
 
   /**
-   * Upload de archivos
+   * Upload de archivos (multipart/form-data)
    */
   async upload<T>(endpoint: string, formData: FormData): Promise<T> {
-    const headers: HeadersInit = {};
+    const headers: HeadersInit = {
+      "Accept": "application/json",
+    };
     const token = getAuthToken();
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
@@ -174,6 +196,13 @@ export const apiClient = {
     });
 
     return handleResponse<T>(response);
+  },
+
+  /**
+   * Obtiene la URL base de la API
+   */
+  getBaseUrl(): string {
+    return API_CONFIG.baseUrl;
   },
 };
 

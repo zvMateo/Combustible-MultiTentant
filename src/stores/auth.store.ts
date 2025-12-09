@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { User, Permission } from "@/types";
 import { ROLE_PERMISSIONS } from "@/types";
 import { authService } from "@/services";
+import { toast } from "sonner";
 
 interface AuthState {
   // Estado
@@ -13,7 +14,7 @@ interface AuthState {
   error: string | null;
 
   // Acciones
-  login: (email: string, password: string) => Promise<void>;
+  login: (userName: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => void;
   updateUser: (user: Partial<User>) => void;
@@ -32,20 +33,21 @@ export const useAuthStore = create<AuthState>()(
       // Estado inicial
       user: null,
       isAuthenticated: false,
-      isLoading: false,
+      isLoading: true, // Empieza en true mientras se verifica auth
       error: null,
 
       // Login
-      login: async (email: string, password: string) => {
+      login: async (userName: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
-          const user = await authService.login({ email, password });
+          const user = await authService.login({ userName, password });
           set({
             user,
             isAuthenticated: true,
             isLoading: false,
             error: null,
           });
+          toast.success(`¡Bienvenido, ${user.name}!`);
         } catch (err) {
           const message = err instanceof Error ? err.message : "Error al iniciar sesión";
           set({
@@ -67,6 +69,7 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
           error: null,
         });
+        toast.info("Sesión cerrada correctamente");
       },
 
       // Verificar autenticación existente
@@ -139,4 +142,3 @@ export const useUser = () => useAuthStore((state) => state.user);
 export const useIsAuthenticated = () => useAuthStore((state) => state.isAuthenticated);
 export const useAuthLoading = () => useAuthStore((state) => state.isLoading);
 export const useAuthError = () => useAuthStore((state) => state.error);
-

@@ -1,9 +1,9 @@
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { usePermissions } from "../../hooks/usePermissions";
 import { Box, Typography, Button } from "@mui/material";
 import LockIcon from "@mui/icons-material/Lock";
-import type { Permission } from "../../utils/permissions";
+import type { Permission } from "@/types/auth";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -16,7 +16,7 @@ interface ProtectedRouteProps {
 
 /**
  * Componente para proteger rutas completas basado en permisos
- * 
+ *
  * @example
  * <Route
  *   path="/vehiculos"
@@ -73,12 +73,16 @@ export default function ProtectedRoute({
         <Typography variant="h4" fontWeight="bold" gutterBottom>
           Acceso Denegado
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 500 }}>
+        <Typography
+          variant="body1"
+          color="text.secondary"
+          sx={{ mb: 3, maxWidth: 500 }}
+        >
           No tienes los permisos necesarios para acceder a esta sección.
           Contacta a un administrador si crees que deberías tener acceso.
         </Typography>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={() => window.history.back()}
           sx={{ bgcolor: "#1E2C56", "&:hover": { bgcolor: "#16213E" } }}
         >
@@ -90,4 +94,3 @@ export default function ProtectedRoute({
 
   return <>{children}</>;
 }
-

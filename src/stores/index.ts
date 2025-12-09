@@ -21,16 +21,6 @@ export {
   useGlobalLoading,
 } from "./ui.store";
 
-// Tenant Store
-export {
-  useTenantStore,
-  useCurrentTenant,
-  useTenantSlug,
-  useTenantTheme,
-  useTenantPolicies,
-  useTenantLoading,
-} from "./tenant.store";
-
 // Filters Store
 export {
   useFiltersStore,
@@ -50,4 +40,3 @@ export {
   useUnidadFilter,
   useUnidadActivaNombre,
 } from "./unidad.store";
-

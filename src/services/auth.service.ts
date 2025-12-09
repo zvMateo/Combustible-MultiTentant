@@ -1,6 +1,8 @@
 // src/services/auth.service.ts
-import type { LoginCredentials, User, LoginResponse, ApiResponse } from "@/types";
-import { apiClient } from "./api.client";
+import type { User } from "@/types";
+import { authApi } from "./api/auth.api";
+import { tokenStorage } from "@/lib/axios";
+import type { ApiUser } from "@/types/api.types";
 
 /**
  * Mock users para desarrollo
@@ -17,7 +19,7 @@ const MOCK_USERS: Record<string, User> = {
     empresaSubdomain: null,
     unidadesAsignadas: [], // SuperAdmin no tiene unidades
   },
-  
+
   // Admin de Empresa - ve TODAS las unidades
   "admin@empresaA.com": {
     id: 2,
@@ -26,10 +28,11 @@ const MOCK_USERS: Record<string, User> = {
     role: "admin",
     empresaId: 1,
     empresaSubdomain: "empresaa",
+    empresaNombre: "Transportes Norte S.A.",
     unidadesAsignadas: [], // Admin ve todas (array vacío = todas)
     telefono: "+54 351 1234567",
   },
-  
+
   // Supervisor - solo ve Campo Norte (id: 1)
   "supervisor@empresaA.com": {
     id: 3,
@@ -38,10 +41,11 @@ const MOCK_USERS: Record<string, User> = {
     role: "supervisor",
     empresaId: 1,
     empresaSubdomain: "empresaa",
+    empresaNombre: "Transportes Norte S.A.",
     unidadesAsignadas: [1], // Solo Campo Norte
     telefono: "+54 351 2345678",
   },
-  
+
   // Supervisor 2 - solo ve Campo Sur (id: 2)
   "supervisor2@empresaA.com": {
     id: 5,
@@ -50,10 +54,11 @@ const MOCK_USERS: Record<string, User> = {
     role: "supervisor",
     empresaId: 1,
     empresaSubdomain: "empresaa",
+    empresaNombre: "Transportes Norte S.A.",
     unidadesAsignadas: [2], // Solo Campo Sur
     telefono: "+54 358 3456789",
   },
-  
+
   // Operador - asignado a Campo Norte
   "operador@empresaA.com": {
     id: 4,
@@ -62,10 +67,11 @@ const MOCK_USERS: Record<string, User> = {
     role: "operador",
     empresaId: 1,
     empresaSubdomain: "empresaa",
+    empresaNombre: "Transportes Norte S.A.",
     unidadesAsignadas: [1], // Solo Campo Norte
     telefono: "+54 351 4567890",
   },
-  
+
   // Auditor - puede ver Campo Norte y Sur
   "auditor@empresaA.com": {
     id: 6,
@@ -74,6 +80,7 @@ const MOCK_USERS: Record<string, User> = {
     role: "auditor",
     empresaId: 1,
     empresaSubdomain: "empresaa",
+    empresaNombre: "Transportes Norte S.A.",
     unidadesAsignadas: [1, 2], // Campo Norte y Sur
     telefono: "+54 351 5678901",
   },
@@ -88,84 +95,42 @@ class AuthService {
   /**
    * Login de usuario
    */
-  async login(credentials: LoginCredentials): Promise<User> {
-    if (USE_MOCK) {
-      return this.mockLogin(credentials);
-    }
+  async login(credentials: { userName: string; password: string }): Promise<User> {
+    try {
+      const response = await authApi.login(credentials);
+      
+      if (!response.user) {
+        throw new Error("Usuario no encontrado en la respuesta");
+      }
 
-    const response = await apiClient.post<ApiResponse<LoginResponse>>(
-      "/auth/login",
-      credentials
-    );
+      // Convertir ApiUser a User
+      const user: User = {
+        id: parseInt(response.user.id) || 0,
+        email: response.user.email,
+        name: `${response.user.firstName || ""} ${response.user.lastName || ""}`.trim() || response.user.userName,
+        role: "admin", // TODO: Obtener rol desde la API cuando esté disponible
+        empresaId: response.user.idCompany || null,
+        empresaNombre: undefined,
+        unidadesAsignadas: response.user.idBusinessUnit ? [response.user.idBusinessUnit] : [],
+        telefono: response.user.phoneNumber,
+      };
 
-    if (response.success && response.data) {
-      const { user, token } = response.data;
-      this.saveSession(user, token);
+      // El token ya fue guardado por authApi.login()
+      this.saveSession(user);
       return user;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Error al iniciar sesión";
+      throw new Error(message);
     }
-
-    throw new Error("Error al iniciar sesión");
-  }
-
-  /**
-   * Login mock para desarrollo
-   */
-  private async mockLogin(credentials: LoginCredentials): Promise<User> {
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const user = MOCK_USERS[credentials.email];
-
-    if (!user) {
-      throw new Error("Usuario no encontrado");
-    }
-
-    // Validaciones de seguridad
-    const isAdminRoute = window.location.pathname.startsWith("/a");
-
-    if (isAdminRoute && user.role !== "superadmin") {
-      throw new Error("Solo usuarios de GoodApps pueden acceder");
-    }
-
-    if (!isAdminRoute && user.role === "superadmin") {
-      throw new Error("Usa el panel de administración");
-    }
-
-    // Validar subdomain para tenants
-    if (!isAdminRoute && user.empresaSubdomain) {
-      const hostname = window.location.hostname;
-      const parts = hostname.split(".");
-      let currentSubdomain: string | null = null;
-
-      if (hostname.includes("localhost")) {
-        if (parts.length > 1 && parts[0] !== "localhost") {
-          currentSubdomain = parts[0];
-        }
-      } else {
-        if (parts.length > 2) {
-          currentSubdomain = parts[0];
-        }
-      }
-
-      if (
-        currentSubdomain &&
-        currentSubdomain.toLowerCase() !== user.empresaSubdomain.toLowerCase()
-      ) {
-        throw new Error("Usuario no pertenece a esta empresa");
-      }
-    }
-
-    this.saveSession(user);
-    return user;
   }
 
   /**
    * Cerrar sesión
    */
   logout(): void {
+    tokenStorage.clearTokens();
     sessionStorage.removeItem("user");
-    sessionStorage.removeItem("token");
     localStorage.removeItem("user");
-    localStorage.removeItem("token");
   }
 
   /**
@@ -203,14 +168,10 @@ class AuthService {
   /**
    * Guardar sesión
    */
-  private saveSession(user: User, token?: string): void {
+  private saveSession(user: User): void {
     sessionStorage.setItem("user", JSON.stringify(user));
     localStorage.setItem("user", JSON.stringify(user));
-    
-    if (token) {
-      sessionStorage.setItem("token", token);
-      localStorage.setItem("token", token);
-    }
+    // El token ya fue guardado por authApi.login() usando tokenStorage
   }
 
   /**
@@ -248,7 +209,7 @@ class AuthService {
       const response = await apiClient.post<ApiResponse<{ token: string }>>(
         "/auth/refresh"
       );
-      
+
       if (response.success && response.data) {
         sessionStorage.setItem("token", response.data.token);
         localStorage.setItem("token", response.data.token);
@@ -264,7 +225,10 @@ class AuthService {
   /**
    * Cambiar contraseña
    */
-  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  async changePassword(
+    currentPassword: string,
+    newPassword: string
+  ): Promise<void> {
     if (USE_MOCK) {
       await new Promise((resolve) => setTimeout(resolve, 500));
       return;
