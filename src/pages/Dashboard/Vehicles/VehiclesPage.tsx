@@ -1,5 +1,5 @@
 // src/pages/Dashboard/Vehicles/VehiclesPage.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Box,
   Button,
@@ -56,7 +56,7 @@ interface FormErrors {
 
 export default function VehiclesPage() {
   const { user } = useAuthStore();
-  const idCompany = user?.idCompany ?? 0;
+  const idCompany = 2; // Hardcoded para desarrollo
 
   // Estados locales
   const [searchTerm, setSearchTerm] = useState("");
@@ -65,8 +65,8 @@ export default function VehiclesPage() {
   const [editingVehicle, setEditingVehicle] = useState<Resource | null>(null);
   const [deleteVehicle, setDeleteVehicle] = useState<Resource | null>(null);
   const [formData, setFormData] = useState<CreateResourceRequest>({
-    idType: RESOURCE_TYPES.VEHICLE,
-    idCompany: idCompany || 0,
+    idType: RESOURCE_TYPES.VEHICLE, // Se actualizará cuando vehicleTypeId esté disponible
+    idCompany: 2,
     idBusinessUnit: undefined,
     nativeLiters: undefined,
     name: "",
@@ -83,9 +83,37 @@ export default function VehiclesPage() {
   const updateMutation = useUpdateResource();
   const deactivateMutation = useDeactivateResource();
 
+  // Obtener el id del tipo "Vehiculo" dinámicamente
+  const vehicleTypeId = useMemo(() => {
+    const vehicleType = resourceTypes.find(
+      (rt) =>
+        rt.name.toLowerCase().includes("vehiculo") ||
+        rt.name.toLowerCase().includes("vehicle")
+    );
+    return vehicleType?.id || RESOURCE_TYPES.VEHICLE; // Fallback a 1 si no se encuentra
+  }, [resourceTypes]);
+
+  // Actualizar formData.idType cuando vehicleTypeId esté disponible (solo si el modal no está abierto)
+  useEffect(() => {
+    if (vehicleTypeId && !editingVehicle && !openDialog) {
+      // Solo actualizar si el modal no está abierto para evitar resetear otros campos
+      setFormData((prev) => ({
+        ...prev,
+        idType: vehicleTypeId,
+        // Asegurar que idCompany sea siempre 2
+        idCompany: 2,
+      }));
+    }
+  }, [vehicleTypeId, editingVehicle, openDialog]);
+
   // Filtrar vehículos por búsqueda y empresa
   const filteredVehicles = useMemo(() => {
     let filtered = vehicles;
+
+    // Filtrar recursos inactivos (active: false)
+    filtered = filtered.filter(
+      (v) => v.active !== false && v.isActive !== false
+    );
 
     // Filtrar por empresa si no es superadmin
     if (user?.role !== "superadmin" && idCompany) {
@@ -107,24 +135,37 @@ export default function VehiclesPage() {
 
   // Handlers
   const handleNew = () => {
+    // Usar idCompany fijo = 2
+    const initialIdCompany = 2;
+
     setEditingVehicle(null);
-    setFormData({
-      idType: RESOURCE_TYPES.VEHICLE,
-      idCompany: idCompany || companies[0]?.id || 0,
+    const newFormData = {
+      idType: vehicleTypeId, // Usar el id dinámico del tipo "Vehiculo"
+      idCompany: initialIdCompany,
       idBusinessUnit: undefined,
       nativeLiters: undefined,
       name: "",
       identifier: "",
-    });
+    };
+    setFormData(newFormData);
     setErrors({});
     setOpenDialog(true);
+    console.log("🆕 [VehiclesPage] Modal de nuevo vehículo abierto", {
+      vehicleTypeId,
+      idCompany,
+      initialIdCompany,
+      companiesCount: companies.length,
+      companies: companies.map((c) => ({ id: c.id, name: c.name })),
+      userRole: user?.role,
+      formData: newFormData,
+    });
   };
 
   const handleEdit = (vehicle: Resource) => {
     setEditingVehicle(vehicle);
     setFormData({
       idType: vehicle.idType,
-      idCompany: vehicle.idCompany,
+      idCompany: 2, // Forzar idCompany a 2
       idBusinessUnit: vehicle.idBusinessUnit,
       nativeLiters: vehicle.nativeLiters,
       name: vehicle.name,
@@ -139,25 +180,47 @@ export default function VehiclesPage() {
     setOpenDeleteDialog(true);
   };
 
-  const validate = (): boolean => {
-    const newErrors: FormErrors = {};
+  const handleSave = async () => {
+    console.log("🔍 [VehiclesPage] handleSave llamado");
+    console.log("🔍 [VehiclesPage] formData:", formData);
+    console.log("🔍 [VehiclesPage] Context:", {
+      idCompany,
+      companiesCount: companies.length,
+      companies: companies.map((c) => ({ id: c.id, name: c.name })),
+      vehicleTypeId,
+    });
 
-    if (!formData.name.trim()) {
+    // Asegurar que idCompany sea siempre 2
+    const finalFormData = { ...formData };
+    if (finalFormData.idCompany !== 2) {
+      finalFormData.idCompany = 2;
+      setFormData(finalFormData);
+      console.log("⚠️ [VehiclesPage] Forzando idCompany a 2");
+    }
+
+    // Usar finalFormData para validación
+    const validationFormData = finalFormData;
+    const newErrors: FormErrors = {};
+    if (!validationFormData.name.trim()) {
       newErrors.name = "El nombre es obligatorio";
     }
-    if (!formData.identifier.trim()) {
-      newErrors.identifier = "El identificador (patente) es obligatorio";
+    if (!validationFormData.identifier.trim()) {
+      newErrors.identifier = "El identificador es obligatorio";
     }
-    if (!formData.idCompany || formData.idCompany === 0) {
-      newErrors.idCompany = "Debe seleccionar una empresa";
+    if (validationFormData.idCompany !== 2) {
+      newErrors.idCompany = "La empresa debe ser 2";
+    }
+    if (!validationFormData.idType || validationFormData.idType === 0) {
+      newErrors.idType = "Debe seleccionar un tipo de recurso";
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      console.log("❌ [VehiclesPage] Validación falló, errors:", newErrors);
+      return;
+    }
 
-  const handleSave = async () => {
-    if (!validate()) return;
+    setErrors({});
 
     try {
       if (editingVehicle) {
@@ -170,12 +233,34 @@ export default function VehiclesPage() {
           name: formData.name,
           identifier: formData.identifier,
         };
+        console.log("🔄 [VehiclesPage] Actualizando vehículo:", updateData);
         await updateMutation.mutateAsync(updateData);
       } else {
-        await createMutation.mutateAsync(formData);
+        // Preparar payload para creación
+        // La API requiere todos los campos como números, usar 0 si no están definidos
+        const createPayload: CreateResourceRequest = {
+          idType: finalFormData.idType,
+          idCompany: finalFormData.idCompany,
+          idBusinessUnit: finalFormData.idBusinessUnit ?? 0,
+          nativeLiters: finalFormData.nativeLiters ?? 0,
+          name: finalFormData.name.trim(),
+          identifier: finalFormData.identifier.trim(),
+        };
+        console.log(
+          "➕ [VehiclesPage] Creando vehículo con payload:",
+          createPayload
+        );
+        console.log("➕ [VehiclesPage] Mutation state:", {
+          isPending: createMutation.isPending,
+          isError: createMutation.isError,
+          error: createMutation.error,
+        });
+        await createMutation.mutateAsync(createPayload);
+        console.log("✅ [VehiclesPage] Vehículo creado exitosamente");
       }
       setOpenDialog(false);
-    } catch {
+    } catch (error) {
+      console.error("❌ [VehiclesPage] Error al guardar vehículo:", error);
       // Error manejado por el mutation
     }
   };
@@ -187,7 +272,8 @@ export default function VehiclesPage() {
       await deactivateMutation.mutateAsync(deleteVehicle.id);
       setOpenDeleteDialog(false);
       setDeleteVehicle(null);
-    } catch {
+    } catch (error) {
+      console.error("❌ [VehiclesPage] Error al guardar vehículo:", error);
       // Error manejado por el mutation
     }
   };
@@ -195,7 +281,9 @@ export default function VehiclesPage() {
   const handleExport = () => {
     const dataToExport = filteredVehicles.map((v) => {
       const company = companies.find((c) => c.id === v.idCompany);
-      const businessUnit = businessUnits.find((bu) => bu.id === v.idBusinessUnit);
+      const businessUnit = businessUnits.find(
+        (bu) => bu.id === v.idBusinessUnit
+      );
       return {
         Nombre: v.name,
         Identificador: v.identifier,
@@ -352,7 +440,6 @@ export default function VehiclesPage() {
                   display: "flex",
                   flexDirection: "column",
                   transition: "all 0.25s ease",
-                  opacity: vehicle.isActive !== false ? 1 : 0.7,
                   "&:hover": {
                     boxShadow: "0 8px 18px rgba(15,23,42,0.10)",
                     transform: "translateY(-3px)",
@@ -436,20 +523,6 @@ export default function VehiclesPage() {
                       </Typography>
                     </Box>
                   )}
-
-                  {/* Estado */}
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
-                    <Chip
-                      label={vehicle.isActive !== false ? "Activo" : "Inactivo"}
-                      size="small"
-                      sx={{
-                        bgcolor:
-                          vehicle.isActive !== false ? "#10b98115" : "#f59e0b15",
-                        color: vehicle.isActive !== false ? "#10b981" : "#f59e0b",
-                        fontWeight: 600,
-                      }}
-                    />
-                  </Box>
 
                   {/* Acciones */}
                   <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}>
@@ -546,18 +619,33 @@ export default function VehiclesPage() {
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    idBusinessUnit: e.target.value ? Number(e.target.value) : undefined,
+                    idBusinessUnit: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
                   })
                 }
               >
                 <MenuItem value="">Sin asignar</MenuItem>
-                {businessUnits
-                  .filter((bu) => bu.idCompany === formData.idCompany)
-                  .map((bu) => (
+                {(() => {
+                  // Filtrar unidades de negocio por la empresa seleccionada
+                  // Si no hay empresa seleccionada o es 0, mostrar todas (o las de la empresa del usuario)
+                  const companyIdToFilter =
+                    formData.idCompany && formData.idCompany !== 0
+                      ? formData.idCompany
+                      : idCompany || undefined;
+
+                  const filteredUnits = companyIdToFilter
+                    ? businessUnits.filter(
+                        (bu) => bu.idCompany === companyIdToFilter
+                      )
+                    : businessUnits;
+
+                  return filteredUnits.map((bu) => (
                     <MenuItem key={bu.id} value={bu.id}>
                       {bu.name}
                     </MenuItem>
-                  ))}
+                  ));
+                })()}
               </Select>
             </FormControl>
 
@@ -574,25 +662,27 @@ export default function VehiclesPage() {
             />
 
             <TextField
-              label="Identificador (Patente)"
+              label="Identificador"
               value={formData.identifier}
               onChange={(e) =>
-                setFormData({ ...formData, identifier: e.target.value.toUpperCase() })
+                setFormData({ ...formData, identifier: e.target.value })
               }
               error={!!errors.identifier}
-              helperText={errors.identifier || "Ej: ABC123"}
+              helperText={errors.identifier}
               required
               fullWidth
             />
 
             <TextField
-              label="Capacidad de Tanque (Litros)"
+              label="Capacidad (Litros)"
               type="number"
               value={formData.nativeLiters || ""}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  nativeLiters: e.target.value ? Number(e.target.value) : undefined,
+                  nativeLiters: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
                 })
               }
               fullWidth

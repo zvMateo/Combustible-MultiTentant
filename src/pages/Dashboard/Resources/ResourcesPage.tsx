@@ -123,6 +123,11 @@ export default function ResourcesPage() {
       console.log("🔍 [ResourcesPage] Recursos recibidos:", allResources);
     }
 
+    // Filtrar recursos inactivos (active: false)
+    filtered = filtered.filter(
+      (r) => r.active !== false && r.isActive !== false
+    );
+
     // Filtrar por empresa si no es superadmin
     if (user?.role !== "superadmin" && idCompany) {
       filtered = filtered.filter((r) => r.idCompany === idCompany);
@@ -201,7 +206,7 @@ export default function ResourcesPage() {
     const defaultType = nonVehicleTypes[0]?.id || 2; // Default a tanque si existe
     setFormData({
       idType: defaultType,
-      idCompany: idCompany || companies[0]?.id || 0,
+      idCompany: 2,
       idBusinessUnit: undefined,
       nativeLiters: undefined,
       name: "",
@@ -618,7 +623,6 @@ export default function ResourcesPage() {
                   display: "flex",
                   flexDirection: "column",
                   transition: "all 0.25s ease",
-                  opacity: resource.isActive !== false ? 1 : 0.7,
                   "&:hover": {
                     boxShadow: "0 8px 18px rgba(15,23,42,0.10)",
                     transform: "translateY(-3px)",
@@ -702,27 +706,6 @@ export default function ResourcesPage() {
                       </Typography>
                     </Box>
                   )}
-
-                  {/* Estado */}
-                  <Box
-                    sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}
-                  >
-                    <Chip
-                      label={
-                        resource.isActive !== false ? "Activo" : "Inactivo"
-                      }
-                      size="small"
-                      sx={{
-                        bgcolor:
-                          resource.isActive !== false
-                            ? "#10b98115"
-                            : "#f59e0b15",
-                        color:
-                          resource.isActive !== false ? "#10b981" : "#f59e0b",
-                        fontWeight: 600,
-                      }}
-                    />
-                  </Box>
 
                   {/* Acciones */}
                   <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}>

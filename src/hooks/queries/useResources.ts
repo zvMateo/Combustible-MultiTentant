@@ -103,26 +103,39 @@ export function useResourcesByBusinessUnit(idBusinessUnit: number) {
 /**
  * Obtener todos los vehículos
  * Usa GetAll y filtra en el frontend para evitar problemas con tipos inconsistentes
+ * Incluye recursos con idType 1 (legacy) o idType 5 (nuevo tipo "Vehiculo")
  */
 export function useVehicles() {
   return useQuery({
     queryKey: resourcesKeys.vehicles(),
     queryFn: async () => {
       const all = await resourcesApi.getAll();
-      // Filtrar vehículos: idType 1 y que no tenga type array o type que no sea tanque/surtidor
+      // Filtrar vehículos: idType 1 (legacy), idType 5 (nuevo tipo "Vehiculo"), o que tenga "vehiculo" en el type array
+      // También filtrar recursos inactivos (active: false)
       return all.filter((r) => {
+        // Excluir recursos inactivos
+        if (r.active === false || r.isActive === false) {
+          return false;
+        }
+
         const typeArray = (r as any).type || [];
         if (typeArray.length > 0) {
-          // Si tiene type array, solo incluir si no es tanque ni surtidor
-          return !typeArray.some(
+          // Si tiene type array, verificar si es vehículo o no es tanque/surtidor
+          const isVehicle = typeArray.some(
+            (t: string) =>
+              t.toLowerCase().includes("vehiculo") ||
+              t.toLowerCase().includes("vehicle")
+          );
+          const isNotTankOrDispenser = !typeArray.some(
             (t: string) =>
               t.toLowerCase().includes("tanque") ||
               t.toLowerCase().includes("surtidor") ||
               t.toLowerCase().includes("dispenser")
           );
+          return isVehicle || isNotTankOrDispenser;
         }
-        // Si no tiene type array, usar idType
-        return r.idType === 1;
+        // Si no tiene type array, usar idType: 1 (legacy) o 5 (nuevo tipo "Vehiculo")
+        return r.idType === 1 || r.idType === 5;
       });
     },
     staleTime: 1000 * 60 * 5,
@@ -139,7 +152,13 @@ export function useTanks() {
     queryFn: async () => {
       const all = await resourcesApi.getAll();
       // Filtrar tanques: buscar por type array o idType 2
+      // También filtrar recursos inactivos (active: false)
       return all.filter((r) => {
+        // Excluir recursos inactivos
+        if (r.active === false || r.isActive === false) {
+          return false;
+        }
+
         const typeArray = (r as any).type || [];
         if (typeArray.length > 0) {
           return typeArray.some((t: string) =>
@@ -163,7 +182,13 @@ export function useDispensers() {
     queryFn: async () => {
       const all = await resourcesApi.getAll();
       // Filtrar surtidores: buscar por type array o idType 3
+      // También filtrar recursos inactivos (active: false)
       return all.filter((r) => {
+        // Excluir recursos inactivos
+        if (r.active === false || r.isActive === false) {
+          return false;
+        }
+
         const typeArray = (r as any).type || [];
         if (typeArray.length > 0) {
           return typeArray.some(
