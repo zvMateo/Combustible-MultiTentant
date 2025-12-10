@@ -16,14 +16,17 @@ interface JwtPayload {
 export function getUserIdFromToken(token: string): string | null {
   try {
     const decoded = jwtDecode<JwtPayload>(token);
-    
+
     console.log("🔍 [JWT] Token decodificado:", decoded);
-    
+
     // El userId está en nameidentifier
-    const userId = decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
-    
+    const userId =
+      decoded[
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
+      ];
+
     console.log("✅ [JWT] userId extraído:", userId);
-    
+
     return userId || null;
   } catch (error) {
     console.error("❌ [JWT] Error decodificando token:", error);
@@ -34,7 +37,11 @@ export function getUserIdFromToken(token: string): string | null {
 export function getUserNameFromToken(token: string): string | null {
   try {
     const decoded = jwtDecode<JwtPayload>(token);
-    return decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || decoded.sub || null;
+    return (
+      decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] ||
+      decoded.sub ||
+      null
+    );
   } catch {
     return null;
   }
@@ -43,7 +50,10 @@ export function getUserNameFromToken(token: string): string | null {
 export function getRoleFromToken(token: string): string | null {
   try {
     const decoded = jwtDecode<JwtPayload>(token);
-    return decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || null;
+    return (
+      decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
+      null
+    );
   } catch {
     return null;
   }
