@@ -8,11 +8,11 @@
  * - operador: Solo puede registrar cargas
  * - auditor: Solo lectura para auditorías
  */
-export type UserRole = 
-  | "superadmin" 
-  | "admin" 
-  | "supervisor" 
-  | "operador" 
+export type UserRole =
+  | "superadmin"
+  | "admin"
+  | "supervisor"
+  | "operador"
   | "auditor";
 
 /**
@@ -109,28 +109,17 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
  * Usuario autenticado
  */
 export interface User {
-  id: number;
+  id: string; // ✅ String, no number
   email: string;
   name: string;
   role: UserRole;
+  idCompany?: number; // ✅ Agregar
+  idBusinessUnit?: number; // ✅ Agregar
   empresaId: number | null;
-  empresaSubdomain?: string | null;
   empresaNombre?: string;
-  
-  /**
-   * IDs de unidades de negocio asignadas al usuario
-   * - admin: array vacío (ve todas las unidades)
-   * - supervisor/auditor: IDs de unidades específicas asignadas
-   * - operador: ID de su unidad (solo una)
-   */
-  unidadesAsignadas: number[];
-  
-  avatar?: string;
+  empresaSubdomain?: string;
+  unidadesAsignadas?: number[];
   telefono?: string;
-  permissions?: Permission[];
-  createdAt?: string;
-  updatedAt?: string;
-  lastLoginAt?: string;
 }
 
 /**
@@ -197,17 +186,20 @@ export interface AuthState {
 /**
  * Helper para verificar permisos
  */
-export function hasPermission(user: User | null, permission: Permission): boolean {
+export function hasPermission(
+  user: User | null,
+  permission: Permission
+): boolean {
   if (!user) return false;
-  
+
   // Superadmin tiene acceso a todo
   if (user.role === "superadmin") return true;
-  
+
   // Si el usuario tiene permisos personalizados, usarlos
   if (user.permissions) {
     return user.permissions.includes(permission);
   }
-  
+
   // De lo contrario, usar los permisos del rol
   return ROLE_PERMISSIONS[user.role]?.includes(permission) ?? false;
 }

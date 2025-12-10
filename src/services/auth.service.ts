@@ -1,124 +1,143 @@
 // src/services/auth.service.ts
-import type { User } from "@/types";
+import type { User, UserRole } from "@/types";
 import { authApi } from "./api/auth.api";
+import { userRolesApi } from "./api/roles.api";
 import { tokenStorage } from "@/lib/axios";
-import type { ApiUser } from "@/types/api.types";
+import { 
+  getUserIdFromToken, 
+  getUserNameFromToken, 
+  getCompanyIdFromToken, 
+  getBusinessUnitIdFromToken 
+} from "@/lib/jwt";
 
 /**
- * Mock users para desarrollo
- * TODO: Eliminar cuando la API esté lista
+ * Mapeo de nombres de roles de la API a roles de la aplicación
  */
-const MOCK_USERS: Record<string, User> = {
-  // SuperAdmin de GoodApps (acceso a /a)
-  "admin@goodapps.com": {
-    id: 1,
-    email: "admin@goodapps.com",
-    name: "Super Admin GoodApps",
-    role: "superadmin",
-    empresaId: null,
-    empresaSubdomain: null,
-    unidadesAsignadas: [], // SuperAdmin no tiene unidades
-  },
-
-  // Admin de Empresa - ve TODAS las unidades
-  "admin@empresaA.com": {
-    id: 2,
-    email: "admin@empresaA.com",
-    name: "Carlos Rodríguez",
-    role: "admin",
-    empresaId: 1,
-    empresaSubdomain: "empresaa",
-    empresaNombre: "Transportes Norte S.A.",
-    unidadesAsignadas: [], // Admin ve todas (array vacío = todas)
-    telefono: "+54 351 1234567",
-  },
-
-  // Supervisor - solo ve Campo Norte (id: 1)
-  "supervisor@empresaA.com": {
-    id: 3,
-    email: "supervisor@empresaA.com",
-    name: "Juan Pérez",
-    role: "supervisor",
-    empresaId: 1,
-    empresaSubdomain: "empresaa",
-    empresaNombre: "Transportes Norte S.A.",
-    unidadesAsignadas: [1], // Solo Campo Norte
-    telefono: "+54 351 2345678",
-  },
-
-  // Supervisor 2 - solo ve Campo Sur (id: 2)
-  "supervisor2@empresaA.com": {
-    id: 5,
-    email: "supervisor2@empresaA.com",
-    name: "María García",
-    role: "supervisor",
-    empresaId: 1,
-    empresaSubdomain: "empresaa",
-    empresaNombre: "Transportes Norte S.A.",
-    unidadesAsignadas: [2], // Solo Campo Sur
-    telefono: "+54 358 3456789",
-  },
-
-  // Operador - asignado a Campo Norte
-  "operador@empresaA.com": {
-    id: 4,
-    email: "operador@empresaA.com",
-    name: "Pedro López",
-    role: "operador",
-    empresaId: 1,
-    empresaSubdomain: "empresaa",
-    empresaNombre: "Transportes Norte S.A.",
-    unidadesAsignadas: [1], // Solo Campo Norte
-    telefono: "+54 351 4567890",
-  },
-
-  // Auditor - puede ver Campo Norte y Sur
-  "auditor@empresaA.com": {
-    id: 6,
-    email: "auditor@empresaA.com",
-    name: "Ana Martínez",
-    role: "auditor",
-    empresaId: 1,
-    empresaSubdomain: "empresaa",
-    empresaNombre: "Transportes Norte S.A.",
-    unidadesAsignadas: [1, 2], // Campo Norte y Sur
-    telefono: "+54 351 5678901",
-  },
+const ROLE_MAPPING: Record<string, UserRole> = {
+  "Admin": "admin",
+  "Administrador": "admin",
+  "SuperAdmin": "superadmin",
+  "Super Admin": "superadmin",
+  "Supervisor": "supervisor",
+  "Auditor": "auditor",
+  "Operador": "operador",
 };
 
 /**
- * Flag para usar mock o API real
+ * Normalizar nombre de rol de la API al formato de la app
  */
-const USE_MOCK = true; // TODO: Cambiar a false cuando la API esté lista
+function normalizeRole(apiRoleName: string): UserRole {
+  // Buscar coincidencia exacta (case insensitive)
+  const normalized = ROLE_MAPPING[apiRoleName];
+  if (normalized) return normalized;
+
+  // Buscar por coincidencia parcial
+  const lowerName = apiRoleName.toLowerCase();
+  if (lowerName.includes("superadmin") || lowerName.includes("super")) {
+    return "superadmin";
+  }
+  if (lowerName.includes("admin")) {
+    return "admin";
+  }
+  if (lowerName.includes("supervisor")) {
+    return "supervisor";
+  }
+  if (lowerName.includes("auditor")) {
+    return "auditor";
+  }
+  if (lowerName.includes("operador") || lowerName.includes("operator")) {
+    return "operador";
+  }
+
+  // Por defecto, operador (menor privilegio)
+  console.warn(`⚠️ Rol desconocido: "${apiRoleName}", asignando "operador"`);
+  return "operador";
+}
 
 class AuthService {
   /**
-   * Login de usuario
+   * Login de usuario - Obtiene el rol real desde la API
    */
   async login(credentials: { userName: string; password: string }): Promise<User> {
     try {
+      console.log("🔐 [AuthService] Iniciando login...");
+      
+      // 1️⃣ Login y obtener token
       const response = await authApi.login(credentials);
       
-      if (!response.user) {
-        throw new Error("Usuario no encontrado en la respuesta");
+      if (!response.token) {
+        throw new Error("Token no encontrado en la respuesta");
       }
 
-      // Convertir ApiUser a User
+      console.log("✅ [AuthService] Login exitoso, token recibido");
+
+      // 2️⃣ Extraer datos del token JWT
+      const userId = getUserIdFromToken(response.token);
+      const userName = getUserNameFromToken(response.token);
+      const idCompany = getCompanyIdFromToken(response.token);
+      const idBusinessUnit = getBusinessUnitIdFromToken(response.token);
+      
+      if (!userId) {
+        throw new Error("No se pudo extraer el userId del token");
+      }
+
+      console.log("✅ [AuthService] Datos extraídos del token:", {
+        userId,
+        userName,
+        idCompany,
+        idBusinessUnit,
+      });
+
+      // 3️⃣ Obtener roles del usuario desde la API
+      let userRole: UserRole = "operador"; // Default fallback
+      
+      try {
+        console.log("🔍 [AuthService] Buscando roles para userId:", userId);
+        const userRoles = await userRolesApi.getByUser(userId);
+        
+        console.log("🔍 [AuthService] Roles recibidos:", userRoles);
+        
+        if (userRoles && userRoles.length > 0) {
+          const apiRoleName = userRoles[0].name;
+          userRole = normalizeRole(apiRoleName);
+          console.log(`✅ [AuthService] Rol obtenido: "${apiRoleName}" → "${userRole}"`);
+        } else {
+          console.warn("⚠️ [AuthService] Usuario sin roles asignados, usando 'operador'");
+        }
+      } catch (roleError) {
+        console.error("❌ [AuthService] Error al obtener roles:", roleError);
+        console.warn("⚠️ [AuthService] Usando rol por defecto: 'operador'");
+      }
+
+      // 4️⃣ Construir objeto User
       const user: User = {
-        id: parseInt(response.user.id) || 0,
-        email: response.user.email,
-        name: `${response.user.firstName || ""} ${response.user.lastName || ""}`.trim() || response.user.userName,
-        role: "admin", // TODO: Obtener rol desde la API cuando esté disponible
-        empresaId: response.user.idCompany || null,
+        id: userId,
+        email: credentials.userName, // El backend no devuelve email
+        name: userName || credentials.userName,
+        role: userRole,
+        idCompany: idCompany || undefined,
+        idBusinessUnit: idBusinessUnit || undefined,
+        empresaId: idCompany,
         empresaNombre: undefined,
-        unidadesAsignadas: response.user.idBusinessUnit ? [response.user.idBusinessUnit] : [],
-        telefono: response.user.phoneNumber,
+        empresaSubdomain: undefined,
+        unidadesAsignadas: idBusinessUnit ? [idBusinessUnit] : [],
+        telefono: undefined,
       };
 
-      // El token ya fue guardado por authApi.login()
+      console.log("✅ [AuthService] Usuario completo:", {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        idCompany: user.idCompany,
+        idBusinessUnit: user.idBusinessUnit,
+      });
+
+      // 5️⃣ Guardar sesión
       this.saveSession(user);
+      
       return user;
     } catch (error) {
+      console.error("❌ [AuthService] Error en login:", error);
       const message = error instanceof Error ? error.message : "Error al iniciar sesión";
       throw new Error(message);
     }
@@ -128,6 +147,7 @@ class AuthService {
    * Cerrar sesión
    */
   logout(): void {
+    console.log("👋 [AuthService] Cerrando sesión...");
     tokenStorage.clearTokens();
     sessionStorage.removeItem("user");
     localStorage.removeItem("user");
@@ -162,7 +182,7 @@ class AuthService {
    * Verificar si hay sesión activa
    */
   isAuthenticated(): boolean {
-    return this.getCurrentUser() !== null;
+    return this.getCurrentUser() !== null && tokenStorage.getToken() !== null;
   }
 
   /**
@@ -171,7 +191,6 @@ class AuthService {
   private saveSession(user: User): void {
     sessionStorage.setItem("user", JSON.stringify(user));
     localStorage.setItem("user", JSON.stringify(user));
-    // El token ya fue guardado por authApi.login() usando tokenStorage
   }
 
   /**
@@ -198,70 +217,30 @@ class AuthService {
   }
 
   /**
-   * Refrescar token
-   */
-  async refreshToken(): Promise<string | null> {
-    if (USE_MOCK) {
-      return null;
-    }
-
-    try {
-      const response = await apiClient.post<ApiResponse<{ token: string }>>(
-        "/auth/refresh"
-      );
-
-      if (response.success && response.data) {
-        sessionStorage.setItem("token", response.data.token);
-        localStorage.setItem("token", response.data.token);
-        return response.data.token;
-      }
-    } catch {
-      this.logout();
-    }
-
-    return null;
-  }
-
-  /**
    * Cambiar contraseña
    */
   async changePassword(
     currentPassword: string,
     newPassword: string
   ): Promise<void> {
-    if (USE_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return;
-    }
-
-    await apiClient.post("/auth/change-password", {
-      currentPassword,
-      newPassword,
-    });
+    // TODO: Implementar endpoint de cambio de contraseña
+    throw new Error("Cambio de contraseña no implementado en la API");
   }
 
   /**
    * Solicitar recuperación de contraseña
    */
   async requestPasswordReset(email: string): Promise<void> {
-    if (USE_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return;
-    }
-
-    await apiClient.post("/auth/forgot-password", { email });
+    // TODO: Implementar endpoint de recuperación de contraseña
+    throw new Error("Recuperación de contraseña no implementada en la API");
   }
 
   /**
    * Resetear contraseña con token
    */
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    if (USE_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return;
-    }
-
-    await apiClient.post("/auth/reset-password", { token, newPassword });
+    // TODO: Implementar endpoint de reset de contraseña
+    throw new Error("Reset de contraseña no implementado en la API");
   }
 }
 

@@ -28,13 +28,13 @@ import SearchIcon from "@mui/icons-material/Search";
 import PersonIcon from "@mui/icons-material/Person";
 import PhoneAndroidIcon from "@mui/icons-material/PhoneAndroid";
 import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import StoreIcon from "@mui/icons-material/Store";
 import * as XLSX from "xlsx";
 import { useUsers, useCreateUser, useUpdateUser } from "@/hooks/queries";
 import { useRoles, useUserRoles, useAddUserRole } from "@/hooks/queries";
 import { useCompanies, useBusinessUnits } from "@/hooks/queries";
+import { userRolesApi } from "@/services/api";
 import { useAuthStore } from "@/stores/auth.store";
 import type {
   ApiUser,
@@ -102,12 +102,9 @@ function UserRoleChips({ userId }: { userId: string }) {
 
 export default function UsersPage() {
   const { user } = useAuthStore();
-  const idCompany = user?.idCompany ?? 0;
 
   const [openDialog, setOpenDialog] = useState(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<ApiUser | null>(null);
-  const [deleteUser, setDeleteUser] = useState<ApiUser | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState<CreateUserRequest>({
     firstName: "",
@@ -116,7 +113,7 @@ export default function UsersPage() {
     userName: "",
     password: "",
     confirmPassword: "",
-    idCompany: idCompany || 0,
+    idCompany: 2,
     idBusinessUnit: undefined,
     phoneNumber: "",
   });
@@ -146,9 +143,13 @@ export default function UsersPage() {
   const filteredUsers = useMemo(() => {
     let filtered = users;
 
-    // Filtrar por empresa si no es superadmin
-    if (user?.role !== "superadmin" && idCompany) {
-      filtered = filtered.filter((u) => u.idCompany === idCompany);
+    // ✅ Admin y superadmin ven solo empresa 2 (hardcoded)
+    if (user?.role === "admin" || user?.role === "superadmin") {
+      filtered = filtered.filter((u) => u.idCompany === 2);
+    }
+    // Otros roles filtran por su empresa asignada
+    else if (user?.idCompany) {
+      filtered = filtered.filter((u) => u.idCompany === user.idCompany);
     }
 
     // Filtrar por búsqueda
@@ -164,7 +165,7 @@ export default function UsersPage() {
     }
 
     return filtered;
-  }, [users, searchTerm, idCompany, user?.role]);
+  }, [users, searchTerm, user?.role, user?.idCompany]);
 
   const handleNew = () => {
     setEditingUser(null);
@@ -175,7 +176,7 @@ export default function UsersPage() {
       userName: "",
       password: "",
       confirmPassword: "",
-      idCompany: 2, // Hardcoded temporalmente
+      idCompany: 2,
       idBusinessUnit: undefined,
       phoneNumber: "",
     });
@@ -184,7 +185,7 @@ export default function UsersPage() {
     setOpenDialog(true);
   };
 
-  const handleEdit = (userToEdit: ApiUser) => {
+  const handleEdit = async (userToEdit: ApiUser) => {
     setEditingUser(userToEdit);
     setFormData({
       firstName: userToEdit.firstName || "",
@@ -193,18 +194,26 @@ export default function UsersPage() {
       userName: userToEdit.userName,
       password: "",
       confirmPassword: "",
-      idCompany: userToEdit.idCompany || idCompany || 0,
+      idCompany: userToEdit.idCompany || 2,
       idBusinessUnit: userToEdit.idBusinessUnit,
       phoneNumber: userToEdit.phoneNumber || "",
     });
-    setSelectedRoleId(""); // Se seteará automáticamente en el useEffect
+
+    // ✅ Cargar roles del usuario
+    try {
+      const rolesData = await userRolesApi.getByUser(userToEdit.id);
+      if (rolesData.length > 0) {
+        setSelectedRoleId(rolesData[0].id);
+      } else {
+        setSelectedRoleId("");
+      }
+    } catch (error) {
+      console.error("Error al cargar roles:", error);
+      setSelectedRoleId("");
+    }
+
     setErrors({});
     setOpenDialog(true);
-  };
-
-  const handleDeleteClick = (userToDelete: ApiUser) => {
-    setDeleteUser(userToDelete);
-    setOpenDeleteDialog(true);
   };
 
   const validate = (): boolean => {
@@ -240,6 +249,10 @@ export default function UsersPage() {
 
     try {
       if (editingUser) {
+        // ==========================================
+        // CASO 1: EDITAR USUARIO EXISTENTE
+        // ==========================================
+
         // 1️⃣ Actualizar datos del usuario
         const updateData: UpdateUserRequest = {
           id: editingUser.id,
@@ -253,34 +266,71 @@ export default function UsersPage() {
           data: updateData,
         });
 
-        // 2️⃣ Solo asignar rol si cambió
-        const currentRoleId = userRoles[0]?.id;
-        if (selectedRoleId && selectedRoleId !== currentRoleId) {
-          await addRoleMutation.mutateAsync({
-            userId: editingUser.id,
-            roleData: { roleId: selectedRoleId },
-          });
+        // 2️⃣ Solo asignar rol si cambió y hay uno seleccionado
+        if (selectedRoleId) {
+          const currentRoleId = userRoles[0]?.id;
+          if (selectedRoleId !== currentRoleId) {
+            await addRoleMutation.mutateAsync({
+              userId: editingUser.id,
+              data: { roleId: selectedRoleId },
+            });
+          }
         }
       } else {
-        // Crear nuevo usuario
-        const dataToSend = {
-          ...formData,
-          idCompany: 2, // Hardcoded temporalmente
+        // ==========================================
+        // CASO 2: CREAR NUEVO USUARIO
+        // ==========================================
+
+        const dataToSend: CreateUserRequest = {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          userName: formData.userName,
+          password: formData.password,
+          confirmPassword: "",
+          idCompany: 2,
+          idBusinessUnit: formData.idBusinessUnit,
+          phoneNumber: formData.phoneNumber || "",
         };
 
         const newUser = await createMutation.mutateAsync(dataToSend);
 
-        // Asignar rol si se seleccionó uno y tenemos el ID
-        if (selectedRoleId && newUser?.id) {
+        // 🔍 Extraer userId de la respuesta
+        let userId: string | undefined;
+
+        if (newUser && typeof newUser === "object") {
+          userId = newUser.id || newUser.userId || (newUser as any).user?.id;
+        }
+
+        if (!userId) {
+          throw new Error("No se pudo obtener el ID del usuario creado");
+        }
+
+        // ✅ Asignar rol si se seleccionó uno
+        if (selectedRoleId) {
           await addRoleMutation.mutateAsync({
-            userId: newUser.id,
-            roleData: { roleId: selectedRoleId },
+            userId: userId,
+            data: { roleId: selectedRoleId },
           });
         }
       }
+
       setOpenDialog(false);
-    } catch (error) {
+      setErrors({});
+    } catch (error: any) {
       console.error("❌ Error al guardar:", error);
+
+      // ✅ Mostrar error específico
+      if (error.response?.status === 409) {
+        setErrors({
+          userName: "El nombre de usuario o email ya existe",
+          email: "El nombre de usuario o email ya existe",
+        });
+      } else {
+        setErrors({
+          general: error.response?.data?.message || "Error al guardar usuario",
+        });
+      }
     }
   };
 
@@ -362,7 +412,7 @@ export default function UsersPage() {
           </Typography>
           <Typography variant="body2" sx={{ color: "#64748b" }}>
             {filteredUsers.length}{" "}
-            {filteredUsers.length === 1 ? "user" : "Usuarios"}
+            {filteredUsers.length === 1 ? "usuario" : "usuarios"}
           </Typography>
         </Box>
 
@@ -644,6 +694,7 @@ export default function UsersPage() {
         maxWidth="sm"
         fullWidth
         PaperProps={{ sx: { borderRadius: 3 } }}
+        disableEnforceFocus
       >
         <DialogTitle sx={{ fontWeight: 700 }}>
           {editingUser ? "Editar Usuario" : "Nuevo Usuario"}
@@ -652,6 +703,9 @@ export default function UsersPage() {
           <Box
             sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 2 }}
           >
+            {/* ✅ Mostrar error general */}
+            {errors.general && <Alert severity="error">{errors.general}</Alert>}
+
             <Box sx={{ display: "flex", gap: 2 }}>
               <TextField
                 fullWidth

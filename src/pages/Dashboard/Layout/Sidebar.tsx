@@ -1,4 +1,4 @@
-// src/pages/Dashboard/Layout/Sidebar.tsx
+// Asegúrate de tener estos imports al inicio del archivo
 import { useState, useEffect } from "react";
 import {
   List,
@@ -40,98 +40,98 @@ interface MenuItem {
   label: string;
   icon: React.ReactNode;
   path?: string;
-  // Roles que pueden ver este item
   roles: UserRole[];
-  // Permiso requerido (alternativa a roles)
   permission?: Permission;
-  // Sub-items
   submenu?: MenuItem[];
-  // Badge para mostrar contadores
   badge?: number;
 }
 
-/**
- * Estructura del menú según el modelo de negocio:
- * - Admin: Ve todo, incluyendo gestión de unidades y usuarios
- * - Supervisor: Ve solo su unidad, gestiona flota, usuarios de su unidad y valida eventos
- * - Auditor: Solo lectura de su unidad
- * - Operador: Solo WhatsApp (acceso mínimo web)
- */
 const menuStructure: MenuItem[] = [
-  // Dashboard - todos
+  // ============================================
+  // DASHBOARD - TODOS
+  // ============================================
   {
     label: "Dashboard",
     icon: <DashboardIcon />,
     path: "/dashboard",
-    roles: ["admin", "supervisor", "auditor"],
+    roles: ["admin", "supervisor", "operador", "auditor"],
   },
 
-  // Administración - Admin y Supervisor (con diferentes alcances)
+  // ============================================
+  // ADMINISTRACIÓN - Solo Admin
+  // ============================================
   {
     label: "Administración",
     icon: <AdminPanelSettingsIcon />,
-    roles: ["admin", "supervisor"],
+    roles: ["admin"],
     submenu: [
       {
         label: "Unidades de Negocio",
         icon: <StoreIcon />,
         path: "/dashboard/business-units",
-        roles: ["admin"], // Solo admin gestiona unidades
+        roles: ["admin"],
         permission: "unidades:gestionar",
       },
       {
         label: "Usuarios",
         icon: <PeopleIcon />,
         path: "/dashboard/users",
-        roles: ["admin", "supervisor"], // Supervisor puede crear usuarios de su unidad
+        roles: ["admin"],
         permission: "usuarios:gestionar",
       },
       {
         label: "Centros de Costo",
         icon: <AccountTreeIcon />,
         path: "/dashboard/cost-centers",
-        roles: ["admin", "supervisor"],
+        roles: ["admin"],
         permission: "centros-costo:gestionar",
       },
     ],
   },
 
-  // Flota - Admin y Supervisor (de su unidad)
+  // ============================================
+  // FLOTA - Solo Admin
+  // ============================================
   {
     label: "Flota",
     icon: <LocalShippingIcon />,
-    roles: ["admin", "supervisor"],
+    roles: ["admin"],
     submenu: [
       {
         label: "Vehículos",
         icon: <DirectionsCarIcon />,
         path: "/dashboard/vehicles",
-        roles: ["admin", "supervisor"],
+        roles: ["admin"],
         permission: "vehiculos:gestionar",
       },
       {
         label: "Choferes",
         icon: <PersonIcon />,
         path: "/dashboard/drivers",
-        roles: ["admin", "supervisor"],
+        roles: ["admin"],
         permission: "choferes:gestionar",
       },
     ],
   },
 
-  // Combustible - Admin, Supervisor y vista lectura para Auditor
+  // ============================================
+  // COMBUSTIBLE
+  // ============================================
   {
     label: "Combustible",
     icon: <LocalGasStationIcon />,
-    roles: ["admin", "supervisor", "auditor"],
+    roles: ["admin", "supervisor", "operador", "auditor"],
     submenu: [
+      // CARGAS - TODOS
       {
         label: "Cargas",
         icon: <LocalGasStationIcon />,
         path: "/dashboard/fuel",
-        roles: ["admin", "supervisor", "auditor"],
+        roles: ["admin", "supervisor", "operador", "auditor"],
         permission: "eventos:ver",
       },
+
+      // VALIDACIÓN - Admin y Supervisor
       {
         label: "Validación",
         icon: <CheckCircleIcon />,
@@ -139,26 +139,32 @@ const menuStructure: MenuItem[] = [
         roles: ["admin", "supervisor"],
         permission: "eventos:validar",
       },
+
+      // RECURSOS - Admin y Operador
       {
         label: "Recursos",
         icon: <PropaneTankIcon />,
         path: "/dashboard/resources",
-        roles: ["admin"],
+        roles: ["admin", "operador"],
         permission: "recursos:gestionar",
       },
     ],
   },
 
-  // Reportes - Admin, Supervisor y Auditor
+  // ============================================
+  // REPORTES - Admin y Auditor
+  // ============================================
   {
     label: "Reportes",
     icon: <AssessmentIcon />,
     path: "/dashboard/reports",
-    roles: ["admin", "supervisor", "auditor"],
+    roles: ["admin", "auditor"],
     permission: "reportes:ver",
   },
 
-  // Configuración - solo Admin
+  // ============================================
+  // CONFIGURACIÓN - Solo Admin
+  // ============================================
   {
     label: "Configuración",
     icon: <SettingsIcon />,
@@ -251,7 +257,9 @@ export default function Sidebar() {
 
         {/* Indicador de Unidad Activa */}
         <Chip
-          icon={<StoreIcon sx={{ fontSize: 14, color: "inherit !important" }} />}
+          icon={
+            <StoreIcon sx={{ fontSize: 14, color: "inherit !important" }} />
+          }
           label={unidadNombre}
           size="small"
           sx={{
@@ -339,7 +347,9 @@ export default function Sidebar() {
                               : "transparent",
                             color: tenantTheme?.sidebarText || "#ffffff",
                             borderLeft: isActive(subItem.path)
-                              ? `3px solid ${tenantTheme?.accentColor || "#10b981"}`
+                              ? `3px solid ${
+                                  tenantTheme?.accentColor || "#10b981"
+                                }`
                               : "3px solid transparent",
                             "&:hover": {
                               bgcolor: isActive(subItem.path)

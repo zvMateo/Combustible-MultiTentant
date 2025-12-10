@@ -49,13 +49,17 @@ export function useCreateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateUserRequest) => usersApi.create(data),
-    onSuccess: () => {
+    mutationFn: (data: CreateUserRequest) => {
+      console.log("🔥 [useCreateUser] Datos a enviar:", data);
+      return usersApi.create(data);
+    },
+    onSuccess: (newUser) => {
+      console.log("✅ [useCreateUser] Usuario creado:", newUser);
       toast.success("Usuario creado correctamente");
       queryClient.invalidateQueries({ queryKey: usersKeys.lists() });
-      queryClient.refetchQueries({ queryKey: usersKeys.lists() }); // ✅ Forzar refetch
     },
     onError: (error) => {
+      console.error("❌ [useCreateUser] Error:", error);
       toast.error(getErrorMessage(error));
     },
   });
