@@ -2,10 +2,9 @@
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  useEmpresas,
-  useEmpresasResumen,
-  empresasKeys,
-} from "@/hooks/queries/useEmpresas";
+  useCompanies,
+  companiesKeys,
+} from "@/hooks/queries/useCompanies";
 import {
   Box,
   Typography,
@@ -33,7 +32,7 @@ import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import WarningIcon from "@mui/icons-material/Warning";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import type { EmpresaResumen } from "@/types";
+// import type { EmpresaResumen } from "@/types"; // Ya no se usa
 
 // Theme colors
 const theme = {
@@ -210,9 +209,19 @@ function EmpresaMiniCard({
   empresa,
   onClick,
 }: {
-  empresa: EmpresaResumen;
+  empresa: {
+    id: number;
+    nombre: string;
+    eventosHoy: number;
+    litrosHoy: number;
+    primaryColor?: string;
+    activa?: boolean;
+  };
   onClick: () => void;
 }) {
+  const primaryColor = empresa.primaryColor || theme.primary;
+  const activa = empresa.activa ?? true;
+  
   return (
     <Card
       elevation={0}
@@ -223,8 +232,8 @@ function EmpresaMiniCard({
         cursor: "pointer",
         transition: "all 0.3s ease",
         "&:hover": {
-          borderColor: empresa.primaryColor,
-          boxShadow: `0 4px 15px ${alpha(empresa.primaryColor, 0.2)}`,
+          borderColor: primaryColor,
+          boxShadow: `0 4px 15px ${alpha(primaryColor, 0.2)}`,
           transform: "translateY(-2px)",
         },
       }}
@@ -235,7 +244,7 @@ function EmpresaMiniCard({
             sx={{
               width: 44,
               height: 44,
-              bgcolor: empresa.primaryColor,
+              bgcolor: primaryColor,
               fontWeight: 700,
               fontSize: 16,
             }}
@@ -256,14 +265,14 @@ function EmpresaMiniCard({
             </Typography>
             <Chip
               size="small"
-              label={empresa.activa ? "Activa" : "Inactiva"}
+              label={activa ? "Activa" : "Inactiva"}
               sx={{
                 height: 20,
                 fontSize: 10,
-                bgcolor: empresa.activa
+                bgcolor: activa
                   ? alpha(theme.success, 0.1)
                   : alpha(theme.error, 0.1),
-                color: empresa.activa ? theme.success : theme.error,
+                color: activa ? theme.success : theme.error,
               }}
             />
           </Box>
@@ -306,38 +315,35 @@ export default function HomePage() {
   const queryClient = useQueryClient();
 
   // React Query hooks
-  const { data: empresasData, isLoading: isLoadingEmpresas } = useEmpresas();
-  const { data: resumenData, isLoading: isLoadingResumen } =
-    useEmpresasResumen();
-
-  const loading = isLoadingEmpresas || isLoadingResumen;
-
-  // Computed stats from empresas
-  const empresas = empresasData?.data || [];
-  const resumen = resumenData?.data || [];
+  const { data: empresas = [], isLoading: loading } = useCompanies();
 
   const stats = {
-    empresasActivas: empresas.filter((e) => e.activo).length,
-    empresasInactivas: empresas.filter((e) => !e.activo).length,
-    totalUsuarios: resumen.reduce((acc, e) => acc + (e.usuarios || 0), 0),
-    totalVehiculos: resumen.reduce((acc, e) => acc + (e.vehiculos || 0), 0),
-    eventosHoy: resumen.reduce((acc, e) => acc + (e.eventosHoy || 0), 0),
-    litrosHoy: resumen.reduce((acc, e) => acc + (e.litrosHoy || 0), 0),
-    tendenciaEventos: 12.5, // Mock - puede venir del backend
-    eventosMes: 2456, // Mock
-    eventosValidados: 2180, // Mock
-    eventosPendientes: 276, // Mock
-    costoMes: 125680.5, // Mock
-    litrosMes: 98450, // Mock
+    empresasActivas: empresas.filter((e) => e.active).length,
+    empresasInactivas: empresas.filter((e) => !e.active).length,
+    totalUsuarios: 0, // TODO: Calcular desde API cuando esté disponible
+    totalVehiculos: 0, // TODO: Calcular desde API cuando esté disponible
+    eventosHoy: 0, // TODO: Calcular desde API cuando esté disponible
+    litrosHoy: 0, // TODO: Calcular desde API cuando esté disponible
+    tendenciaEventos: 12.5, // TODO: Calcular desde API cuando esté disponible
+    eventosMes: 2456, // TODO: Calcular desde API cuando esté disponible
+    eventosValidados: 2180, // TODO: Calcular desde API cuando esté disponible
+    eventosPendientes: 276, // TODO: Calcular desde API cuando esté disponible
+    costoMes: 125680.5, // TODO: Calcular desde API cuando esté disponible
+    litrosMes: 98450, // TODO: Calcular desde API cuando esté disponible
   };
 
-  // Top empresas ordenadas por eventos
-  const topEmpresas = [...resumen]
-    .sort((a, b) => b.eventosHoy - a.eventosHoy)
-    .slice(0, 4);
+  // Top empresas (usando solo las primeras 4 por ahora)
+  const topEmpresas = empresas.slice(0, 4).map((e) => ({
+    id: e.id,
+    nombre: e.name,
+    eventosHoy: 0, // TODO: Obtener desde API cuando esté disponible
+    usuarios: 0, // TODO: Obtener desde API cuando esté disponible
+    vehiculos: 0, // TODO: Obtener desde API cuando esté disponible
+    litrosHoy: 0, // TODO: Obtener desde API cuando esté disponible
+  }));
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: empresasKeys.all });
+    queryClient.invalidateQueries({ queryKey: companiesKeys.all });
   };
 
   const handleEmpresaClick = () => {

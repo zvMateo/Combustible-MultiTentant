@@ -1,11 +1,11 @@
 // src/components/pages/_A/Empresas/EmpresasPage.tsx
 import { useState, useMemo } from "react";
 import {
-  useEmpresas,
-  useCreateEmpresa,
-  useUpdateEmpresa,
-  useDeleteEmpresa,
-} from "@/hooks/queries/useEmpresas";
+  useCompanies,
+  useCreateCompany,
+  useUpdateCompany,
+  useDeactivateCompany,
+} from "@/hooks/queries/useCompanies";
 import type { Empresa, EmpresaFormData, EmpresaPolicies } from "@/types";
 import { DEFAULT_POLICIES, DEFAULT_THEME } from "@/types";
 import {
@@ -379,12 +379,10 @@ function mapPoliciesToApi(policies: LocalEmpresaPolicies): EmpresaPolicies {
 
 export default function EmpresasPage() {
   // React Query hooks
-  const { data: empresasResponse, isLoading: loading } = useEmpresas();
-  const createMutation = useCreateEmpresa();
-  const updateMutation = useUpdateEmpresa();
-  const deleteMutation = useDeleteEmpresa();
-
-  const empresas = empresasResponse?.data || [];
+  const { data: empresas = [], isLoading: loading } = useCompanies();
+  const createMutation = useCreateCompany();
+  const updateMutation = useUpdateCompany();
+  const deleteMutation = useDeactivateCompany();
 
   // Local state
   const [openDialog, setOpenDialog] = useState<boolean>(false);
