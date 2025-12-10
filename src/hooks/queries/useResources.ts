@@ -19,11 +19,15 @@ import { RESOURCE_TYPES } from "@/types/api.types";
 export const resourcesKeys = {
   all: ["resources"] as const,
   lists: () => [...resourcesKeys.all, "list"] as const,
-  list: (filters?: { idType?: number; idCompany?: number; idBusinessUnit?: number }) =>
-    [...resourcesKeys.lists(), filters] as const,
+  list: (filters?: {
+    idType?: number;
+    idCompany?: number;
+    idBusinessUnit?: number;
+  }) => [...resourcesKeys.lists(), filters] as const,
   detail: (id: number) => [...resourcesKeys.all, "detail", id] as const,
   byType: (idType: number) => [...resourcesKeys.all, "byType", idType] as const,
-  byCompany: (idCompany: number) => [...resourcesKeys.all, "byCompany", idCompany] as const,
+  byCompany: (idCompany: number) =>
+    [...resourcesKeys.all, "byCompany", idCompany] as const,
   byBusinessUnit: (idBusinessUnit: number) =>
     [...resourcesKeys.all, "byBusinessUnit", idBusinessUnit] as const,
   vehicles: () => [...resourcesKeys.all, "vehicles"] as const,
@@ -98,33 +102,79 @@ export function useResourcesByBusinessUnit(idBusinessUnit: number) {
 
 /**
  * Obtener todos los vehículos
+ * Usa GetAll y filtra en el frontend para evitar problemas con tipos inconsistentes
  */
 export function useVehicles() {
   return useQuery({
     queryKey: resourcesKeys.vehicles(),
-    queryFn: () => resourcesApi.getVehicles(),
+    queryFn: async () => {
+      const all = await resourcesApi.getAll();
+      // Filtrar vehículos: idType 1 y que no tenga type array o type que no sea tanque/surtidor
+      return all.filter((r) => {
+        const typeArray = (r as any).type || [];
+        if (typeArray.length > 0) {
+          // Si tiene type array, solo incluir si no es tanque ni surtidor
+          return !typeArray.some(
+            (t: string) =>
+              t.toLowerCase().includes("tanque") ||
+              t.toLowerCase().includes("surtidor") ||
+              t.toLowerCase().includes("dispenser")
+          );
+        }
+        // Si no tiene type array, usar idType
+        return r.idType === 1;
+      });
+    },
     staleTime: 1000 * 60 * 5,
   });
 }
 
 /**
  * Obtener todos los tanques
+ * Usa GetAll y filtra en el frontend para evitar problemas con tipos inconsistentes
  */
 export function useTanks() {
   return useQuery({
     queryKey: resourcesKeys.tanks(),
-    queryFn: () => resourcesApi.getTanks(),
+    queryFn: async () => {
+      const all = await resourcesApi.getAll();
+      // Filtrar tanques: buscar por type array o idType 2
+      return all.filter((r) => {
+        const typeArray = (r as any).type || [];
+        if (typeArray.length > 0) {
+          return typeArray.some((t: string) =>
+            t.toLowerCase().includes("tanque")
+          );
+        }
+        return r.idType === 2;
+      });
+    },
     staleTime: 1000 * 60 * 5,
   });
 }
 
 /**
  * Obtener todos los surtidores
+ * Usa GetAll y filtra en el frontend para evitar problemas con tipos inconsistentes
  */
 export function useDispensers() {
   return useQuery({
     queryKey: resourcesKeys.dispensers(),
-    queryFn: () => resourcesApi.getDispensers(),
+    queryFn: async () => {
+      const all = await resourcesApi.getAll();
+      // Filtrar surtidores: buscar por type array o idType 3
+      return all.filter((r) => {
+        const typeArray = (r as any).type || [];
+        if (typeArray.length > 0) {
+          return typeArray.some(
+            (t: string) =>
+              t.toLowerCase().includes("surtidor") ||
+              t.toLowerCase().includes("dispenser")
+          );
+        }
+        return r.idType === 3;
+      });
+    },
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -158,7 +208,9 @@ export function useUpdateResource() {
     onSuccess: (_, variables) => {
       toast.success("Recurso actualizado correctamente");
       queryClient.invalidateQueries({ queryKey: resourcesKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: resourcesKeys.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: resourcesKeys.detail(variables.id),
+      });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -218,7 +270,8 @@ export function useCreateResourceType() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateResourceTypeRequest) => resourceTypesApi.create(data),
+    mutationFn: (data: CreateResourceTypeRequest) =>
+      resourceTypesApi.create(data),
     onSuccess: () => {
       toast.success("Tipo de recurso creado correctamente");
       queryClient.invalidateQueries({ queryKey: resourceTypesKeys.lists() });
@@ -236,11 +289,14 @@ export function useUpdateResourceType() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: UpdateResourceTypeRequest) => resourceTypesApi.update(data),
+    mutationFn: (data: UpdateResourceTypeRequest) =>
+      resourceTypesApi.update(data),
     onSuccess: (_, variables) => {
       toast.success("Tipo de recurso actualizado correctamente");
       queryClient.invalidateQueries({ queryKey: resourceTypesKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: resourceTypesKeys.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: resourceTypesKeys.detail(variables.id),
+      });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -265,4 +321,3 @@ export function useDeactivateResourceType() {
     },
   });
 }
-

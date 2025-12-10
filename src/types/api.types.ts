@@ -190,12 +190,16 @@ export interface UpdateResourceTypeRequest extends CreateResourceTypeRequest {
 export interface Resource {
   id: number;
   idType: number;
+  type?: string[]; // Array de tipos desde la API (ej: ["Tanque"])
   idCompany: number;
+  company?: string[]; // Array de nombres de empresa desde la API
   idBusinessUnit?: number;
+  businessUnit?: string[]; // Array de nombres de unidad desde la API
   nativeLiters?: number;
   name: string;
   identifier: string;
-  isActive?: boolean;
+  active?: boolean; // La API usa "active" en lugar de "isActive"
+  isActive?: boolean; // Mantener para compatibilidad
   createdAt?: string;
   updatedAt?: string;
   resourceType?: ResourceType;
@@ -275,7 +279,8 @@ export interface CreateFuelStockMovementRequest {
   liters: number;
 }
 
-export interface UpdateFuelStockMovementRequest extends CreateFuelStockMovementRequest {
+export interface UpdateFuelStockMovementRequest
+  extends CreateFuelStockMovementRequest {
   id: number;
 }
 
@@ -375,11 +380,10 @@ export interface PaginatedResponse<T> {
 // RESOURCE TYPE CONSTANTS
 // ============================================
 export const RESOURCE_TYPES = {
-  VEHICLE: 1,      // Vehículo
-  TANK: 2,         // Tanque
-  DISPENSER: 3,    // Surtidor
+  VEHICLE: 1, // Vehículo
+  TANK: 2, // Tanque
+  DISPENSER: 3, // Surtidor
 } as const;
 
-export type ResourceTypeId = typeof RESOURCE_TYPES[keyof typeof RESOURCE_TYPES];
-
-
+export type ResourceTypeId =
+  (typeof RESOURCE_TYPES)[keyof typeof RESOURCE_TYPES];

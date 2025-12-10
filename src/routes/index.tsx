@@ -19,8 +19,7 @@ import VehiclesPage from "@/pages/Dashboard/Vehicles/VehiclesPage";
 import DriversPage from "@/pages/Dashboard/Drivers/DriversPage";
 import LoadsPage from "@/pages/Dashboard/Loads/LoadsPage";
 import ValidationPage from "@/pages/Dashboard/Validation/ValidationPage";
-import DispensersPage from "@/pages/Dashboard/Dispensers/DispensersPage";
-import TanksPage from "@/pages/Dashboard/Tanks/TanksPage";
+import ResourcesPage from "@/pages/Dashboard/Resources/ResourcesPage";
 import ReportsPage from "@/pages/Dashboard/Reports/ReportsPage";
 
 // Auth Guard Component
@@ -64,8 +63,7 @@ export function AppRoutes() {
         { path: "drivers", element: <DriversPage /> },
         { path: "loads", element: <LoadsPage /> },
         { path: "validation", element: <ValidationPage /> },
-        { path: "dispensers", element: <DispensersPage /> },
-        { path: "tanks", element: <TanksPage /> },
+        { path: "resources", element: <ResourcesPage /> },
         { path: "reports", element: <ReportsPage /> },
       ],
     },
