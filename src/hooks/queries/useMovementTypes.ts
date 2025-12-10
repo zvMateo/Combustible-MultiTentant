@@ -19,7 +19,7 @@ export const movementTypesKeys = {
 };
 
 /**
- * Obtener todos los tipos de movimiento
+ * Obtener todos los tipos de movimiento (ACTIVOS E INACTIVOS)
  */
 export function useMovementTypes() {
   return useQuery({
@@ -79,7 +79,7 @@ export function useUpdateMovementType() {
 }
 
 /**
- * Desactivar tipo de movimiento
+ * Desactivar/Activar tipo de movimiento (TOGGLE)
  */
 export function useDeactivateMovementType() {
   const queryClient = useQueryClient();
@@ -87,7 +87,7 @@ export function useDeactivateMovementType() {
   return useMutation({
     mutationFn: (id: number) => movementTypesApi.deactivate(id),
     onSuccess: () => {
-      toast.success("Tipo de movimiento desactivado");
+      toast.success("Estado actualizado correctamente");
       queryClient.invalidateQueries({ queryKey: movementTypesKeys.lists() });
     },
     onError: (error) => {
@@ -95,4 +95,3 @@ export function useDeactivateMovementType() {
     },
   });
 }
-

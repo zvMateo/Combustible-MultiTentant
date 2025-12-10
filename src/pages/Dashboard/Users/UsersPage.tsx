@@ -1,5 +1,4 @@
-// src/pages/Dashboard/Users/UsersPage.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Box,
   Button,
@@ -33,11 +32,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import StoreIcon from "@mui/icons-material/Store";
 import * as XLSX from "xlsx";
-import {
-  useUsers,
-  useCreateUser,
-  useUpdateUser,
-} from "@/hooks/queries";
+import { useUsers, useCreateUser, useUpdateUser } from "@/hooks/queries";
 import { useRoles, useUserRoles, useAddUserRole } from "@/hooks/queries";
 import { useCompanies, useBusinessUnits } from "@/hooks/queries";
 import { useAuthStore } from "@/stores/auth.store";
@@ -45,7 +40,6 @@ import type {
   ApiUser,
   CreateUserRequest,
   UpdateUserRequest,
-  ApiRole,
 } from "@/types/api.types";
 
 interface FormErrors {
@@ -70,6 +64,41 @@ const getAvatarColor = (name: string): string => {
   ];
   return colors[name.charCodeAt(0) % colors.length] || "#999";
 };
+
+// 🆕 Componente para mostrar roles de un usuario
+function UserRoleChips({ userId }: { userId: string }) {
+  const { data: userRoles = [] } = useUserRoles(userId);
+
+  if (userRoles.length === 0) return null;
+
+  return (
+    <Box>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ display: "block", mb: 0.5 }}
+      >
+        Roles
+      </Typography>
+      <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+        {userRoles.map((role) => (
+          <Chip
+            key={role.id}
+            label={role.name}
+            size="small"
+            sx={{
+              bgcolor: "#8b5cf615",
+              color: "#8b5cf6",
+              fontWeight: 600,
+              height: 20,
+              fontSize: 11,
+            }}
+          />
+        ))}
+      </Box>
+    </Box>
+  );
+}
 
 export default function UsersPage() {
   const { user } = useAuthStore();
@@ -106,6 +135,13 @@ export default function UsersPage() {
   // Obtener roles del usuario editado
   const { data: userRoles = [] } = useUserRoles(editingUser?.id || "");
 
+  // ✅ Setear rol actual cuando se cargan los roles del usuario editado
+  useEffect(() => {
+    if (editingUser && userRoles.length > 0 && !selectedRoleId) {
+      setSelectedRoleId(userRoles[0]?.id || "");
+    }
+  }, [editingUser, userRoles, selectedRoleId]);
+
   // Filtrar usuarios por búsqueda y empresa
   const filteredUsers = useMemo(() => {
     let filtered = users;
@@ -139,7 +175,7 @@ export default function UsersPage() {
       userName: "",
       password: "",
       confirmPassword: "",
-      idCompany: idCompany || companies[0]?.id || 0,
+      idCompany: 2, // Hardcoded temporalmente
       idBusinessUnit: undefined,
       phoneNumber: "",
     });
@@ -161,7 +197,7 @@ export default function UsersPage() {
       idBusinessUnit: userToEdit.idBusinessUnit,
       phoneNumber: userToEdit.phoneNumber || "",
     });
-    setSelectedRoleId(userRoles[0]?.id || "");
+    setSelectedRoleId(""); // Se seteará automáticamente en el useEffect
     setErrors({});
     setOpenDialog(true);
   };
@@ -194,9 +230,6 @@ export default function UsersPage() {
     if (!editingUser && formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Las contraseñas no coinciden";
     }
-    if (!formData.idCompany || formData.idCompany === 0) {
-      newErrors.idCompany = "Debe seleccionar una empresa";
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -207,29 +240,38 @@ export default function UsersPage() {
 
     try {
       if (editingUser) {
+        // 1️⃣ Actualizar datos del usuario
         const updateData: UpdateUserRequest = {
           id: editingUser.id,
           userName: formData.userName,
           email: formData.email,
           phoneNumber: formData.phoneNumber,
         };
+
         await updateMutation.mutateAsync({
           userId: editingUser.id,
           data: updateData,
         });
 
-        // Asignar rol si se seleccionó uno
-        if (selectedRoleId && selectedRoleId !== userRoles[0]?.id) {
+        // 2️⃣ Solo asignar rol si cambió
+        const currentRoleId = userRoles[0]?.id;
+        if (selectedRoleId && selectedRoleId !== currentRoleId) {
           await addRoleMutation.mutateAsync({
             userId: editingUser.id,
             roleData: { roleId: selectedRoleId },
           });
         }
       } else {
-        const newUser = await createMutation.mutateAsync(formData);
+        // Crear nuevo usuario
+        const dataToSend = {
+          ...formData,
+          idCompany: 2, // Hardcoded temporalmente
+        };
 
-        // Asignar rol si se seleccionó uno
-        if (selectedRoleId) {
+        const newUser = await createMutation.mutateAsync(dataToSend);
+
+        // Asignar rol si se seleccionó uno y tenemos el ID
+        if (selectedRoleId && newUser?.id) {
           await addRoleMutation.mutateAsync({
             userId: newUser.id,
             roleData: { roleId: selectedRoleId },
@@ -237,15 +279,17 @@ export default function UsersPage() {
         }
       }
       setOpenDialog(false);
-    } catch {
-      // Error manejado por el mutation
+    } catch (error) {
+      console.error("❌ Error al guardar:", error);
     }
   };
 
   const handleExport = () => {
     const dataToExport = filteredUsers.map((u) => {
       const company = companies.find((c) => c.id === u.idCompany);
-      const businessUnit = businessUnits.find((bu) => bu.id === u.idBusinessUnit);
+      const businessUnit = businessUnits.find(
+        (bu) => bu.id === u.idBusinessUnit
+      );
       return {
         Nombre: u.firstName || "",
         Apellido: u.lastName || "",
@@ -260,10 +304,7 @@ export default function UsersPage() {
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Users");
-    XLSX.writeFile(
-      wb,
-      `users_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
+    XLSX.writeFile(wb, `users_${new Date().toISOString().split("T")[0]}.xlsx`);
   };
 
   // Loading state
@@ -317,11 +358,11 @@ export default function UsersPage() {
               mb: 0.5,
             }}
           >
-            User Management
+            Usuarios
           </Typography>
           <Typography variant="body2" sx={{ color: "#64748b" }}>
             {filteredUsers.length}{" "}
-            {filteredUsers.length === 1 ? "user" : "users"}
+            {filteredUsers.length === 1 ? "user" : "Usuarios"}
           </Typography>
         </Box>
 
@@ -339,7 +380,7 @@ export default function UsersPage() {
               "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
             }}
           >
-            Export
+            Exportar
           </Button>
           <Button
             variant="contained"
@@ -353,7 +394,7 @@ export default function UsersPage() {
               "&:hover": { bgcolor: "#2563eb" },
             }}
           >
-            New User
+            Nuevo Usuario
           </Button>
         </Box>
       </Box>
@@ -449,7 +490,9 @@ export default function UsersPage() {
                         {userItem.firstName} {userItem.lastName || ""}
                       </Typography>
 
-                      <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
+                      <Box
+                        sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}
+                      >
                         <Chip
                           label={userItem.userName}
                           size="small"
@@ -485,22 +528,13 @@ export default function UsersPage() {
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteClick(userItem)}
-                        sx={{
-                          bgcolor: "#fee2e2",
-                          color: "#dc2626",
-                          "&:hover": { bgcolor: "#fecaca" },
-                        }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
                     </Box>
                   </Box>
 
                   {/* Detalles */}
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1.75 }}>
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1.75 }}
+                  >
                     <Box>
                       <Typography
                         variant="caption"
@@ -527,14 +561,25 @@ export default function UsersPage() {
                         >
                           Teléfono
                         </Typography>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                          <PhoneAndroidIcon sx={{ fontSize: 18, color: "#10b981" }} />
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.75,
+                          }}
+                        >
+                          <PhoneAndroidIcon
+                            sx={{ fontSize: 18, color: "#10b981" }}
+                          />
                           <Typography variant="body2" fontWeight={600}>
                             {userItem.phoneNumber}
                           </Typography>
                         </Box>
                       </Box>
                     )}
+
+                    {/* 🆕 Mostrar roles del usuario */}
+                    <UserRoleChips userId={userItem.id} />
 
                     {/* Mostrar empresa y unidad */}
                     {company && (
@@ -546,7 +591,13 @@ export default function UsersPage() {
                         >
                           Empresa
                         </Typography>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.75,
+                          }}
+                        >
                           <StoreIcon sx={{ fontSize: 18, color: "#64748b" }} />
                           <Typography variant="body2" fontWeight={500}>
                             {company.name}
@@ -598,7 +649,9 @@ export default function UsersPage() {
           {editingUser ? "Editar Usuario" : "Nuevo Usuario"}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 2 }}>
+          <Box
+            sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 2 }}
+          >
             <Box sx={{ display: "flex", gap: 2 }}>
               <TextField
                 fullWidth
@@ -669,7 +722,10 @@ export default function UsersPage() {
                   label="Confirmar Contraseña"
                   value={formData.confirmPassword}
                   onChange={(e) =>
-                    setFormData({ ...formData, confirmPassword: e.target.value })
+                    setFormData({
+                      ...formData,
+                      confirmPassword: e.target.value,
+                    })
                   }
                   error={!!errors.confirmPassword}
                   helperText={errors.confirmPassword}
@@ -694,32 +750,37 @@ export default function UsersPage() {
               }}
             />
 
-            {(user?.role === "superadmin" || companies.length > 1) && (
-              <FormControl fullWidth error={!!errors.idCompany}>
-                <InputLabel>Empresa *</InputLabel>
-                <Select
-                  value={formData.idCompany}
-                  label="Empresa *"
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      idCompany: Number(e.target.value),
-                    })
-                  }
-                >
-                  {companies.map((c) => (
-                    <MenuItem key={c.id} value={c.id}>
-                      {c.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {errors.idCompany && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                    {errors.idCompany}
-                  </Typography>
-                )}
-              </FormControl>
-            )}
+            {companies.length > 0 &&
+              (user?.role === "superadmin" || companies.length > 1) && (
+                <FormControl fullWidth error={!!errors.idCompany}>
+                  <InputLabel>Empresa *</InputLabel>
+                  <Select
+                    value={formData.idCompany}
+                    label="Empresa *"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        idCompany: Number(e.target.value),
+                      })
+                    }
+                  >
+                    {companies.map((c) => (
+                      <MenuItem key={c.id} value={c.id}>
+                        {c.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.idCompany && (
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5 }}
+                    >
+                      {errors.idCompany}
+                    </Typography>
+                  )}
+                </FormControl>
+              )}
 
             <FormControl fullWidth>
               <InputLabel>Unidad de Negocio (opcional)</InputLabel>
@@ -729,7 +790,9 @@ export default function UsersPage() {
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    idBusinessUnit: e.target.value ? Number(e.target.value) : undefined,
+                    idBusinessUnit: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
                   })
                 }
               >
@@ -780,44 +843,6 @@ export default function UsersPage() {
               : editingUser
               ? "Guardar Cambios"
               : "Crear Usuario"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Dialog eliminar */}
-      <Dialog
-        open={openDeleteDialog}
-        onClose={() => setOpenDeleteDialog(false)}
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Confirmar Eliminación</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¿Estás seguro de eliminar al usuario{" "}
-            <strong>
-              {deleteUser?.firstName} {deleteUser?.lastName || ""}
-            </strong>
-            ?
-          </Typography>
-          <Typography variant="body2" sx={{ color: "#ef4444", mt: 1 }}>
-            Esta acción no se puede deshacer.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button onClick={() => setOpenDeleteDialog(false)} sx={{ borderRadius: 2 }}>
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={() => {
-              // TODO: Implementar eliminación cuando la API lo soporte
-              setOpenDeleteDialog(false);
-              setDeleteUser(null);
-            }}
-            sx={{ borderRadius: 2 }}
-          >
-            Eliminar
           </Button>
         </DialogActions>
       </Dialog>

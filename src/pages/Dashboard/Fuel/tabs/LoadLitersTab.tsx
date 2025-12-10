@@ -1,4 +1,4 @@
-// src/pages/Dashboard/Loads/LoadsPage.tsx
+// src/pages/Dashboard/Fuel/tabs/LoadLitersTab.tsx
 import { useState, useMemo } from "react";
 import {
   Box,
@@ -19,8 +19,7 @@ import {
   Paper,
   Chip,
   IconButton,
-  LinearProgress,
-  Alert,
+  Card,
   MenuItem,
   FormControl,
   InputLabel,
@@ -31,7 +30,6 @@ import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
 import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -47,20 +45,17 @@ import type {
   CreateLoadLitersRequest,
   UpdateLoadLitersRequest,
 } from "@/types/api.types";
-import { RESOURCE_TYPES } from "@/types/api.types";
 
 interface FormErrors {
   [key: string]: string;
 }
 
-export default function LoadsPage() {
+export default function LoadLitersTab() {
   const { user } = useAuthStore();
   const idCompany = user?.idCompany ?? 0;
 
   const [openDialog, setOpenDialog] = useState(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [editingLoad, setEditingLoad] = useState<LoadLiters | null>(null);
-  const [deleteLoad, setDeleteLoad] = useState<LoadLiters | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState<CreateLoadLitersRequest>({
     idResource: 0,
@@ -74,38 +69,20 @@ export default function LoadsPage() {
   const [errors, setErrors] = useState<FormErrors>({});
 
   // React Query hooks
-  const { data: loads = [], isLoading, error } = useLoadLiters();
+  const { data: loads = [], isLoading } = useLoadLiters();
   const { data: resources = [] } = useResources();
   const { data: fuelTypes = [] } = useFuelTypes();
   const createMutation = useCreateLoadLiters();
   const updateMutation = useUpdateLoadLiters();
 
-  // Filtrar recursos por tipo (vehículos, tanques, surtidores)
-  const vehicles = useMemo(
-    () => resources.filter((r) => r.idType === RESOURCE_TYPES.VEHICLE),
-    [resources]
-  );
-  const tanks = useMemo(
-    () => resources.filter((r) => r.idType === RESOURCE_TYPES.TANK),
-    [resources]
-  );
-  const dispensers = useMemo(
-    () => resources.filter((r) => r.idType === RESOURCE_TYPES.DISPENSER),
-    [resources]
-  );
-
-  // Filtrar cargas por búsqueda y empresa
+  // Filtrar cargas
   const filteredLoads = useMemo(() => {
     let filtered = loads;
 
-    // Filtrar por empresa si no es superadmin
     if (user?.role !== "superadmin" && idCompany) {
-      filtered = filtered.filter(
-        (l) => l.resource?.idCompany === idCompany
-      );
+      filtered = filtered.filter((l) => l.resource?.idCompany === idCompany);
     }
 
-    // Filtrar por búsqueda
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -122,7 +99,7 @@ export default function LoadsPage() {
   const handleNew = () => {
     setEditingLoad(null);
     setFormData({
-      idResource: vehicles[0]?.id || 0,
+      idResource: resources[0]?.id || 0,
       loadDate: new Date().toISOString().split("T")[0],
       initialLiters: 0,
       finalLiters: 0,
@@ -149,11 +126,6 @@ export default function LoadsPage() {
     setOpenDialog(true);
   };
 
-  const handleDeleteClick = (load: LoadLiters) => {
-    setDeleteLoad(load);
-    setOpenDeleteDialog(true);
-  };
-
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
 
@@ -170,7 +142,8 @@ export default function LoadsPage() {
       newErrors.finalLiters = "Los litros finales no pueden ser negativos";
     }
     if (formData.finalLiters < formData.initialLiters) {
-      newErrors.finalLiters = "Los litros finales deben ser mayores a los iniciales";
+      newErrors.finalLiters =
+        "Los litros finales deben ser mayores a los iniciales";
     }
     if (!formData.idFuelType || formData.idFuelType === 0) {
       newErrors.idFuelType = "Debe seleccionar un tipo de combustible";
@@ -234,113 +207,65 @@ export default function LoadsPage() {
 
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Loads");
+    XLSX.utils.book_append_sheet(wb, ws, "Cargas");
     XLSX.writeFile(
       wb,
-      `loads_${new Date().toISOString().split("T")[0]}.xlsx`
+      `cargas_litros_${new Date().toISOString().split("T")[0]}.xlsx`
     );
     toast.success("Archivo exportado correctamente");
   };
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <LinearProgress sx={{ mb: 2 }} />
-        <Typography>Cargando cargas de combustible...</Typography>
-      </Box>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          Error al cargar cargas de combustible:{" "}
-          {error instanceof Error ? error.message : "Error desconocido"}
-        </Alert>
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 1.5,
-          mt: -3,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 700, lineHeight: 1.1, mb: 0.5 }}
-          >
-            Load Management
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {filteredLoads.length}{" "}
-            {filteredLoads.length === 1 ? "load" : "loads"} registradas
-          </Typography>
+    <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
+      <Box sx={{ p: 3 }}>
+        {/* Header */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Box>
+            <Typography variant="h6" fontWeight={700}>
+              Cargas de Litros
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {filteredLoads.length}{" "}
+              {filteredLoads.length === 1 ? "carga registrada" : "cargas registradas"}
+            </Typography>
+          </Box>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadIcon />}
+              onClick={handleExport}
+              disabled={filteredLoads.length === 0}
+              size="small"
+            >
+              Exportar
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleNew}
+              disabled={createMutation.isPending}
+              size="small"
+            >
+              Nueva Carga
+            </Button>
+          </Box>
         </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExport}
-            disabled={filteredLoads.length === 0}
-            sx={{
-              borderColor: "#10b981",
-              color: "#10b981",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
-            }}
-          >
-            Export
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleNew}
-            disabled={createMutation.isPending}
-            sx={{
-              bgcolor: "#1E2C56",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { bgcolor: "#16213E" },
-            }}
-          >
-            New Load
-          </Button>
-        </Box>
-      </Box>
 
-      {/* Filtros */}
-      <Box
-        sx={{
-          mb: 3,
-          background: "white",
-          borderRadius: 2,
-          border: "1px solid #e2e8f0",
-          p: 2,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 2,
-          alignItems: "center",
-        }}
-      >
+        {/* Buscador */}
         <TextField
           placeholder="Buscar por recurso o detalle..."
           size="small"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ flexGrow: 1, minWidth: 220 }}
+          fullWidth
+          sx={{ mb: 3 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -349,55 +274,49 @@ export default function LoadsPage() {
             ),
           }}
         />
-      </Box>
 
-      {/* Tabla de cargas */}
-      <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 700 }}>Fecha</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Recurso</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Identificador</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700 }}>
-                Litros Iniciales
-              </TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700 }}>
-                Litros Finales
-              </TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700 }}>
-                Total Litros
-              </TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Tipo Combustible</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredLoads.map((load) => (
-              <TableRow key={load.id} hover>
-                <TableCell>
-                  {new Date(load.loadDate).toLocaleDateString()}
+        {/* Tabla */}
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700 }}>Fecha</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Recurso</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700 }}>
+                  L. Iniciales
                 </TableCell>
-                <TableCell>{load.resource?.name || "-"}</TableCell>
-                <TableCell>{load.resource?.identifier || "-"}</TableCell>
-                <TableCell align="right">{load.initialLiters} L</TableCell>
-                <TableCell align="right">{load.finalLiters} L</TableCell>
-                <TableCell align="right">
-                  <Chip
-                    label={`${load.totalLiters} L`}
-                    size="small"
-                    sx={{
-                      bgcolor: "#10b98115",
-                      color: "#10b981",
-                      fontWeight: 600,
-                    }}
-                  />
+                <TableCell align="right" sx={{ fontWeight: 700 }}>
+                  L. Finales
                 </TableCell>
-                <TableCell>
-                  {load.fuelType?.name || "-"}
+                <TableCell align="right" sx={{ fontWeight: 700 }}>
+                  Total
                 </TableCell>
-                <TableCell>
-                  <Box sx={{ display: "flex", gap: 1 }}>
+                <TableCell sx={{ fontWeight: 700 }}>Combustible</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredLoads.map((load) => (
+                <TableRow key={load.id} hover>
+                  <TableCell>
+                    {new Date(load.loadDate).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>{load.resource?.name || "-"}</TableCell>
+                  <TableCell align="right">{load.initialLiters} L</TableCell>
+                  <TableCell align="right">{load.finalLiters} L</TableCell>
+                  <TableCell align="right">
+                    <Chip
+                      label={`${load.totalLiters} L`}
+                      size="small"
+                      sx={{
+                        bgcolor: "#10b98115",
+                        color: "#10b981",
+                        fontWeight: 600,
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>{load.fuelType?.name || "-"}</TableCell>
+                  <TableCell>
                     <IconButton
                       size="small"
                       onClick={() => handleEdit(load)}
@@ -409,35 +328,24 @@ export default function LoadsPage() {
                     >
                       <EditIcon fontSize="small" />
                     </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDeleteClick(load)}
-                      sx={{
-                        bgcolor: "#fee2e2",
-                        color: "#dc2626",
-                        "&:hover": { bgcolor: "#fecaca" },
-                      }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      {filteredLoads.length === 0 && !isLoading && (
-        <Box sx={{ textAlign: "center", py: 8 }}>
-          <LocalGasStationIcon sx={{ fontSize: 64, color: "#ddd", mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
-            No hay cargas de combustible registradas
-          </Typography>
-        </Box>
-      )}
+        {filteredLoads.length === 0 && !isLoading && (
+          <Box sx={{ textAlign: "center", py: 8 }}>
+            <LocalGasStationIcon sx={{ fontSize: 64, color: "#ddd", mb: 2 }} />
+            <Typography variant="h6" color="text.secondary">
+              No hay cargas registradas
+            </Typography>
+          </Box>
+        )}
+      </Box>
 
-      {/* Diálogo de crear/editar */}
+      {/* Dialog Crear/Editar */}
       <Dialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
@@ -445,14 +353,13 @@ export default function LoadsPage() {
         fullWidth
       >
         <DialogTitle>
-          {editingLoad ? "Editar Carga de Combustible" : "Nueva Carga de Combustible"}
+          {editingLoad ? "Editar Carga" : "Nueva Carga de Litros"}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
             <Grid container spacing={2}>
-              {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-              <Grid xs={12} md={6}>
-                <FormControl fullWidth error={!!errors.idResource}>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small" error={!!errors.idResource}>
                   <InputLabel>Recurso *</InputLabel>
                   <Select
                     value={formData.idResource}
@@ -464,7 +371,7 @@ export default function LoadsPage() {
                       })
                     }
                   >
-                    {[...vehicles, ...tanks, ...dispensers].map((r) => (
+                    {resources.map((r) => (
                       <MenuItem key={r.id} value={r.id}>
                         {r.name} ({r.identifier})
                       </MenuItem>
@@ -478,8 +385,7 @@ export default function LoadsPage() {
                 </FormControl>
               </Grid>
 
-              {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-              <Grid xs={12} md={6}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   label="Fecha de Carga"
                   type="date"
@@ -491,12 +397,12 @@ export default function LoadsPage() {
                   helperText={errors.loadDate}
                   required
                   fullWidth
+                  size="small"
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
 
-              {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-              <Grid xs={12} md={4}>
+              <Grid item xs={12} md={4}>
                 <TextField
                   label="Litros Iniciales"
                   type="number"
@@ -510,14 +416,16 @@ export default function LoadsPage() {
                   error={!!errors.initialLiters}
                   helperText={errors.initialLiters}
                   fullWidth
+                  size="small"
                   InputProps={{
-                    endAdornment: <InputAdornment position="end">L</InputAdornment>,
+                    endAdornment: (
+                      <InputAdornment position="end">L</InputAdornment>
+                    ),
                   }}
                 />
               </Grid>
 
-              {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-              <Grid xs={12} md={4}>
+              <Grid item xs={12} md={4}>
                 <TextField
                   label="Litros Finales"
                   type="number"
@@ -531,29 +439,33 @@ export default function LoadsPage() {
                   error={!!errors.finalLiters}
                   helperText={errors.finalLiters}
                   fullWidth
+                  size="small"
                   InputProps={{
-                    endAdornment: <InputAdornment position="end">L</InputAdornment>,
+                    endAdornment: (
+                      <InputAdornment position="end">L</InputAdornment>
+                    ),
                   }}
                 />
               </Grid>
 
-              {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-              <Grid xs={12} md={4}>
+              <Grid item xs={12} md={4}>
                 <TextField
                   label="Total Litros"
                   type="number"
                   value={formData.totalLiters}
                   disabled
                   fullWidth
+                  size="small"
                   InputProps={{
-                    endAdornment: <InputAdornment position="end">L</InputAdornment>,
+                    endAdornment: (
+                      <InputAdornment position="end">L</InputAdornment>
+                    ),
                   }}
                 />
               </Grid>
 
-              {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-              <Grid xs={12} md={6}>
-                <FormControl fullWidth error={!!errors.idFuelType}>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small" error={!!errors.idFuelType}>
                   <InputLabel>Tipo de Combustible *</InputLabel>
                   <Select
                     value={formData.idFuelType}
@@ -579,8 +491,7 @@ export default function LoadsPage() {
                 </FormControl>
               </Grid>
 
-              {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-              <Grid xs={12}>
+              <Grid item xs={12}>
                 <TextField
                   label="Detalle (opcional)"
                   value={formData.detail || ""}
@@ -590,6 +501,7 @@ export default function LoadsPage() {
                   multiline
                   rows={2}
                   fullWidth
+                  size="small"
                 />
               </Grid>
             </Grid>
@@ -601,7 +513,6 @@ export default function LoadsPage() {
             variant="contained"
             onClick={handleSave}
             disabled={createMutation.isPending || updateMutation.isPending}
-            sx={{ bgcolor: "#1E2C56", "&:hover": { bgcolor: "#16213E" } }}
           >
             {createMutation.isPending || updateMutation.isPending
               ? "Guardando..."
@@ -611,33 +522,6 @@ export default function LoadsPage() {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Confirmación de eliminación */}
-      <Dialog
-        open={openDeleteDialog}
-        onClose={() => setOpenDeleteDialog(false)}
-      >
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¿Estás seguro de eliminar esta carga de combustible?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={() => {
-              // TODO: Implementar eliminación cuando la API lo soporte
-              setOpenDeleteDialog(false);
-              setDeleteLoad(null);
-            }}
-          >
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+    </Card>
   );
 }

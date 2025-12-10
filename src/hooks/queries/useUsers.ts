@@ -1,6 +1,3 @@
-/**
- * Hooks de TanStack Query para Users
- */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi } from "@/services/api";
 import { toast } from "sonner";
@@ -25,8 +22,11 @@ export const usersKeys = {
 export function useUsers() {
   return useQuery({
     queryKey: usersKeys.lists(),
-    queryFn: () => usersApi.getAll(),
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    queryFn: () => {
+      console.log("🚀 [useUsers] Ejecutando queryFn - Llamando a usersApi.getAll()");
+      return usersApi.getAll();
+    },
+    staleTime: 1000 * 60 * 5, 
   });
 }
 
@@ -53,6 +53,7 @@ export function useCreateUser() {
     onSuccess: () => {
       toast.success("Usuario creado correctamente");
       queryClient.invalidateQueries({ queryKey: usersKeys.lists() });
+      queryClient.refetchQueries({ queryKey: usersKeys.lists() }); // ✅ Forzar refetch
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -95,4 +96,3 @@ export function useChangePassword() {
     },
   });
 }
-
