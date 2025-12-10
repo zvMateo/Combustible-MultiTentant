@@ -23,20 +23,27 @@ export const usersApi = {
    */
   async getAll(): Promise<ApiUser[]> {
     const { data } = await axiosInstance.get(USERS_ENDPOINTS.getAll);
-    
+
     console.log("🔍 [usersApi.getAll] Respuesta completa:", data);
-    
-    // ✅ Desempaquetar: {status: 200, message: '...', users: Array(3)}
+
     if (Array.isArray(data)) {
-      console.log("✅ [usersApi.getAll] Formato directo:", data.length, "usuarios");
+      console.log(
+        "✅ [usersApi.getAll] Formato directo:",
+        data.length,
+        "usuarios"
+      );
       return data;
     }
-    
+
     if (data && Array.isArray(data.users)) {
-      console.log("✅ [usersApi.getAll] Formato envuelto:", data.users.length, "usuarios");
-      return data.users; // ← ESTO ES LO CLAVE
+      console.log(
+        "✅ [usersApi.getAll] Formato envuelto:",
+        data.users.length,
+        "usuarios"
+      );
+      return data.users;
     }
-    
+
     console.error("❌ [usersApi.getAll] Formato inesperado:", data);
     return [];
   },
@@ -51,14 +58,38 @@ export const usersApi = {
 
   /**
    * Crear nuevo usuario
+   * 
+   * ⚠️ NOTA: El backend retorna 204 No Content, así que debemos buscar
+   * el usuario recién creado por email después de la creación
    */
   async create(userData: CreateUserRequest): Promise<ApiUser> {
-    const { data } = await axiosInstance.post(USERS_ENDPOINTS.create, userData);
+    console.log("🚀 [usersApi.create] Enviando datos:", userData);
     
-    console.log("✅ [usersApi.create] Usuario creado, respuesta:", data);
+    // 1️⃣ Crear el usuario (retorna 204 No Content)
+    const response = await axiosInstance.post(USERS_ENDPOINTS.create, userData);
     
-    // ✅ Extraer el user si viene envuelto
-    return data.user || data;
+    console.log("✅ [usersApi.create] Usuario creado, status:", response.status);
+    console.log("✅ [usersApi.create] Response data:", response.data);
+    
+    // 2️⃣ Como el backend retorna 204, debemos buscar el usuario recién creado
+    console.log("🔍 [usersApi.create] Buscando usuario recién creado por email:", userData.email);
+    
+    // Esperar un momento para que la base de datos se actualice
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Buscar entre todos los usuarios el que tiene el email que acabamos de crear
+    const allUsers = await this.getAll();
+    const newUser = allUsers.find(u => u.email === userData.email);
+    
+    if (!newUser) {
+      console.error("❌ [usersApi.create] No se encontró el usuario recién creado");
+      throw new Error("El usuario fue creado pero no se pudo recuperar su información");
+    }
+    
+    console.log("✅ [usersApi.create] Usuario encontrado:", newUser);
+    console.log("✅ [usersApi.create] userId:", newUser.id);
+    
+    return newUser;
   },
 
   /**
@@ -75,7 +106,10 @@ export const usersApi = {
   /**
    * Cambiar contraseña
    */
-  async changePassword(userId: string, passwords: ChangePasswordRequest): Promise<void> {
+  async changePassword(
+    userId: string,
+    passwords: ChangePasswordRequest
+  ): Promise<void> {
     await axiosInstance.put(USERS_ENDPOINTS.changePassword(userId), passwords);
   },
 };

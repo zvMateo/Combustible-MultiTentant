@@ -18,29 +18,117 @@ import {
   Card,
   TextField,
   Chip,
+  LinearProgress,
+  Alert,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import ToggleOffIcon from "@mui/icons-material/ToggleOff";
 import ToggleOnIcon from "@mui/icons-material/ToggleOn";
 import CategoryIcon from "@mui/icons-material/Category";
-import { toast } from "sonner";
-import { useFuelTypes } from "@/hooks/queries";
+import {
+  useFuelTypes,
+  useCreateFuelType,
+  useUpdateFuelType,
+  useDeactivateFuelType,
+} from "@/hooks/queries";
+import type {
+  FuelType,
+  CreateFuelTypeRequest,
+  UpdateFuelTypeRequest,
+} from "@/types/api.types";
 
 export default function FuelTypesTab() {
   const [openDialog, setOpenDialog] = useState(false);
-  const [formData, setFormData] = useState({
+  const [editingType, setEditingType] = useState<FuelType | null>(null);
+  const [formData, setFormData] = useState<CreateFuelTypeRequest>({
     name: "",
   });
+  const [errors, setErrors] = useState({ name: "" });
 
-  const { data: fuelTypes = [], isLoading } = useFuelTypes();
+  // React Query hooks
+  const { data: fuelTypes = [], isLoading, error } = useFuelTypes();
+  const createMutation = useCreateFuelType();
+  const updateMutation = useUpdateFuelType();
+  const deactivateMutation = useDeactivateFuelType();
 
-  const handleSave = () => {
-    // TODO: Implementar create/update mutation
-    toast.success("Tipo de combustible guardado");
-    setOpenDialog(false);
+  const handleNew = () => {
+    setEditingType(null);
     setFormData({ name: "" });
+    setErrors({ name: "" });
+    setOpenDialog(true);
   };
+
+  const handleEdit = (type: FuelType) => {
+    setEditingType(type);
+    setFormData({ name: type.name });
+    setErrors({ name: "" });
+    setOpenDialog(true);
+  };
+
+  const validate = (): boolean => {
+    const newErrors = { name: "" };
+
+    if (!formData.name.trim()) {
+      newErrors.name = "El nombre es obligatorio";
+    }
+
+    setErrors(newErrors);
+    return !newErrors.name;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+
+    console.log("📤 Enviando datos:", formData); // Debug
+
+    try {
+      if (editingType) {
+        const updateData: UpdateFuelTypeRequest = {
+          id: editingType.id,
+          name: formData.name,
+        };
+        await updateMutation.mutateAsync(updateData);
+      } else {
+        await createMutation.mutateAsync(formData);
+      }
+      setOpenDialog(false);
+    } catch (err) {
+      console.error("❌ Error al guardar:", err);
+    }
+  };
+
+  const handleToggleActive = async (id: number) => {
+    try {
+      await deactivateMutation.mutateAsync(id);
+    } catch {
+      // Error manejado por el mutation
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
+        <Box sx={{ p: 3 }}>
+          <LinearProgress sx={{ mb: 2 }} />
+          <Typography>Cargando tipos de combustible...</Typography>
+        </Box>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
+        <Box sx={{ p: 3 }}>
+          <Alert severity="error">
+            Error al cargar tipos de combustible:{" "}
+            {error instanceof Error ? error.message : "Error desconocido"}
+          </Alert>
+        </Box>
+      </Card>
+    );
+  }
 
   return (
     <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
@@ -65,7 +153,8 @@ export default function FuelTypesTab() {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setOpenDialog(true)}
+            onClick={handleNew}
+            disabled={createMutation.isPending}
             size="small"
           >
             Nuevo Tipo
@@ -108,6 +197,8 @@ export default function FuelTypesTab() {
                     <Box sx={{ display: "flex", gap: 1 }}>
                       <IconButton
                         size="small"
+                        onClick={() => handleEdit(type)}
+                        disabled={updateMutation.isPending}
                         sx={{
                           bgcolor: "#f3f4f6",
                           "&:hover": { bgcolor: "#e5e7eb" },
@@ -117,6 +208,8 @@ export default function FuelTypesTab() {
                       </IconButton>
                       <IconButton
                         size="small"
+                        onClick={() => handleToggleActive(type.id)}
+                        disabled={deactivateMutation.isPending}
                         sx={{
                           bgcolor: type.active ? "#fee2e2" : "#dcfce7",
                           color: type.active ? "#dc2626" : "#10b981",
@@ -139,7 +232,7 @@ export default function FuelTypesTab() {
           </Table>
         </TableContainer>
 
-        {fuelTypes.length === 0 && !isLoading && (
+        {fuelTypes.length === 0 && (
           <Box sx={{ textAlign: "center", py: 8 }}>
             <CategoryIcon sx={{ fontSize: 64, color: "#ddd", mb: 2 }} />
             <Typography variant="h6" color="text.secondary">
@@ -155,24 +248,38 @@ export default function FuelTypesTab() {
         onClose={() => setOpenDialog(false)}
         maxWidth="xs"
         fullWidth
+        disableEnforceFocus
       >
-        <DialogTitle>Nuevo Tipo de Combustible</DialogTitle>
+        <DialogTitle>
+          {editingType ? "Editar Tipo de Combustible" : "Nuevo Tipo de Combustible"}
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <TextField
-              label="Nombre"
+              label="Nombre *"
               value={formData.name}
               onChange={(e) => setFormData({ name: e.target.value })}
+              error={!!errors.name}
+              helperText={errors.name}
               fullWidth
               size="small"
               placeholder="Ej: Nafta Super, Diesel Premium"
+              autoFocus
             />
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave}>
-            Guardar
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={createMutation.isPending || updateMutation.isPending}
+          >
+            {createMutation.isPending || updateMutation.isPending
+              ? "Guardando..."
+              : editingType
+              ? "Guardar Cambios"
+              : "Crear"}
           </Button>
         </DialogActions>
       </Dialog>
