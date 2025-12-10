@@ -24,7 +24,19 @@ export const companiesKeys = {
 export function useCompanies() {
   return useQuery({
     queryKey: companiesKeys.lists(),
-    queryFn: () => companiesApi.getAll(),
+    queryFn: async () => {
+      try {
+        return await companiesApi.getAll();
+      } catch (error: any) {
+        // ✅ Si es 403 (sin permisos), devolver array vacío sin romper la app
+        if (error.response?.status === 403) {
+          console.warn("⚠️ Sin permisos para ver empresas, usando array vacío");
+          return [];
+        }
+        throw error;
+      }
+    },
+    initialData: [], // ✅ Evita "undefined" mientras carga
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
@@ -95,4 +107,3 @@ export function useDeactivateCompany() {
     },
   });
 }
-

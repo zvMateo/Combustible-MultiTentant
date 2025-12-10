@@ -28,18 +28,23 @@ export function ThemeProvider({
     const savedTheme = localStorage.getItem("app-theme-config");
     if (savedTheme) {
       try {
-        return JSON.parse(savedTheme);
+        const parsed = JSON.parse(savedTheme);
+        console.log("🎨 Tema cargado desde localStorage:", parsed);
+        return parsed;
       } catch (e) {
         console.error("Error parsing saved theme:", e);
       }
     }
 
+    console.log("🎨 Usando tema por defecto");
     return DEFAULT_TENANT_THEME;
   });
 
   // Aplicar CSS variables cuando cambia el tema
   useEffect(() => {
     const root = document.documentElement;
+
+    console.log("🎨 Aplicando tema:", tenantTheme);
 
     // Aplicar variables CSS
     root.style.setProperty("--primary-color", tenantTheme.primaryColor);
@@ -48,12 +53,20 @@ export function ThemeProvider({
     root.style.setProperty("--sidebar-text", tenantTheme.sidebarText);
     root.style.setProperty("--accent-color", tenantTheme.accentColor);
 
-    // Guardar en localStorage
+    // ✅ Guardar en localStorage SOLO cuando cambia (no en el primer render)
+    // Esto evita sobreescribir el tema guardado
     localStorage.setItem("app-theme-config", JSON.stringify(tenantTheme));
   }, [tenantTheme]);
 
-  const updateTenantTheme = (config: Partial<TenantThemeConfig>) => {
-    setTenantTheme((prev) => ({ ...prev, ...config }));
+  // ✅ Cambiar el tipo para aceptar objeto completo O parcial
+  const updateTenantTheme = (config: TenantThemeConfig | Partial<TenantThemeConfig>) => {
+    console.log("🎨 updateTenantTheme llamado con:", config);
+    
+    setTenantTheme((prev) => {
+      const newTheme = { ...prev, ...config };
+      console.log("🎨 Nuevo tema calculado:", newTheme);
+      return newTheme;
+    });
   };
 
   const value = {

@@ -17,7 +17,7 @@ import CostCentersPage from "@/pages/Dashboard/CostCenters/CostCentersPage";
 import SettingsPage from "@/pages/Dashboard/Settings/SettingsPage";
 import VehiclesPage from "@/pages/Dashboard/Vehicles/VehiclesPage";
 import DriversPage from "@/pages/Dashboard/Drivers/DriversPage";
-import LoadsPage from "@/pages/Dashboard/Loads/LoadsPage";
+import FuelManagementPage from "@/pages/Dashboard/Fuel/FuelManagementPage"; // ✅ Cambio aquí
 import ValidationPage from "@/pages/Dashboard/Validation/ValidationPage";
 import DispensersPage from "@/pages/Dashboard/Dispensers/DispensersPage";
 import TanksPage from "@/pages/Dashboard/Tanks/TanksPage";
@@ -62,7 +62,7 @@ export function AppRoutes() {
         { path: "settings", element: <SettingsPage /> },
         { path: "vehicles", element: <VehiclesPage /> },
         { path: "drivers", element: <DriversPage /> },
-        { path: "loads", element: <LoadsPage /> },
+        { path: "fuel", element: <FuelManagementPage /> },
         { path: "validation", element: <ValidationPage /> },
         { path: "dispensers", element: <DispensersPage /> },
         { path: "tanks", element: <TanksPage /> },

@@ -21,27 +21,38 @@ export const rolesApi = {
    * Obtener todos los roles
    */
   async getAll(): Promise<ApiRole[]> {
-    const { data } = await axiosInstance.get<ApiRole[]>(ROLES_ENDPOINTS.getAll);
-    return data;
+    const { data } = await axiosInstance.get(ROLES_ENDPOINTS.getAll);
+
+    // ✅ Desempaquetar: {status: 200, message: '...', roles: Array(2)}
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    if (data && Array.isArray(data.roles)) {
+      return data.roles;
+    }
+
+    console.error("❌ Formato inesperado en roles.getAll():", data);
+    return [];
   },
 
   /**
    * Crear nuevo rol
    */
   async create(roleData: ApiRole): Promise<ApiRole> {
-    const { data } = await axiosInstance.post<ApiRole>(ROLES_ENDPOINTS.create, roleData);
-    return data;
+    const { data } = await axiosInstance.post(ROLES_ENDPOINTS.create, roleData);
+    return data.role || data;
   },
 
   /**
    * Actualizar rol
    */
   async update(roleId: string, roleData: ApiRole): Promise<ApiRole> {
-    const { data } = await axiosInstance.put<ApiRole>(
+    const { data } = await axiosInstance.put(
       ROLES_ENDPOINTS.update(roleId),
       roleData
     );
-    return data;
+    return data.role || data;
   },
 
   /**
@@ -57,17 +68,54 @@ export const userRolesApi = {
    * Obtener roles de un usuario
    */
   async getByUser(userId: string): Promise<ApiRole[]> {
-    const { data } = await axiosInstance.get<ApiRole[]>(
+    const { data } = await axiosInstance.get(
       USER_ROLES_ENDPOINTS.getByUser(userId)
     );
-    return data;
+
+    console.log("🔍 [userRolesApi.getByUser] Respuesta completa:", data);
+
+    // ✅ Desempaquetar: {status: 200, message: '...', userRoles: Array(2)}
+    if (Array.isArray(data)) {
+      console.log(
+        "✅ [userRolesApi.getByUser] Formato directo:",
+        data.length,
+        "roles"
+      );
+      return data;
+    }
+
+    if (data && Array.isArray(data.userRoles)) {
+      console.log(
+        "✅ [userRolesApi.getByUser] Formato envuelto:",
+        data.userRoles.length,
+        "roles"
+      );
+
+      // ✅ Mapear de {roleId, roleName} a {id, name}
+      return data.userRoles.map((ur: any) => ({
+        id: ur.roleId,
+        name: ur.roleName,
+        description: ur.description || "",
+      }));
+    }
+
+    console.error("❌ Formato inesperado en userRoles.getByUser():", data);
+    return [];
   },
 
-  /**
-   * Agregar rol a usuario
-   */
   async addToUser(userId: string, roleData: AddUserRoleRequest): Promise<void> {
-    await axiosInstance.post(USER_ROLES_ENDPOINTS.addToUser(userId), roleData);
+    console.log("🔍 [userRolesApi.addToUser] userId:", userId);
+    console.log("🔍 [userRolesApi.addToUser] roleData:", roleData);
+    console.log(
+      "🔍 [userRolesApi.addToUser] JSON.stringify:",
+      JSON.stringify(roleData)
+    );
+
+    await axiosInstance.post(USER_ROLES_ENDPOINTS.addToUser(userId), roleData, {
+      headers: {
+        "Content-Type": "application/json", // ✅ Forzar Content-Type
+      },
+    });
   },
 };
 

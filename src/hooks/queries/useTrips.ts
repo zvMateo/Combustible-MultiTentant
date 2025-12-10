@@ -58,9 +58,16 @@ export function useCreateTrip() {
 
   return useMutation({
     mutationFn: (data: CreateTripRequest) => tripsApi.create(data),
-    onSuccess: () => {
+    onSuccess: (newTrip) => {
       toast.success("Viaje creado correctamente");
       queryClient.invalidateQueries({ queryKey: tripsKeys.lists() });
+      
+      // Invalidar también los viajes del conductor si existe
+      if (newTrip.idDriver) {
+        queryClient.invalidateQueries({ 
+          queryKey: tripsKeys.byDriver(newTrip.idDriver) 
+        });
+      }
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -80,10 +87,16 @@ export function useUpdateTrip() {
       toast.success("Viaje actualizado correctamente");
       queryClient.invalidateQueries({ queryKey: tripsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: tripsKeys.detail(variables.id) });
+      
+      // Invalidar los viajes del conductor si cambió
+      if (variables.idDriver) {
+        queryClient.invalidateQueries({ 
+          queryKey: tripsKeys.byDriver(variables.idDriver) 
+        });
+      }
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
     },
   });
 }
-

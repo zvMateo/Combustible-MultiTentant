@@ -20,5 +20,7 @@ export type ThemeProviderState = {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   tenantTheme?: TenantThemeConfig;
-  updateTenantTheme?: (config: Partial<TenantThemeConfig>) => void;
+  updateTenantTheme?: (
+    config: TenantThemeConfig | Partial<TenantThemeConfig>
+  ) => void;
 };

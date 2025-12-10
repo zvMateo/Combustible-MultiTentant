@@ -22,35 +22,54 @@ export const usersApi = {
    * Obtener todos los usuarios
    */
   async getAll(): Promise<ApiUser[]> {
-    const { data } = await axiosInstance.get<ApiUser[]>(USERS_ENDPOINTS.getAll);
-    return data;
+    const { data } = await axiosInstance.get(USERS_ENDPOINTS.getAll);
+    
+    console.log("🔍 [usersApi.getAll] Respuesta completa:", data);
+    
+    // ✅ Desempaquetar: {status: 200, message: '...', users: Array(3)}
+    if (Array.isArray(data)) {
+      console.log("✅ [usersApi.getAll] Formato directo:", data.length, "usuarios");
+      return data;
+    }
+    
+    if (data && Array.isArray(data.users)) {
+      console.log("✅ [usersApi.getAll] Formato envuelto:", data.users.length, "usuarios");
+      return data.users; // ← ESTO ES LO CLAVE
+    }
+    
+    console.error("❌ [usersApi.getAll] Formato inesperado:", data);
+    return [];
   },
 
   /**
    * Obtener usuario por ID
    */
   async getById(userId: string): Promise<ApiUser> {
-    const { data } = await axiosInstance.get<ApiUser>(USERS_ENDPOINTS.getById(userId));
-    return data;
+    const { data } = await axiosInstance.get(USERS_ENDPOINTS.getById(userId));
+    return data.user || data;
   },
 
   /**
    * Crear nuevo usuario
    */
   async create(userData: CreateUserRequest): Promise<ApiUser> {
-    const { data } = await axiosInstance.post<ApiUser>(USERS_ENDPOINTS.create, userData);
-    return data;
+    const { data } = await axiosInstance.post(USERS_ENDPOINTS.create, userData);
+    
+    console.log("✅ [usersApi.create] Usuario creado, respuesta:", data);
+    
+    // ✅ Extraer el user si viene envuelto
+    return data.user || data;
   },
 
   /**
    * Actualizar usuario
    */
   async update(userId: string, userData: UpdateUserRequest): Promise<ApiUser> {
-    const { data } = await axiosInstance.put<ApiUser>(
+    const { data } = await axiosInstance.put(
       USERS_ENDPOINTS.update(userId),
       userData
     );
-    return data;
+    return data.user || data;
   },
 
   /**

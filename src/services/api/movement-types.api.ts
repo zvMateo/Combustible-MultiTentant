@@ -61,14 +61,12 @@ export const movementTypesApi = {
   },
 
   /**
-   * Desactivar tipo de movimiento
+   * Desactivar/Activar tipo de movimiento (TOGGLE)
    */
   async deactivate(id: number): Promise<void> {
-    await axiosInstance.patch(MOVEMENT_TYPES_ENDPOINTS.deactivate, null, {
-      params: { id },
-    });
+    // ✅ CORRECTO: Query param en la URL directamente
+    await axiosInstance.patch(`${MOVEMENT_TYPES_ENDPOINTS.deactivate}?id=${id}`);
   },
 };
 
 export default movementTypesApi;
-

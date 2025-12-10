@@ -1,5 +1,5 @@
 // src/pages/Dashboard/Layout/Sidebar.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   List,
   ListItem,
@@ -32,6 +32,7 @@ import StoreIcon from "@mui/icons-material/Store";
 import { useAuthStore } from "@/stores/auth.store";
 import { useUnidadStore } from "@/stores/unidad.store";
 import type { UserRole, Permission } from "@/types";
+import { useTheme } from "@/components/providers/theme/use-theme";
 
 const DRAWER_WIDTH = 260;
 
@@ -127,7 +128,7 @@ const menuStructure: MenuItem[] = [
       {
         label: "Cargas",
         icon: <LocalGasStationIcon />,
-        path: "/dashboard/loads",
+        path: "/dashboard/fuel",
         roles: ["admin", "supervisor", "auditor"],
         permission: "eventos:ver",
       },
@@ -179,6 +180,7 @@ export default function Sidebar() {
   const location = useLocation();
   const { hasRole, user } = useAuthStore();
   const { unidadActiva, unidades } = useUnidadStore();
+  const { tenantTheme } = useTheme();
 
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
     Administración: true,
@@ -187,6 +189,13 @@ export default function Sidebar() {
   });
 
   const isAdmin = user?.role === "admin";
+
+  // ✅ Aplicar tema cuando cambie
+  useEffect(() => {
+    if (tenantTheme) {
+      console.log("🎨 [Sidebar] Aplicando tema:", tenantTheme);
+    }
+  }, [tenantTheme]);
 
   const handleMenuClick = (label: string) => {
     setOpenMenus((prev) => ({
@@ -219,8 +228,8 @@ export default function Sidebar() {
         "& .MuiDrawer-paper": {
           width: DRAWER_WIDTH,
           boxSizing: "border-box",
-          bgcolor: "var(--sidebar-bg)",
-          color: "var(--sidebar-text)",
+          bgcolor: tenantTheme?.sidebarBg || "#1E2C56",
+          color: tenantTheme?.sidebarText || "#ffffff",
           position: "fixed",
           height: "100vh",
           overflowY: "auto",
@@ -233,7 +242,7 @@ export default function Sidebar() {
         <LocalGasStationIcon
           sx={{
             fontSize: 40,
-            color: "var(--accent-color)",
+            color: tenantTheme?.accentColor || "#10b981",
             mb: 1,
             filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))",
           }}
@@ -242,7 +251,7 @@ export default function Sidebar() {
         <Typography
           variant="h6"
           fontWeight="bold"
-          sx={{ color: "var(--sidebar-text)", mb: 0.5 }}
+          sx={{ color: tenantTheme?.sidebarText || "#ffffff", mb: 0.5 }}
         >
           {user?.empresaNombre || "Gestión Combustibles"}
         </Typography>
@@ -255,11 +264,11 @@ export default function Sidebar() {
           sx={{
             mt: 1,
             bgcolor: "rgba(255, 255, 255, 0.1)",
-            color: "var(--sidebar-text)",
+            color: tenantTheme?.sidebarText || "#ffffff",
             fontSize: 11,
             height: 24,
             "& .MuiChip-icon": {
-              color: "var(--accent-color)",
+              color: tenantTheme?.accentColor || "#10b981",
             },
           }}
         />
@@ -289,7 +298,7 @@ export default function Sidebar() {
                     sx={{
                       borderRadius: 2,
                       bgcolor: "transparent",
-                      color: "var(--sidebar-text)",
+                      color: tenantTheme?.sidebarText || "#ffffff",
                       "&:hover": {
                         bgcolor: "rgba(255, 255, 255, 0.08)",
                         transform: "translateX(4px)",
@@ -299,7 +308,7 @@ export default function Sidebar() {
                   >
                     <ListItemIcon
                       sx={{
-                        color: "var(--sidebar-text)",
+                        color: tenantTheme?.sidebarText || "#ffffff",
                         minWidth: 40,
                         opacity: 0.9,
                       }}
@@ -335,9 +344,9 @@ export default function Sidebar() {
                             bgcolor: isActive(subItem.path)
                               ? "rgba(255, 255, 255, 0.15)"
                               : "transparent",
-                            color: "var(--sidebar-text)",
+                            color: tenantTheme?.sidebarText || "#ffffff",
                             borderLeft: isActive(subItem.path)
-                              ? "3px solid var(--accent-color)"
+                              ? `3px solid ${tenantTheme?.accentColor || "#10b981"}`
                               : "3px solid transparent",
                             "&:hover": {
                               bgcolor: isActive(subItem.path)
@@ -351,8 +360,8 @@ export default function Sidebar() {
                           <ListItemIcon
                             sx={{
                               color: isActive(subItem.path)
-                                ? "var(--accent-color)"
-                                : "var(--sidebar-text)",
+                                ? tenantTheme?.accentColor || "#10b981"
+                                : tenantTheme?.sidebarText || "#ffffff",
                               minWidth: 36,
                               opacity: isActive(subItem.path) ? 1 : 0.8,
                             }}
@@ -377,8 +386,8 @@ export default function Sidebar() {
                                 height: 20,
                                 minWidth: 20,
                                 fontSize: 10,
-                                bgcolor: "var(--accent-color)",
-                                color: "var(--sidebar-bg)",
+                                bgcolor: tenantTheme?.accentColor || "#10b981",
+                                color: tenantTheme?.sidebarBg || "#1E2C56",
                                 fontWeight: 700,
                               }}
                             />
@@ -402,9 +411,9 @@ export default function Sidebar() {
                   bgcolor: isActive(item.path)
                     ? "rgba(255, 255, 255, 0.15)"
                     : "transparent",
-                  color: "var(--sidebar-text)",
+                  color: tenantTheme?.sidebarText || "#ffffff",
                   borderLeft: isActive(item.path)
-                    ? "3px solid var(--accent-color)"
+                    ? `3px solid ${tenantTheme?.accentColor || "#10b981"}`
                     : "3px solid transparent",
                   "&:hover": {
                     bgcolor: isActive(item.path)
@@ -418,8 +427,8 @@ export default function Sidebar() {
                 <ListItemIcon
                   sx={{
                     color: isActive(item.path)
-                      ? "var(--accent-color)"
-                      : "var(--sidebar-text)",
+                      ? tenantTheme?.accentColor || "#10b981"
+                      : tenantTheme?.sidebarText || "#ffffff",
                     minWidth: 40,
                     opacity: isActive(item.path) ? 1 : 0.9,
                   }}
