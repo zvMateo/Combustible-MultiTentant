@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Permission } from "@/types";
 
@@ -17,28 +17,28 @@ interface PermissionGuardProps {
 
 /**
  * Componente que controla la visibilidad de contenido según permisos
- * 
+ *
  * @example
  * // Requiere un permiso específico
  * <PermissionGuard permission="eventos.crear">
  *   <Button>Nuevo Evento</Button>
  * </PermissionGuard>
- * 
+ *
  * @example
  * // Requiere TODOS los permisos
  * <PermissionGuard requireAll={['eventos.editar', 'eventos.eliminar']}>
  *   <AdminPanel />
  * </PermissionGuard>
- * 
+ *
  * @example
  * // Requiere AL MENOS UNO de los permisos
  * <PermissionGuard requireAny={['reportes.ver', 'dashboard.ver']}>
  *   <Analytics />
  * </PermissionGuard>
- * 
+ *
  * @example
  * // Con fallback
- * <PermissionGuard 
+ * <PermissionGuard
  *   permission="config.editar"
  *   fallback={<Typography>No tienes permiso para editar</Typography>}
  * >
@@ -73,4 +73,3 @@ export default function PermissionGuard({
 
   return <>{children}</>;
 }
-
