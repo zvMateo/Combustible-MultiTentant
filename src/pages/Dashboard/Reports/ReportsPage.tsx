@@ -20,6 +20,10 @@ import {
   Alert,
   IconButton,
   Tooltip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import {
   BarChart,
@@ -41,9 +45,6 @@ import PersonIcon from "@mui/icons-material/Person";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import WarningIcon from "@mui/icons-material/Warning";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import TrendingDownIcon from "@mui/icons-material/TrendingDown";
-import RemoveIcon from "@mui/icons-material/Remove";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -54,11 +55,21 @@ import {
   useLoadLiters,
   useVehicles,
   useDrivers,
-  useDispensers,
+  useTrips,
+  useResources,
+  useBusinessUnits,
   loadLitersKeys,
 } from "@/hooks/queries";
-import { useUnidadActivaNombre, useUnidadActiva } from "@/stores/unidad.store";
-import { useAuthStore } from "@/stores/auth.store";
+import type {
+  ConsumoVehiculoData,
+  LitrosSurtidorData,
+  LitrosOperadorData,
+  CostoCentroCostoData,
+  DesvioData,
+  RankingEficienciaData,
+  PeriodoReporte,
+} from "@/types/reportes";
+import { PERIODOS_REPORTE } from "@/types/reportes";
 
 type TipoReporte =
   | "consumo-vehiculos"
@@ -114,201 +125,251 @@ function TableSkeleton({
 export default function ReportsPage() {
   const [tipoReporte, setTipoReporte] =
     useState<TipoReporte>("consumo-vehiculos");
+  const [periodoReporte, setPeriodoReporte] = useState<PeriodoReporte>("mes");
   const queryClient = useQueryClient();
-  const unidadNombre = useUnidadActivaNombre();
-  const unidadActiva = useUnidadActiva();
-  const { user } = useAuthStore();
 
   // React Query hooks
   const { data: loadsData = [], isLoading: loadingLoads } = useLoadLiters();
-  const { data: vehiclesData = [], isLoading: loadingVehiculos } = useVehicles();
-  const { data: driversData = [], isLoading: loadingChoferes } = useDrivers(user?.idCompany);
-  const { data: dispensersData = [], isLoading: loadingSurtidores } = useDispensers();
+  const { data: vehiclesData = [], isLoading: loadingVehiculos } =
+    useVehicles();
+  const { data: driversData = [], isLoading: loadingChoferes } = useDrivers();
+  const { data: tripsData = [], isLoading: loadingTrips } = useTrips();
+  const { data: resourcesData = [], isLoading: loadingResources } =
+    useResources();
+  const { data: businessUnitsData = [], isLoading: loadingBusinessUnits } =
+    useBusinessUnits();
 
   // Extraer datos
   const loads = loadsData || [];
   const vehicles = vehiclesData || [];
   const drivers = driversData || [];
-  const dispensers = dispensersData || [];
+  const trips = tripsData || [];
+  const allResources = resourcesData || [];
+  const businessUnits = businessUnitsData || [];
 
-  // Mapear loads a formato de eventos para compatibilidad
-  const eventos = useMemo(() => {
-    return loads.map((load) => ({
-      id: load.id,
-      vehiculoId: load.idResource,
-      vehiculoPatente: load.resource?.identifier || "",
-      vehiculoTipo: load.resource?.resourceType?.name || "Otro",
-      choferId: 0, // TODO: Asociar con trips cuando esté disponible
-      choferNombre: "",
-      surtidorId: load.resource?.idType === 3 ? load.idResource : 0,
-      surtidorNombre: load.resource?.name || "",
-      litros: load.totalLiters || 0,
-      total: (load.totalLiters || 0) * 850, // Precio estimado
-      fecha: load.loadDate,
-      estado: "validado",
-    }));
-  }, [loads]);
+  // 1. Calcular Consumo por Vehículo (L/100km, L/hora)
+  const consumoVehiculos = useMemo((): ConsumoVehiculoData[] => {
+    const consumoMap = new Map<number, ConsumoVehiculoData>();
 
-  // Calcular datos para Consumo por Vehículo
-  const consumoVehiculos = useMemo(() => {
-    const porVehiculo: Record<
-      number,
-      {
-        vehiculoId: number;
-        vehiculoPatente: string;
-        vehiculoTipo: string;
-        litrosTotales: number;
-        costoTotal: number;
-        numeroEventos: number;
-      }
-    > = {};
+    vehicles.forEach((vehicle) => {
+      const vehicleLoads = loads.filter(
+        (load) => load.idResource === vehicle.id
+      );
+      const vehicleTrips = trips.filter(
+        (trip) => trip.idVehicle === vehicle.id
+      );
 
-    eventos.forEach((evento) => {
-      const id = evento.vehiculoId;
-      if (!porVehiculo[id]) {
-        porVehiculo[id] = {
-          vehiculoId: id,
-          vehiculoPatente: evento.vehiculoPatente,
-          vehiculoTipo: evento.vehiculoTipo || "Otro",
-          litrosTotales: 0,
-          costoTotal: 0,
-          numeroEventos: 0,
-        };
-      }
-      porVehiculo[id].litrosTotales += evento.litros;
-      porVehiculo[id].costoTotal += evento.total;
-      porVehiculo[id].numeroEventos += 1;
+      const litrosTotales = vehicleLoads.reduce(
+        (sum, load) => sum + (load.totalLiters || 0),
+        0
+      );
+      const totalKm = vehicleTrips.reduce(
+        (sum, trip) => sum + (trip.totalKm || 0),
+        0
+      );
+
+      const eficienciaKmPorLitro =
+        totalKm > 0 && litrosTotales > 0 ? totalKm / litrosTotales : undefined;
+
+      const typeArray = (vehicle as any).type || [];
+      const vehicleTypeName = typeArray.length > 0 ? typeArray[0] : "Vehículo";
+
+      consumoMap.set(vehicle.id, {
+        vehiculoId: vehicle.id,
+        vehiculoPatente: vehicle.identifier || vehicle.name,
+        vehiculoTipo: vehicleTypeName,
+        litrosTotales,
+        costoTotal: 0, // TODO: Calcular con precios
+        numeroEventos: vehicleLoads.length,
+        eficienciaKmPorLitro,
+        eficienciaLitrosPorHora: undefined, // TODO: Calcular con horómetro
+        consumoPromedioPorEvento:
+          vehicleLoads.length > 0 ? litrosTotales / vehicleLoads.length : 0,
+      });
     });
 
-    return Object.values(porVehiculo).sort(
+    return Array.from(consumoMap.values()).sort(
       (a, b) => b.litrosTotales - a.litrosTotales
     );
-  }, [eventos]);
+  }, [vehicles, loads, trips]);
 
-  // Calcular datos para Litros por Surtidor
-  const litrosPorSurtidor = useMemo(() => {
-    const porSurtidor: Record<
-      number,
-      {
-        surtidorId: number;
-        surtidorNombre: string;
-        litrosTotales: number;
-        costoTotal: number;
-        numeroEventos: number;
-      }
-    > = {};
-
-    eventos.forEach((evento) => {
-      const id = evento.surtidorId;
-      if (!id) return;
-
-      if (!porSurtidor[id]) {
-        porSurtidor[id] = {
-          surtidorId: id,
-          surtidorNombre: evento.surtidorNombre || `Surtidor ${id}`,
-          litrosTotales: 0,
-          costoTotal: 0,
-          numeroEventos: 0,
-        };
-      }
-      porSurtidor[id].litrosTotales += evento.litros;
-      porSurtidor[id].costoTotal += evento.total;
-      porSurtidor[id].numeroEventos += 1;
+  // 2. Calcular Litros por Surtidor/Tanque
+  const litrosPorSurtidor = useMemo((): LitrosSurtidorData[] => {
+    const surtidores = allResources.filter((r) => {
+      const typeArray = (r as any).type || [];
+      const typeName = typeArray.length > 0 ? typeArray[0] : "";
+      return (
+        typeName.toLowerCase().includes("surtidor") ||
+        typeName.toLowerCase().includes("dispenser") ||
+        typeName.toLowerCase().includes("tanque")
+      );
     });
 
-    return Object.values(porSurtidor).sort(
-      (a, b) => b.litrosTotales - a.litrosTotales
+    const totalLitros = loads.reduce(
+      (sum, load) => sum + (load.totalLiters || 0),
+      0
     );
-  }, [eventos]);
 
-  // Calcular datos para Litros por Operador
-  const litrosPorOperador = useMemo(() => {
-    const porChofer: Record<
-      number,
-      {
-        choferId: number;
-        choferNombre: string;
-        litrosTotales: number;
-        numeroEventos: number;
-        vehiculosUsados: Set<string>;
-      }
-    > = {};
+    return surtidores.map((surtidor) => {
+      const surtidorLoads = loads.filter(
+        (load) => load.idResource === surtidor.id
+      );
+      const litrosTotales = surtidorLoads.reduce(
+        (sum, load) => sum + (load.totalLiters || 0),
+        0
+      );
 
-    eventos.forEach((evento) => {
-      const id = evento.choferId;
-      if (!porChofer[id]) {
-        porChofer[id] = {
-          choferId: id,
-          choferNombre: evento.choferNombre,
-          litrosTotales: 0,
-          numeroEventos: 0,
-          vehiculosUsados: new Set(),
-        };
+      return {
+        surtidorId: surtidor.id,
+        surtidorNombre: surtidor.name,
+        surtidorUbicacion: surtidor.identifier || "",
+        litrosTotales,
+        costoTotal: 0,
+        numeroEventos: surtidorLoads.length,
+        porcentajeTotal:
+          totalLitros > 0 ? (litrosTotales / totalLitros) * 100 : 0,
+      };
+    });
+  }, [allResources, loads]);
+
+  // 3. Calcular Costos por Centro de Costos (Business Units)
+  const costosPorCentroCosto = useMemo((): CostoCentroCostoData[] => {
+    return businessUnits.map((bu) => {
+      // Obtener recursos de esta unidad de negocio
+      const buResources = allResources.filter(
+        (r) => r.idBusinessUnit === bu.id
+      );
+      const resourceIds = new Set(buResources.map((r) => r.id));
+
+      // Obtener cargas de estos recursos
+      const buLoads = loads.filter((load) => resourceIds.has(load.idResource));
+
+      const litrosTotales = buLoads.reduce(
+        (sum, load) => sum + (load.totalLiters || 0),
+        0
+      );
+
+      // Obtener vehículos asignados a esta unidad
+      const buVehicles = vehicles.filter((v) => v.idBusinessUnit === bu.id);
+
+      return {
+        centroCostoId: bu.id,
+        centroCostoCodigo: bu.name.substring(0, 3).toUpperCase() || "N/A",
+        centroCostoNombre: bu.name,
+        centroCostoTipo: "Unidad de Negocio",
+        litrosTotales,
+        costoTotal: 0, // TODO: Calcular con precios
+        numeroEventos: buLoads.length,
+        vehiculosAsignados: buVehicles.length,
+      };
+    });
+  }, [businessUnits, allResources, loads, vehicles]);
+
+  // 4. Calcular Litros por Operador (chofer)
+  const litrosPorOperador = useMemo((): LitrosOperadorData[] => {
+    return drivers.map((driver) => {
+      const driverTrips = trips.filter((trip) => trip.idDriver === driver.id);
+      const vehicleIds = new Set(
+        driverTrips.map((trip) => trip.idVehicle).filter(Boolean) as number[]
+      );
+
+      const driverLoads = loads.filter((load) =>
+        vehicleIds.has(load.idResource)
+      );
+
+      const litrosTotales = driverLoads.reduce(
+        (sum, load) => sum + (load.totalLiters || 0),
+        0
+      );
+
+      const vehiculosMasUsados = Array.from(vehicleIds)
+        .map((vid) => vehicles.find((v) => v.id === vid)?.name || "")
+        .filter(Boolean);
+
+      return {
+        choferId: driver.id,
+        choferNombre: driver.name.split(" ")[0] || "",
+        choferApellido: driver.name.split(" ").slice(1).join(" ") || "",
+        litrosTotales,
+        costoTotal: 0,
+        numeroEventos: driverLoads.length,
+        vehiculosMasUsados,
+      };
+    });
+  }, [drivers, trips, loads, vehicles]);
+
+  // 4. Análisis de Desvíos (fuera de rango, anomalías)
+  const desvios = useMemo((): DesvioData[] => {
+    const desviosList: DesvioData[] = [];
+
+    loads.forEach((load) => {
+      // Detectar cargas muy grandes (> 500L)
+      if (load.totalLiters > 500) {
+        const vehicle = vehicles.find((v) => v.id === load.idResource);
+        const trip = trips.find((t) => t.idVehicle === load.idResource);
+        desviosList.push({
+          eventoId: load.id,
+          fecha: load.loadDate,
+          vehiculoPatente: vehicle?.identifier || vehicle?.name || "N/A",
+          choferNombre: trip?.nameDriver || load.nameResource || "N/A",
+          litros: load.totalLiters,
+          tipoDesvio: "Carga excesiva",
+          severidad: load.totalLiters > 1000 ? "alta" : "media",
+          descripcion: `Carga de ${load.totalLiters}L excede el umbral normal`,
+          resuelto: false,
+        });
       }
-      porChofer[id].litrosTotales += evento.litros;
-      porChofer[id].numeroEventos += 1;
-      porChofer[id].vehiculosUsados.add(evento.vehiculoPatente);
+
+      // Detectar cargas negativas o cero
+      if (load.totalLiters <= 0 && load.initialLiters > 0) {
+        const vehicle = vehicles.find((v) => v.id === load.idResource);
+        const trip = trips.find((t) => t.idVehicle === load.idResource);
+        desviosList.push({
+          eventoId: load.id,
+          fecha: load.loadDate,
+          vehiculoPatente: vehicle?.identifier || vehicle?.name || "N/A",
+          choferNombre: trip?.nameDriver || load.nameResource || "N/A",
+          litros: load.totalLiters,
+          tipoDesvio: "Carga inválida",
+          severidad: "alta",
+          descripcion: "Carga con total de litros inválido",
+          resuelto: false,
+        });
+      }
     });
 
-    return Object.values(porChofer)
-      .map((item) => ({
-        ...item,
-        vehiculosMasUsados: Array.from(item.vehiculosUsados),
-      }))
-      .sort((a, b) => b.litrosTotales - a.litrosTotales);
-  }, [eventos]);
+    return desviosList;
+  }, [loads, vehicles, trips]);
 
-  // Calcular desvíos (eventos con litros excesivos o sin estado validado)
-  const desvios = useMemo(() => {
-    return eventos
-      .filter((evento) => {
-        // Detectar posibles desvíos
-        const excesivo = evento.litros > 200;
-        const pendiente = evento.estado === "pendiente";
-        return excesivo || pendiente;
-      })
-      .map((evento, index) => ({
-        eventoId: evento.id,
-        fecha: evento.fecha,
-        vehiculoPatente: evento.vehiculoPatente,
-        choferNombre: evento.choferNombre,
-        litros: evento.litros,
-        tipoDesvio: evento.litros > 200 ? "exceso" : "pendiente-validacion",
-        severidad: evento.litros > 200 ? ("alta" as const) : ("media" as const),
-        descripcion:
-          evento.litros > 200
-            ? `Carga excesiva detectada (${evento.litros}L > 200L)`
-            : "Evento pendiente de validación",
-      }));
-  }, [eventos]);
-
-  // Calcular ranking de eficiencia
-  const rankingEficiencia = useMemo(() => {
+  // 6. Ranking de Eficiencia
+  const rankingEficiencia = useMemo((): RankingEficienciaData[] => {
     return consumoVehiculos
-      .filter((v) => v.numeroEventos > 0)
-      .map((v) => ({
-        vehiculoId: v.vehiculoId,
-        vehiculoPatente: v.vehiculoPatente,
-        vehiculoTipo: v.vehiculoTipo,
-        eficiencia: v.litrosTotales / v.numeroEventos, // Promedio por carga
-        litrosTotales: v.litrosTotales,
+      .filter((c) => c.eficienciaKmPorLitro !== undefined)
+      .map((consumo, index) => ({
+        posicion: index + 1,
+        vehiculoId: consumo.vehiculoId,
+        vehiculoPatente: consumo.vehiculoPatente,
+        vehiculoTipo: consumo.vehiculoTipo,
+        eficiencia: consumo.eficienciaKmPorLitro || 0,
+        litrosTotales: consumo.litrosTotales,
+        tendencia: "estable" as const,
+        variacion: 0,
       }))
-      .sort((a, b) => a.eficiencia - b.eficiencia) // Menor consumo promedio = más eficiente
+      .sort((a, b) => b.eficiencia - a.eficiencia)
       .slice(0, 10)
       .map((item, index) => ({
         ...item,
         posicion: index + 1,
-        // Tendencia basada en posición final después del sort
-        tendencia: (index % 3 === 0
-          ? "mejorando"
-          : index % 3 === 1
-          ? "estable"
-          : "empeorando") as "mejorando" | "estable" | "empeorando",
       }));
   }, [consumoVehiculos]);
 
   const isLoading =
-    loadingLoads || loadingVehiculos || loadingChoferes || loadingSurtidores;
+    loadingLoads ||
+    loadingVehiculos ||
+    loadingChoferes ||
+    loadingTrips ||
+    loadingResources ||
+    loadingBusinessUnits;
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: loadLitersKeys.all });
@@ -325,28 +386,44 @@ export default function ReportsPage() {
           "Total Litros": item.litrosTotales,
           "Total Costo": item.costoTotal,
           Eventos: item.numeroEventos,
-          "Promedio por Carga":
-            Math.round(item.litrosTotales / item.numeroEventos) || 0,
+          "Eficiencia (km/L)": item.eficienciaKmPorLitro
+            ? item.eficienciaKmPorLitro.toFixed(2)
+            : "N/A",
+          "Promedio por Evento": item.consumoPromedioPorEvento.toFixed(2),
         }));
         filename = "Consumo_por_Vehiculos";
         break;
       case "litros-surtidor":
         dataToExport = litrosPorSurtidor.map((item) => ({
           Surtidor: item.surtidorNombre,
+          Ubicación: item.surtidorUbicacion,
           "Total Litros": item.litrosTotales,
           "Total Costo": item.costoTotal,
           Eventos: item.numeroEventos,
+          "% del Total": item.porcentajeTotal.toFixed(2),
         }));
         filename = "Litros_por_Surtidor";
         break;
       case "litros-operador":
         dataToExport = litrosPorOperador.map((item) => ({
-          Operador: item.choferNombre,
+          Operador: `${item.choferNombre} ${item.choferApellido}`,
           "Total Litros": item.litrosTotales,
           Eventos: item.numeroEventos,
           "Vehículos Usados": item.vehiculosMasUsados.join(", "),
         }));
         filename = "Litros_por_Operador";
+        break;
+      case "costo-centro":
+        dataToExport = costosPorCentroCosto.map((item) => ({
+          "Centro de Costo": item.centroCostoNombre,
+          Código: item.centroCostoCodigo,
+          Tipo: item.centroCostoTipo,
+          "Total Litros": item.litrosTotales,
+          "Costo Total": item.costoTotal,
+          Eventos: item.numeroEventos,
+          "Vehículos Asignados": item.vehiculosAsignados,
+        }));
+        filename = "Costos_por_Centro_Costo";
         break;
       case "desvios":
         dataToExport = desvios.map((item) => ({
@@ -358,6 +435,7 @@ export default function ReportsPage() {
           Tipo: item.tipoDesvio,
           Severidad: item.severidad,
           Descripción: item.descripcion,
+          Estado: item.resuelto ? "Resuelto" : "Pendiente",
         }));
         filename = "Analisis_de_Desvios";
         break;
@@ -365,7 +443,7 @@ export default function ReportsPage() {
         dataToExport = rankingEficiencia.map((item) => ({
           Posición: item.posicion,
           Vehículo: `${item.vehiculoPatente} - ${item.vehiculoTipo}`,
-          "Promedio L/Carga": item.eficiencia.toFixed(1),
+          "Eficiencia (km/L)": item.eficiencia.toFixed(2),
           "Total Litros": item.litrosTotales,
           Tendencia: item.tendencia,
         }));
@@ -383,46 +461,21 @@ export default function ReportsPage() {
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Reporte");
-    const suffix = unidadActiva ? `_${unidadActiva.codigo}` : "";
     XLSX.writeFile(
       wb,
-      `${filename}${suffix}_${new Date().toISOString().split("T")[0]}.xlsx`
+      `${filename}_${new Date().toISOString().split("T")[0]}.xlsx`
     );
     toast.success("Reporte exportado correctamente");
-  };
-
-  const getSeveridadColor = (severidad: string) => {
-    switch (severidad) {
-      case "alta":
-        return { bg: "#ef444415", color: "#ef4444" };
-      case "media":
-        return { bg: "#f59e0b15", color: "#f59e0b" };
-      case "baja":
-        return { bg: "#3b82f615", color: "#3b82f6" };
-      default:
-        return { bg: "#99999915", color: "#999" };
-    }
-  };
-
-  const getTendenciaIcon = (tendencia: string) => {
-    switch (tendencia) {
-      case "mejorando":
-        return <TrendingUpIcon sx={{ fontSize: 18, color: "#10b981" }} />;
-      case "empeorando":
-        return <TrendingDownIcon sx={{ fontSize: 18, color: "#ef4444" }} />;
-      default:
-        return <RemoveIcon sx={{ fontSize: 18, color: "#9ca3af" }} />;
-    }
   };
 
   // Totales calculados
   const totales = useMemo(
     () => ({
-      litros: eventos.reduce((sum, e) => sum + e.litros, 0),
-      costo: eventos.reduce((sum, e) => sum + e.total, 0),
-      eventos: eventos.length,
+      litros: loads.reduce((sum, load) => sum + (load.totalLiters || 0), 0),
+      costo: 0, // TODO: Calcular con precios
+      eventos: loads.length,
     }),
-    [eventos]
+    [loads]
   );
 
   return (
@@ -455,13 +508,22 @@ export default function ReportsPage() {
             <Typography variant="body2" color="text.secondary">
               Análisis completo de consumo, costos, eficiencia y desvíos
             </Typography>
-            {unidadActiva && (
-              <Chip
-                label={`📍 ${unidadNombre}`}
-                size="small"
-                sx={{ bgcolor: "#1E2C5615", color: "#1E2C56", fontWeight: 600 }}
-              />
-            )}
+            <FormControl size="small" sx={{ minWidth: 200, ml: 2 }}>
+              <InputLabel>Período</InputLabel>
+              <Select
+                value={periodoReporte}
+                label="Período"
+                onChange={(e) =>
+                  setPeriodoReporte(e.target.value as PeriodoReporte)
+                }
+              >
+                {PERIODOS_REPORTE.map((p) => (
+                  <MenuItem key={p.value} value={p.value}>
+                    {p.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
@@ -479,7 +541,7 @@ export default function ReportsPage() {
             variant="contained"
             startIcon={<FileDownloadIcon />}
             onClick={handleExport}
-            disabled={isLoading || eventos.length === 0}
+            disabled={isLoading || loads.length === 0}
             sx={{
               bgcolor: "#10b981",
               fontWeight: 600,
@@ -493,12 +555,10 @@ export default function ReportsPage() {
       </Box>
 
       {/* Mensaje si no hay datos */}
-      {!isLoading && eventos.length === 0 && (
+      {!isLoading && loads.length === 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          No hay eventos registrados{" "}
-          {unidadActiva ? `para ${unidadNombre}` : ""}. Los reportes se
-          actualizarán automáticamente cuando se registren cargas de
-          combustible.
+          No hay cargas de combustible registradas. Los reportes se actualizarán
+          automáticamente cuando se registren cargas.
         </Alert>
       )}
 
@@ -539,6 +599,12 @@ export default function ReportsPage() {
           label="Litros por Operador"
         />
         <Tab
+          value="costo-centro"
+          icon={<AccountBalanceIcon />}
+          iconPosition="start"
+          label="Costos por Centro"
+        />
+        <Tab
           value="desvios"
           icon={<WarningIcon />}
           iconPosition="start"
@@ -555,6 +621,7 @@ export default function ReportsPage() {
       {/* Reporte 1: Consumo por Vehículo */}
       {tipoReporte === "consumo-vehiculos" && (
         <Grid container spacing={3}>
+          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
           <Grid item xs={12} md={8}>
             <Card
               elevation={0}
@@ -564,7 +631,7 @@ export default function ReportsPage() {
                 <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
                   Total de Litros por Vehículo
                 </Typography>
-                {loadingEventos ? (
+                {isLoading ? (
                   <Skeleton
                     variant="rectangular"
                     height={400}
@@ -602,6 +669,7 @@ export default function ReportsPage() {
             </Card>
           </Grid>
 
+          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
           <Grid item xs={12} md={4}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Card
@@ -666,64 +734,75 @@ export default function ReportsPage() {
             </Box>
           </Grid>
 
+          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
           <Grid item xs={12}>
             <Card
               elevation={0}
               sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
             >
               <TableContainer>
-                {loadingEventos ? (
-                  <TableSkeleton rows={5} cols={5} />
+                {isLoading ? (
+                  <TableSkeleton rows={5} cols={6} />
                 ) : (
                   <Table>
                     <TableHead sx={{ bgcolor: "#f9fafb" }}>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 700 }}>Vehículo</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
                         <TableCell sx={{ fontWeight: 700 }} align="right">
                           Total Litros
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="right">
-                          Costo Total
                         </TableCell>
                         <TableCell sx={{ fontWeight: 700 }} align="right">
                           Eventos
                         </TableCell>
                         <TableCell sx={{ fontWeight: 700 }} align="right">
-                          Promedio/Carga
+                          Eficiencia (km/L)
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 700 }} align="right">
+                          Promedio/Evento
                         </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {consumoVehiculos.map((item) => (
-                        <TableRow key={item.vehiculoId} hover>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={600}>
-                              {item.vehiculoPatente}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {item.vehiculoTipo}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            {item.litrosTotales.toLocaleString()} L
-                          </TableCell>
-                          <TableCell align="right">
-                            ${item.costoTotal.toLocaleString()}
-                          </TableCell>
-                          <TableCell align="right">
-                            {item.numeroEventos}
-                          </TableCell>
-                          <TableCell align="right">
-                            {Math.round(
-                              item.litrosTotales / item.numeroEventos
-                            )}{" "}
-                            L
+                      {consumoVehiculos.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} align="center">
+                            No hay datos disponibles
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        consumoVehiculos.map((item) => (
+                          <TableRow key={item.vehiculoId} hover>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight={600}>
+                                {item.vehiculoPatente}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {item.vehiculoTipo}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              {item.litrosTotales.toFixed(2)} L
+                            </TableCell>
+                            <TableCell align="right">
+                              {item.numeroEventos}
+                            </TableCell>
+                            <TableCell align="right">
+                              {item.eficienciaKmPorLitro
+                                ? item.eficienciaKmPorLitro.toFixed(2)
+                                : "N/A"}
+                            </TableCell>
+                            <TableCell align="right">
+                              {item.consumoPromedioPorEvento.toFixed(2)} L
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 )}
@@ -736,6 +815,7 @@ export default function ReportsPage() {
       {/* Reporte 2: Litros por Surtidor */}
       {tipoReporte === "litros-surtidor" && (
         <Grid container spacing={3}>
+          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
           <Grid item xs={12} md={6}>
             <Card
               elevation={0}
@@ -745,7 +825,7 @@ export default function ReportsPage() {
                 <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
                   Distribución por Surtidor
                 </Typography>
-                {loadingEventos ? (
+                {isLoading ? (
                   <Skeleton
                     variant="rectangular"
                     height={300}
@@ -786,39 +866,58 @@ export default function ReportsPage() {
             </Card>
           </Grid>
 
+          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
           <Grid item xs={12} md={6}>
             <Card
               elevation={0}
               sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
             >
               <TableContainer>
-                {loadingEventos ? (
-                  <TableSkeleton rows={4} cols={3} />
+                {isLoading ? (
+                  <TableSkeleton rows={4} cols={5} />
                 ) : (
                   <Table>
                     <TableHead sx={{ bgcolor: "#f9fafb" }}>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 700 }}>Surtidor</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>
+                          Ubicación
+                        </TableCell>
                         <TableCell sx={{ fontWeight: 700 }} align="right">
-                          Litros
+                          Litros Totales
                         </TableCell>
                         <TableCell sx={{ fontWeight: 700 }} align="right">
                           Eventos
                         </TableCell>
+                        <TableCell sx={{ fontWeight: 700 }} align="right">
+                          % del Total
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {litrosPorSurtidor.map((item) => (
-                        <TableRow key={item.surtidorId} hover>
-                          <TableCell>{item.surtidorNombre}</TableCell>
-                          <TableCell align="right">
-                            {item.litrosTotales.toLocaleString()} L
-                          </TableCell>
-                          <TableCell align="right">
-                            {item.numeroEventos}
+                      {litrosPorSurtidor.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} align="center">
+                            No hay datos disponibles
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        litrosPorSurtidor.map((item) => (
+                          <TableRow key={item.surtidorId} hover>
+                            <TableCell>{item.surtidorNombre}</TableCell>
+                            <TableCell>{item.surtidorUbicacion}</TableCell>
+                            <TableCell align="right">
+                              {item.litrosTotales.toFixed(2)} L
+                            </TableCell>
+                            <TableCell align="right">
+                              {item.numeroEventos}
+                            </TableCell>
+                            <TableCell align="right">
+                              {item.porcentajeTotal.toFixed(2)}%
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 )}
@@ -831,6 +930,7 @@ export default function ReportsPage() {
       {/* Reporte 3: Litros por Operador */}
       {tipoReporte === "litros-operador" && (
         <Grid container spacing={3}>
+          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
           <Grid item xs={12}>
             <Card
               elevation={0}
@@ -840,7 +940,7 @@ export default function ReportsPage() {
                 <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
                   Consumo por Operador
                 </Typography>
-                {loadingEventos ? (
+                {isLoading ? (
                   <Skeleton
                     variant="rectangular"
                     height={400}
@@ -872,13 +972,14 @@ export default function ReportsPage() {
             </Card>
           </Grid>
 
+          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
           <Grid item xs={12}>
             <Card
               elevation={0}
               sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
             >
               <TableContainer>
-                {loadingEventos ? (
+                {isLoading ? (
                   <TableSkeleton rows={5} cols={4} />
                 ) : (
                   <Table>
@@ -897,47 +998,59 @@ export default function ReportsPage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {litrosPorOperador.map((item) => (
-                        <TableRow key={item.choferId} hover>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={600}>
-                              {item.choferNombre}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            {item.litrosTotales.toLocaleString()} L
-                          </TableCell>
-                          <TableCell align="right">
-                            {item.numeroEventos}
-                          </TableCell>
-                          <TableCell>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                gap: 0.5,
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              {item.vehiculosMasUsados.slice(0, 3).map((v) => (
-                                <Chip
-                                  key={v}
-                                  label={v}
-                                  size="small"
-                                  sx={{ bgcolor: "#e2e8f0" }}
-                                />
-                              ))}
-                              {item.vehiculosMasUsados.length > 3 && (
-                                <Chip
-                                  label={`+${
-                                    item.vehiculosMasUsados.length - 3
-                                  }`}
-                                  size="small"
-                                />
-                              )}
-                            </Box>
+                      {litrosPorOperador.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center">
+                            No hay datos disponibles
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        litrosPorOperador
+                          .sort((a, b) => b.litrosTotales - a.litrosTotales)
+                          .map((item) => (
+                            <TableRow key={item.choferId} hover>
+                              <TableCell>
+                                <Typography variant="body2" fontWeight={600}>
+                                  {item.choferNombre} {item.choferApellido}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="right">
+                                {item.litrosTotales.toFixed(2)} L
+                              </TableCell>
+                              <TableCell align="right">
+                                {item.numeroEventos}
+                              </TableCell>
+                              <TableCell>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    gap: 0.5,
+                                    flexWrap: "wrap",
+                                  }}
+                                >
+                                  {item.vehiculosMasUsados
+                                    .slice(0, 3)
+                                    .map((v) => (
+                                      <Chip
+                                        key={v}
+                                        label={v}
+                                        size="small"
+                                        sx={{ bgcolor: "#e2e8f0" }}
+                                      />
+                                    ))}
+                                  {item.vehiculosMasUsados.length > 3 && (
+                                    <Chip
+                                      label={`+${
+                                        item.vehiculosMasUsados.length - 3
+                                      }`}
+                                      size="small"
+                                    />
+                                  )}
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )}
                     </TableBody>
                   </Table>
                 )}
@@ -947,11 +1060,101 @@ export default function ReportsPage() {
         </Grid>
       )}
 
-      {/* Reporte 4: Análisis de Desvíos */}
+      {/* Reporte 4: Costos por Centro de Costos */}
+      {tipoReporte === "costo-centro" && (
+        <Grid container spacing={3}>
+          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
+          <Grid item xs={12}>
+            <Card
+              elevation={0}
+              sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
+                  Costos por Centro de Costos / Unidad de Negocio
+                </Typography>
+                <TableContainer>
+                  {isLoading ? (
+                    <TableSkeleton rows={5} cols={7} />
+                  ) : (
+                    <Table>
+                      <TableHead sx={{ bgcolor: "#f9fafb" }}>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 700 }}>
+                            Centro de Costo
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Código</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }} align="right">
+                            Total Litros
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 700 }} align="right">
+                            Costo Total
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 700 }} align="right">
+                            Eventos
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 700 }} align="right">
+                            Vehículos
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {costosPorCentroCosto.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} align="center">
+                              No hay datos disponibles
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          costosPorCentroCosto
+                            .sort((a, b) => b.litrosTotales - a.litrosTotales)
+                            .map((item) => (
+                              <TableRow key={item.centroCostoId} hover>
+                                <TableCell>
+                                  <Typography variant="body2" fontWeight={600}>
+                                    {item.centroCostoNombre}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Chip
+                                    label={item.centroCostoCodigo}
+                                    size="small"
+                                    sx={{ bgcolor: "#e2e8f0" }}
+                                  />
+                                </TableCell>
+                                <TableCell>{item.centroCostoTipo}</TableCell>
+                                <TableCell align="right">
+                                  {item.litrosTotales.toFixed(2)} L
+                                </TableCell>
+                                <TableCell align="right">
+                                  ${item.costoTotal.toLocaleString()}
+                                </TableCell>
+                                <TableCell align="right">
+                                  {item.numeroEventos}
+                                </TableCell>
+                                <TableCell align="right">
+                                  {item.vehiculosAsignados}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  )}
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* Reporte 5: Análisis de Desvíos */}
       {tipoReporte === "desvios" && (
         <Grid container spacing={3}>
+          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
           <Grid item xs={12}>
-            {desvios.length === 0 && !loadingEventos ? (
+            {desvios.length === 0 && !isLoading ? (
               <Card
                 elevation={0}
                 sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
@@ -973,50 +1176,84 @@ export default function ReportsPage() {
                 sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
               >
                 <TableContainer>
-                  {loadingEventos ? (
-                    <TableSkeleton rows={5} cols={6} />
+                  {isLoading ? (
+                    <TableSkeleton rows={5} cols={7} />
                   ) : (
                     <Table>
                       <TableHead sx={{ bgcolor: "#f9fafb" }}>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 700 }}>Evento</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>Fecha</TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>
                             Vehículo
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Chofer</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }} align="right">
+                            Litros
+                          </TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>
                             Severidad
                           </TableCell>
                           <TableCell sx={{ fontWeight: 700 }}>
                             Descripción
                           </TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Estado</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {desvios.map((item) => (
-                          <TableRow key={item.eventoId} hover>
-                            <TableCell>#{item.eventoId}</TableCell>
-                            <TableCell>
-                              {new Date(item.fecha).toLocaleDateString("es-AR")}
+                        {desvios.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} align="center">
+                              No se encontraron desvíos
                             </TableCell>
-                            <TableCell>{item.vehiculoPatente}</TableCell>
-                            <TableCell>{item.choferNombre}</TableCell>
-                            <TableCell>
-                              <Chip
-                                label={item.severidad.toUpperCase()}
-                                size="small"
-                                sx={{
-                                  bgcolor: getSeveridadColor(item.severidad).bg,
-                                  color: getSeveridadColor(item.severidad)
-                                    .color,
-                                  fontWeight: 600,
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>{item.descripcion}</TableCell>
                           </TableRow>
-                        ))}
+                        ) : (
+                          desvios.map((item) => (
+                            <TableRow key={item.eventoId} hover>
+                              <TableCell>
+                                {new Date(item.fecha).toLocaleDateString(
+                                  "es-AR"
+                                )}
+                              </TableCell>
+                              <TableCell>{item.vehiculoPatente}</TableCell>
+                              <TableCell>{item.tipoDesvio}</TableCell>
+                              <TableCell align="right">
+                                {item.litros.toFixed(2)} L
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={item.severidad}
+                                  size="small"
+                                  sx={{
+                                    bgcolor:
+                                      item.severidad === "alta"
+                                        ? "#dc2626"
+                                        : item.severidad === "media"
+                                        ? "#f59e0b"
+                                        : "#10b981",
+                                    color: "white",
+                                    fontWeight: 600,
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell>{item.descripcion}</TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={
+                                    item.resuelto ? "Resuelto" : "Pendiente"
+                                  }
+                                  size="small"
+                                  sx={{
+                                    bgcolor: item.resuelto
+                                      ? "#10b981"
+                                      : "#f59e0b",
+                                    color: "white",
+                                    fontWeight: 600,
+                                  }}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   )}
@@ -1027,9 +1264,10 @@ export default function ReportsPage() {
         </Grid>
       )}
 
-      {/* Reporte 5: Ranking de Eficiencia */}
+      {/* Reporte 6: Ranking de Eficiencia */}
       {tipoReporte === "ranking-eficiencia" && (
         <Grid container spacing={3}>
+          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
           <Grid item xs={12}>
             <Card
               elevation={0}
@@ -1049,8 +1287,8 @@ export default function ReportsPage() {
                 </Typography>
               </CardContent>
               <TableContainer>
-                {loadingEventos ? (
-                  <TableSkeleton rows={5} cols={5} />
+                {isLoading ? (
+                  <TableSkeleton rows={5} cols={6} />
                 ) : rankingEficiencia.length === 0 ? (
                   <Box sx={{ textAlign: "center", py: 8, color: "#9ca3af" }}>
                     <EmojiEventsIcon
@@ -1065,7 +1303,7 @@ export default function ReportsPage() {
                         <TableCell sx={{ fontWeight: 700 }}>Posición</TableCell>
                         <TableCell sx={{ fontWeight: 700 }}>Vehículo</TableCell>
                         <TableCell sx={{ fontWeight: 700 }} align="right">
-                          Promedio L/Carga
+                          Eficiencia (km/L)
                         </TableCell>
                         <TableCell sx={{ fontWeight: 700 }} align="right">
                           Total Litros
@@ -1084,9 +1322,8 @@ export default function ReportsPage() {
                               size="small"
                               sx={{
                                 bgcolor:
-                                  item.posicion <= 3 ? "#f59e0b15" : "#e2e8f0",
-                                color:
-                                  item.posicion <= 3 ? "#f59e0b" : "#64748b",
+                                  item.posicion <= 3 ? "#10b981" : "#64748b",
+                                color: "white",
                                 fontWeight: 700,
                               }}
                             />
@@ -1095,6 +1332,8 @@ export default function ReportsPage() {
                             <Typography variant="body2" fontWeight={600}>
                               {item.vehiculoPatente}
                             </Typography>
+                          </TableCell>
+                          <TableCell>
                             <Typography
                               variant="caption"
                               color="text.secondary"
@@ -1108,25 +1347,21 @@ export default function ReportsPage() {
                               fontWeight={700}
                               color="#10b981"
                             >
-                              {item.eficiencia.toFixed(1)} L
+                              {item.eficiencia.toFixed(2)} km/L
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
-                            {item.litrosTotales.toLocaleString()} L
+                            {item.litrosTotales.toFixed(2)} L
                           </TableCell>
                           <TableCell>
-                            <Box
+                            <Chip
+                              label={item.tendencia}
+                              size="small"
                               sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 0.5,
+                                bgcolor: "#f1f5f9",
+                                fontWeight: 600,
                               }}
-                            >
-                              {getTendenciaIcon(item.tendencia)}
-                              <Typography variant="caption">
-                                {item.tendencia}
-                              </Typography>
-                            </Box>
+                            />
                           </TableCell>
                         </TableRow>
                       ))}

@@ -497,7 +497,6 @@ export default function ResourcesPage() {
           justifyContent: "space-between",
           alignItems: "center",
           mb: 1.5,
-          mt: -3,
         }}
       >
         <Box>
