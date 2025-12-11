@@ -34,4 +34,4 @@ export { tripsApi } from "./trips.api";
 // Re-export types
 export type * from "@/types/api.types";
 
-
+export { iaWhiteListApi } from "./ia-whitelist.api";

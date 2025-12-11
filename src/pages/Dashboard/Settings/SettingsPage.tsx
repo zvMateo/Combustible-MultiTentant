@@ -16,10 +16,6 @@ import {
   Divider,
   Chip,
   InputAdornment,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Table,
   TableBody,
   TableCell,
@@ -28,6 +24,20 @@ import {
   TableRow,
   IconButton,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import PhoneIcon from "@mui/icons-material/Phone";
+import ContactPhoneIcon from "@mui/icons-material/ContactPhone";
+
+import {
+  useIaWhiteList,
+  useCreateIaWhiteListContact,
+  useUpdateIaWhiteListContact,
+  useToggleIaWhiteListContact,
+  useDesactivateIaWhiteListContact,
+} from "@/hooks/queries/useIaWhiteList";
+import type { IaWhiteListContact } from "@/services/api/ia-whitelist.api";
+import CircularProgress from "@mui/material/CircularProgress";
+
 import PolicyIcon from "@mui/icons-material/Policy";
 import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
 import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
@@ -43,6 +53,7 @@ import WarningIcon from "@mui/icons-material/Warning";
 import { toast } from "sonner";
 import { useTheme } from "@/components/providers/theme/use-theme";
 import { useAuthStore } from "@/stores/auth.store";
+import { mt } from "date-fns/locale";
 
 // ==================== PERSONALIZACIÓN ====================
 function PersonalizacionTab() {
@@ -1364,6 +1375,322 @@ function AlertasTab() {
     </Card>
   );
 }
+// ==================== WHITELIST DE IA ====================
+function WhiteListTab() {
+  const { user } = useAuthStore();
+  const { data: contacts, isLoading } = useIaWhiteList(
+    user?.idCompany,
+    user?.idBusinessUnit
+  );
+
+  const createContact = useCreateIaWhiteListContact();
+  const updateContact = useUpdateIaWhiteListContact();
+  const desactivateContact = useDesactivateIaWhiteListContact();
+  const toggleContact = useToggleIaWhiteListContact();
+
+  const [isEditing, setIsEditing] = useState<number | null>(null);
+  const [editData, setEditData] = useState({ name: "", phoneNumber: "" });
+
+  const [newContact, setNewContact] = useState({
+    name: "",
+    phoneNumber: "",
+  });
+
+  const handleCreate = () => {
+    if (!newContact.name || !newContact.phoneNumber) {
+      toast.error("Complete todos los campos");
+      return;
+    }
+
+    if (!user?.idCompany || !user?.idBusinessUnit) {
+      toast.error("No se pudo identificar la empresa/unidad");
+      return;
+    }
+
+    createContact.mutate(
+      {
+        name: newContact.name,
+        phoneNumber: newContact.phoneNumber,
+        idCompany: user.idCompany,
+        idBusinessUnit: user.idBusinessUnit,
+      },
+      {
+        onSuccess: () => {
+          setNewContact({ name: "", phoneNumber: "" });
+        },
+      }
+    );
+  };
+
+  const handleEdit = (contact: IaWhiteListContact) => {
+    setIsEditing(contact.id);
+    setEditData({
+      name: contact.name,
+      phoneNumber: contact.phoneNumber,
+    });
+  };
+
+  const handleUpdate = (id: number) => {
+    if (!editData.name || !editData.phoneNumber) {
+      toast.error("Complete todos los campos");
+      return;
+    }
+
+    if (!user?.idCompany || !user?.idBusinessUnit) {
+      toast.error("No se pudo identificar la empresa/unidad");
+      return;
+    }
+
+    updateContact.mutate(
+      {
+        id,
+        name: editData.name,
+        phoneNumber: editData.phoneNumber,
+        idCompany: user.idCompany,
+        idBusinessUnit: user.idBusinessUnit,
+      },
+      {
+        onSuccess: () => {
+          setIsEditing(null);
+        },
+      }
+    );
+  };
+
+  const handleToggleActive = (id: number, currentActive: boolean) => {
+    toggleContact.mutate({ id, activate: !currentActive });
+  };
+
+  return (
+    <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
+      <CardContent sx={{ p: 3 }}>
+        <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
+          📱 WhiteList de IA
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Números de teléfono autorizados para interactuar con el bot de
+          WhatsApp/IA
+        </Typography>
+
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Solo los números <strong>activos</strong> en esta lista podrán
+          utilizar el bot de IA para registrar cargas de combustible por
+          WhatsApp.
+        </Alert>
+
+        {isLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <TableContainer>
+            <Table>
+              <TableHead sx={{ bgcolor: "#f9fafb" }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700 }}>Nombre</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>
+                    Número de Teléfono
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="center">
+                    Estado
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="center">
+                    Acciones
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {contacts?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">
+                      <Typography variant="body2" color="text.secondary">
+                        No hay contactos en la WhiteList
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  contacts?.map((contact) => (
+                    <TableRow key={contact.id} hover>
+                      <TableCell>
+                        {isEditing === contact.id ? (
+                          <TextField
+                            size="small"
+                            value={editData.name}
+                            onChange={(e) =>
+                              setEditData({ ...editData, name: e.target.value })
+                            }
+                            fullWidth
+                          />
+                        ) : (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <ContactPhoneIcon
+                              sx={{
+                                color: contact.active ? "#10b981" : "#9ca3af",
+                              }}
+                            />
+                            <Typography fontWeight={600}>
+                              {contact.name}
+                            </Typography>
+                          </Box>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing === contact.id ? (
+                          <TextField
+                            size="small"
+                            value={editData.phoneNumber}
+                            onChange={(e) =>
+                              setEditData({
+                                ...editData,
+                                phoneNumber: e.target.value,
+                              })
+                            }
+                            fullWidth
+                            placeholder="+5491123456789"
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <PhoneIcon fontSize="small" />
+                                </InputAdornment>
+                              ),
+                            }}
+                          />
+                        ) : (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <PhoneIcon
+                              fontSize="small"
+                              sx={{ color: "#3b82f6" }}
+                            />
+                            <Typography variant="body2">
+                              {contact.phoneNumber}
+                            </Typography>
+                          </Box>
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        {/* ✅ Switch para activar/desactivar */}
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={contact.active}
+                              onChange={() =>
+                                handleToggleActive(contact.id, contact.active)
+                              }
+                              color="success"
+                              size="small"
+                            />
+                          }
+                          label={
+                            <Typography variant="caption" fontWeight={600}>
+                              {contact.active ? "Activo" : "Inactivo"}
+                            </Typography>
+                          }
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        {isEditing === contact.id ? (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 1,
+                              justifyContent: "center",
+                            }}
+                          >
+                            <IconButton
+                              color="success"
+                              onClick={() => handleUpdate(contact.id)}
+                            >
+                              <SaveIcon />
+                            </IconButton>
+                          </Box>
+                        ) : (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 1,
+                              justifyContent: "center",
+                            }}
+                          >
+                            <IconButton onClick={() => handleEdit(contact)}>
+                              <EditIcon />
+                            </IconButton>
+                          </Box>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+
+        <Divider sx={{ my: 3 }} />
+
+        <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2 }}>
+          Agregar Nuevo Contacto
+        </Typography>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "1.2fr 1.5fr auto",
+            gap: 2,
+            alignItems: "center",
+          }}
+        >
+          <TextField
+            label="Nombre"
+            sx={{ mb: 3 }}
+            size="small"
+            value={newContact.name}
+            onChange={(e) =>
+              setNewContact({ ...newContact, name: e.target.value })
+            }
+          />
+          <TextField
+            label="Número de Teléfono"
+            placeholder="+5491123456789"
+            size="small"
+            value={newContact.phoneNumber}
+            onChange={(e) =>
+              setNewContact({ ...newContact, phoneNumber: e.target.value })
+            }
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PhoneIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            helperText="Formato: +5491123456789 (código país + área + número)"
+          />
+          <Button
+            variant="contained"
+            
+            startIcon={<AddIcon />}
+            onClick={handleCreate}
+            disabled={createContact.isPending}
+            sx={{ height: 40, mb: 4 }}
+          >
+            Agregar
+          </Button>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
 
 // ==================== PÁGINA PRINCIPAL ====================
 export default function SettingsPage() {
@@ -1418,6 +1745,11 @@ export default function SettingsPage() {
           label="Umbrales"
         />
         <Tab
+          icon={<ContactPhoneIcon />}
+          iconPosition="start"
+          label="WhiteList IA"
+        />
+        <Tab
           icon={<NotificationsIcon />}
           iconPosition="start"
           label="Alertas"
@@ -1432,8 +1764,9 @@ export default function SettingsPage() {
       {tab === 0 && <PoliticasTab />}
       {tab === 1 && <PreciosTab />}
       {tab === 2 && <UmbralesTab />}
-      {tab === 3 && <AlertasTab />}
-      {tab === 4 && <PersonalizacionTab />}
+      {tab === 3 && <WhiteListTab />}
+      {tab === 4 && <AlertasTab />}
+      {tab === 5 && <PersonalizacionTab />}
     </Box>
   );
 }

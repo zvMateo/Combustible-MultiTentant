@@ -131,14 +131,6 @@ const menuStructure: MenuItem[] = [
         permission: "eventos:ver",
       },
 
-      // VALIDACIÓN - Admin y Supervisor
-      {
-        label: "Validación",
-        icon: <CheckCircleIcon />,
-        path: "/dashboard/validation",
-        roles: ["admin", "supervisor"],
-        permission: "eventos:validar",
-      },
 
       // RECURSOS - Admin y Operador
       {
