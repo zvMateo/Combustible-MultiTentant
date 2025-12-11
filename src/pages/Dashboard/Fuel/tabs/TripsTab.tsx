@@ -17,7 +17,6 @@ import {
   IconButton,
   Card,
   TextField,
-  Chip,
   LinearProgress,
   Alert,
   MenuItem,
@@ -30,7 +29,6 @@ import {
   useCreateTrip,
   useUpdateTrip,
   useDrivers,
-  useResources,
 } from "@/hooks/queries";
 import type {
   Trip,
@@ -38,12 +36,21 @@ import type {
   UpdateTripRequest,
 } from "@/types/api.types";
 
+// Tipo local para el formulario (incluye campos adicionales del UI)
+interface TripFormData {
+  idDriver: number;
+  startDate: string;
+  origin: string;
+  destination: string;
+  distance: number;
+  notes: string;
+}
+
 export default function TripsTab() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
-  const [formData, setFormData] = useState<CreateTripRequest>({
+  const [formData, setFormData] = useState<TripFormData>({
     idDriver: 0,
-    idVehicle: 0,
     startDate: new Date().toISOString().slice(0, 16),
     origin: "",
     destination: "",
@@ -52,7 +59,6 @@ export default function TripsTab() {
   });
   const [errors, setErrors] = useState({
     idDriver: "",
-    idVehicle: "",
     origin: "",
     destination: "",
   });
@@ -60,25 +66,20 @@ export default function TripsTab() {
   // React Query hooks
   const { data: trips = [], isLoading, error } = useTrips();
   const { data: drivers = [] } = useDrivers();
-  const { data: resources = [] } = useResources();
   const createMutation = useCreateTrip();
   const updateMutation = useUpdateTrip();
-
-  // Filtrar solo vehículos
-  const vehicles = resources.filter((r) => r.resourceType === "Vehicle");
 
   const handleNew = () => {
     setEditingTrip(null);
     setFormData({
       idDriver: 0,
-      idVehicle: 0,
       startDate: new Date().toISOString().slice(0, 16),
       origin: "",
       destination: "",
       distance: 0,
       notes: "",
     });
-    setErrors({ idDriver: "", idVehicle: "", origin: "", destination: "" });
+    setErrors({ idDriver: "", origin: "", destination: "" });
     setOpenDialog(true);
   };
 
@@ -86,29 +87,31 @@ export default function TripsTab() {
     setEditingTrip(trip);
     setFormData({
       idDriver: trip.idDriver,
-      idVehicle: trip.idVehicle,
-      startDate: new Date(trip.startDate).toISOString().slice(0, 16),
-      origin: trip.origin,
-      destination: trip.destination,
-      distance: trip.distance || 0,
+      startDate: trip.startDate
+        ? new Date(trip.startDate).toISOString().slice(0, 16)
+        : trip.createdAt
+        ? new Date(trip.createdAt).toISOString().slice(0, 16)
+        : new Date().toISOString().slice(0, 16),
+      origin: trip.origin || trip.initialLocation || "",
+      destination: trip.destination || trip.finalLocation || "",
+      distance: trip.distance || trip.totalKm || 0,
       notes: trip.notes || "",
     });
-    setErrors({ idDriver: "", idVehicle: "", origin: "", destination: "" });
+    setErrors({ idDriver: "", origin: "", destination: "" });
     setOpenDialog(true);
   };
 
   const validate = (): boolean => {
     const newErrors = {
       idDriver: "",
-      idVehicle: "",
       origin: "",
       destination: "",
     };
 
-    if (!formData.idDriver) newErrors.idDriver = "El conductor es obligatorio";
-    if (!formData.idVehicle) newErrors.idVehicle = "El vehículo es obligatorio";
-    if (!formData.origin.trim()) newErrors.origin = "El origen es obligatorio";
-    if (!formData.destination.trim())
+    if (!formData.idDriver || formData.idDriver === 0)
+      newErrors.idDriver = "El conductor es obligatorio";
+    if (!formData.origin?.trim()) newErrors.origin = "El origen es obligatorio";
+    if (!formData.destination?.trim())
       newErrors.destination = "El destino es obligatorio";
 
     setErrors(newErrors);
@@ -119,14 +122,22 @@ export default function TripsTab() {
     if (!validate()) return;
 
     try {
+      // Preparar datos para la API (mapear campos del formulario a la estructura de la API)
+      const apiData: CreateTripRequest = {
+        idDriver: formData.idDriver,
+        initialLocation: formData.origin || "",
+        finalLocation: formData.destination || "",
+        totalKm: formData.distance || 0,
+      };
+
       if (editingTrip) {
         const updateData: UpdateTripRequest = {
           id: editingTrip.id,
-          ...formData,
+          ...apiData,
         };
         await updateMutation.mutateAsync(updateData);
       } else {
-        await createMutation.mutateAsync(formData);
+        await createMutation.mutateAsync(apiData);
       }
       setOpenDialog(false);
     } catch {
@@ -196,9 +207,8 @@ export default function TripsTab() {
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>ID</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Conductor</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Vehículo</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Ruta</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Fecha</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Origen</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Destino</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Distancia (km)</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Acciones</TableCell>
               </TableRow>
@@ -208,28 +218,13 @@ export default function TripsTab() {
                 <TableRow key={trip.id} hover>
                   <TableCell>{trip.id}</TableCell>
                   <TableCell>
-                    {drivers.find((d) => d.id === trip.idDriver)?.fullName ||
+                    {trip.nameDriver ||
+                      drivers.find((d) => d.id === trip.idDriver)?.name ||
                       `Driver #${trip.idDriver}`}
                   </TableCell>
-                  <TableCell>
-                    {vehicles.find((v) => v.id === trip.idVehicle)?.name ||
-                      `Vehicle #${trip.idVehicle}`}
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Typography variant="body2" fontWeight={600}>
-                        {trip.origin}
-                      </Typography>
-                      <DirectionsCarIcon sx={{ fontSize: 16, color: "#3b82f6" }} />
-                      <Typography variant="body2" fontWeight={600}>
-                        {trip.destination}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(trip.startDate).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>{trip.distance || "-"}</TableCell>
+                  <TableCell>{trip.initialLocation || "-"}</TableCell>
+                  <TableCell>{trip.finalLocation || "-"}</TableCell>
+                  <TableCell>{trip.totalKm || "-"}</TableCell>
                   <TableCell>
                     <IconButton
                       size="small"
@@ -284,31 +279,13 @@ export default function TripsTab() {
               size="small"
             >
               <MenuItem value={0}>Seleccionar conductor</MenuItem>
-              {drivers.map((driver) => (
-                <MenuItem key={driver.id} value={driver.id}>
-                  {driver.fullName}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <TextField
-              select
-              label="Vehículo *"
-              value={formData.idVehicle}
-              onChange={(e) =>
-                setFormData({ ...formData, idVehicle: Number(e.target.value) })
-              }
-              error={!!errors.idVehicle}
-              helperText={errors.idVehicle}
-              fullWidth
-              size="small"
-            >
-              <MenuItem value={0}>Seleccionar vehículo</MenuItem>
-              {vehicles.map((vehicle) => (
-                <MenuItem key={vehicle.id} value={vehicle.id}>
-                  {vehicle.name}
-                </MenuItem>
-              ))}
+              {drivers
+                .filter((driver) => driver.isActive !== false)
+                .map((driver) => (
+                  <MenuItem key={driver.id} value={driver.id}>
+                    {driver.name} {driver.dni ? `(${driver.dni})` : ""}
+                  </MenuItem>
+                ))}
             </TextField>
 
             <TextField

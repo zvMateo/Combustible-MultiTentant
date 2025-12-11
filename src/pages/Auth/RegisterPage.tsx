@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
 import { toast } from "sonner";
+import { companiesApi } from "@/services/api/companies.api";
+import { usersApi } from "@/services/api/users.api";
+import { getErrorMessage } from "@/lib/axios";
 import {
   Box,
   Card,
@@ -24,7 +27,6 @@ import BusinessIcon from "@mui/icons-material/Business";
 import PersonIcon from "@mui/icons-material/Person";
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import PhoneIcon from "@mui/icons-material/Phone";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
@@ -32,8 +34,6 @@ interface FormData {
   // Paso 1 - Datos empresa
   empresaNombre: string;
   empresaRazonSocial: string;
-  empresaCuit: string;
-  empresaTelefono: string;
   // Paso 2 - Datos admin
   adminNombre: string;
   adminApellido: string;
@@ -60,8 +60,6 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState<FormData>({
     empresaNombre: "",
     empresaRazonSocial: "",
-    empresaCuit: "",
-    empresaTelefono: "",
     adminNombre: "",
     adminApellido: "",
     adminEmail: "",
@@ -93,13 +91,6 @@ export default function RegisterPage() {
 
     if (!formData.empresaNombre.trim()) {
       newErrors.empresaNombre = "El nombre es obligatorio";
-    }
-    if (!formData.empresaCuit.trim()) {
-      newErrors.empresaCuit = "El CUIT es obligatorio";
-    } else if (
-      !/^\d{2}-?\d{8}-?\d{1}$/.test(formData.empresaCuit.replace(/-/g, ""))
-    ) {
-      newErrors.empresaCuit = "Formato de CUIT inválido";
     }
 
     setErrors(newErrors);
@@ -148,20 +139,60 @@ export default function RegisterPage() {
   const handleSubmit = async () => {
     setIsLoading(true);
 
-    // Simular registro
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      // 1️⃣ Crear la empresa primero
+      const companyData = {
+        name: formData.empresaNombre,
+        detail: formData.empresaRazonSocial || undefined,
+      };
 
-    // En producción, aquí se llamaría al servicio de registro
-    // await empresasService.register(formData);
+      console.log("🚀 [RegisterPage] Creando empresa:", companyData);
+      const newCompany = await companiesApi.create(companyData);
+      console.log("✅ [RegisterPage] Empresa creada:", newCompany);
 
-    setIsLoading(false);
-    setSuccess(true);
-    toast.success("¡Empresa registrada exitosamente!");
+      if (!newCompany || !newCompany.id) {
+        throw new Error("No se pudo obtener el ID de la empresa creada");
+      }
 
-    // Redirigir al login después de 3 segundos
-    setTimeout(() => {
-      navigate("/login");
-    }, 3000);
+      const idCompany = newCompany.id;
+
+      // 2️⃣ Crear el usuario administrador con el idCompany obtenido
+      const userData = {
+        firstName: formData.adminNombre,
+        lastName: formData.adminApellido,
+        email: formData.adminEmail,
+        userName: formData.adminEmail, // Usar el email como userName
+        password: formData.adminPassword,
+        confirmPassword: formData.adminPasswordConfirm,
+        idCompany: idCompany,
+        idBusinessUnit: undefined, // No se requiere en el registro
+      };
+
+      console.log("🚀 [RegisterPage] Creando usuario administrador:", {
+        ...userData,
+        password: "***",
+        confirmPassword: "***",
+      });
+      const newUser = await usersApi.create(userData);
+      console.log("✅ [RegisterPage] Usuario creado:", newUser);
+
+      setIsLoading(false);
+      setSuccess(true);
+      toast.success("¡Empresa registrada exitosamente!");
+
+      // Redirigir al login después de 3 segundos
+      setTimeout(() => {
+        navigate("/login");
+      }, 3000);
+    } catch (error) {
+      console.error("❌ [RegisterPage] Error en el registro:", error);
+      setIsLoading(false);
+      const errorMessage = getErrorMessage(error);
+      toast.error(
+        errorMessage ||
+          "Error al registrar la empresa. Por favor, intenta nuevamente."
+      );
+    }
   };
 
   if (success) {
@@ -330,35 +361,6 @@ export default function RegisterPage() {
                       onChange={handleChange("empresaRazonSocial")}
                       placeholder="Razón Social S.A."
                       size="small"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="CUIT"
-                      value={formData.empresaCuit}
-                      onChange={handleChange("empresaCuit")}
-                      error={!!errors.empresaCuit}
-                      helperText={errors.empresaCuit || "Ej: 30-12345678-9"}
-                      placeholder="30-12345678-9"
-                      size="small"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Teléfono (opcional)"
-                      value={formData.empresaTelefono}
-                      onChange={handleChange("empresaTelefono")}
-                      placeholder="+54 11 1234-5678"
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <PhoneIcon
-                            sx={{ mr: 1, color: "#9ca3af", fontSize: 18 }}
-                          />
-                        ),
-                      }}
                     />
                   </Grid>
                 </Grid>

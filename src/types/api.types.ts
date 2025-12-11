@@ -343,19 +343,35 @@ export interface CreateLoadTripRequest {
 export interface Trip {
   id: number;
   idDriver: number;
+  nameDriver?: string; // Nombre del conductor desde la API
+  idVehicle?: number; // ID del vehículo (puede venir de la API)
   initialLocation: string;
   finalLocation: string;
   totalKm: number;
-  driver?: Driver;
+  driver?: Driver; // Objeto conductor anidado (opcional)
+  vehicle?: Resource; // Objeto vehículo anidado (opcional)
   createdAt?: string;
   updatedAt?: string;
+  // Campos adicionales que pueden venir del formulario
+  origin?: string; // Alias de initialLocation
+  destination?: string; // Alias de finalLocation
+  distance?: number; // Alias de totalKm
+  startDate?: string; // Fecha de inicio
+  notes?: string; // Notas adicionales
 }
 
 export interface CreateTripRequest {
   idDriver: number;
+  idVehicle?: number; // ID del vehículo (opcional según la API)
   initialLocation: string;
   finalLocation: string;
   totalKm: number;
+  // Campos adicionales que pueden ser necesarios
+  origin?: string; // Alias de initialLocation
+  destination?: string; // Alias de finalLocation
+  distance?: number; // Alias de totalKm
+  startDate?: string; // Fecha de inicio
+  notes?: string; // Notas adicionales
 }
 
 export interface UpdateTripRequest extends CreateTripRequest {

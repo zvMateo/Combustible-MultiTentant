@@ -467,7 +467,7 @@ export default function BusinessUnitsPage() {
           fontWeight={700}
           sx={{ color: "#1e293b", mb: 1 }}
         >
-          Business Units
+          Unidades de Negocio
         </Typography>
         <Typography variant="body1" sx={{ color: "#64748b" }}>
           Gestiona las sucursales, campos y divisiones de tu empresa

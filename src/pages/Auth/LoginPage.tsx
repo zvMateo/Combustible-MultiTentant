@@ -190,85 +190,8 @@ export default function LoginPage() {
               Sistema de Gestión de Combustibles
             </Typography>
           </Box>
-
           {/* Form */}
           <CardContent sx={{ p: 3.5 }}>
-            {/* OAuth Buttons */}
-            <Stack spacing={1.5} sx={{ mb: 3 }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<GoogleIcon />}
-                onClick={handleGoogleLogin}
-                sx={{
-                  py: 1.2,
-                  borderColor: "#e2e8f0",
-                  color: "#1f2937",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  fontSize: "0.9rem",
-                  borderRadius: 2,
-                  bgcolor: "#fff",
-                  "&:hover": {
-                    borderColor: "#db4437",
-                    bgcolor: "#fef2f2",
-                  },
-                }}
-              >
-                Continuar con Google
-              </Button>
-
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<FacebookIcon />}
-                onClick={handleFacebookLogin}
-                sx={{
-                  py: 1.2,
-                  borderColor: "#e2e8f0",
-                  color: "#1877f2",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  fontSize: "0.9rem",
-                  borderRadius: 2,
-                  bgcolor: "#fff",
-                  "&:hover": {
-                    borderColor: "#1877f2",
-                    bgcolor: "#eff6ff",
-                  },
-                }}
-              >
-                Continuar con Facebook
-              </Button>
-
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<MicrosoftIcon />}
-                onClick={handleMicrosoftLogin}
-                sx={{
-                  py: 1.2,
-                  borderColor: "#e2e8f0",
-                  color: "#00a4ef",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  fontSize: "0.9rem",
-                  borderRadius: 2,
-                  bgcolor: "#fff",
-                  "&:hover": {
-                    borderColor: "#00a4ef",
-                    bgcolor: "#f0f9ff",
-                  },
-                }}
-              >
-                Continuar con Microsoft
-              </Button>
-            </Stack>
-
-            <Divider sx={{ my: 2.5, color: "#94a3b8", fontSize: "0.8rem" }}>
-              o ingresa con tu usuario
-            </Divider>
-
             <form onSubmit={handleSubmit}>
               <Typography
                 variant="caption"
@@ -284,7 +207,7 @@ export default function LoginPage() {
               </Typography>
               <TextField
                 fullWidth
-                placeholder="nombre.usuario"
+                placeholder="usuario"
                 type="text"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
@@ -440,40 +363,6 @@ export default function LoginPage() {
             </Box>
           </CardContent>
         </Card>
-
-        {/* Demo credentials - Solo en desarrollo */}
-        {import.meta.env.DEV && (
-          <Box
-            sx={{
-              mt: 3,
-              p: 2.5,
-              bgcolor: "rgba(255,255,255,0.1)",
-              borderRadius: 2,
-              border: "1px solid rgba(255,255,255,0.15)",
-              width: "100%",
-            }}
-          >
-            <Typography
-              variant="body2"
-              fontWeight={600}
-              sx={{ color: "white", mb: 1, textAlign: "center" }}
-            >
-              🔑 Credenciales de prueba (solo desarrollo)
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "rgba(255,255,255,0.8)",
-                display: "block",
-                textAlign: "center",
-                fontFamily: "monospace",
-                fontSize: "0.8rem",
-              }}
-            >
-              admin / cualquier contraseña
-            </Typography>
-          </Box>
-        )}
 
         <Typography
           variant="caption"
