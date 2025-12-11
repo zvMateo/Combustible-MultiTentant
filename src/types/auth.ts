@@ -28,6 +28,7 @@ export type Permission =
   | "choferes:gestionar"
   | "surtidores:gestionar"
   | "tanques:gestionar"
+  | "recursos:gestionar"
   | "centros-costo:gestionar"
   | "usuarios:gestionar"
   | "unidades:ver"
@@ -62,6 +63,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "choferes:gestionar",
     "surtidores:gestionar",
     "tanques:gestionar",
+    "recursos:gestionar",
     "centros-costo:gestionar",
     // Eventos
     "eventos:crear",
@@ -95,6 +97,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // Solo WhatsApp, acceso mínimo web
     "eventos:crear",
     "eventos:ver",
+    "recursos:gestionar", // Puede gestionar recursos (tanques, surtidores)
   ],
   auditor: [
     // Solo lectura
@@ -120,6 +123,8 @@ export interface User {
   empresaSubdomain?: string;
   unidadesAsignadas?: number[];
   telefono?: string;
+  /** Permisos personalizados del usuario (opcional, si viene de la API) */
+  permissions?: Permission[];
 }
 
 /**
@@ -185,6 +190,9 @@ export interface AuthState {
 
 /**
  * Helper para verificar permisos
+ * @param user - Usuario a verificar
+ * @param permission - Permiso requerido
+ * @returns true si el usuario tiene el permiso
  */
 export function hasPermission(
   user: User | null,
@@ -195,13 +203,41 @@ export function hasPermission(
   // Superadmin tiene acceso a todo
   if (user.role === "superadmin") return true;
 
-  // Si el usuario tiene permisos personalizados, usarlos
-  if (user.permissions) {
+  // Si el usuario tiene permisos personalizados, usarlos (tienen prioridad)
+  if (user.permissions && Array.isArray(user.permissions)) {
     return user.permissions.includes(permission);
   }
 
   // De lo contrario, usar los permisos del rol
   return ROLE_PERMISSIONS[user.role]?.includes(permission) ?? false;
+}
+
+/**
+ * Helper para verificar múltiples permisos (requiere TODOS)
+ * @param user - Usuario a verificar
+ * @param permissions - Lista de permisos requeridos
+ * @returns true si el usuario tiene TODOS los permisos
+ */
+export function hasAllPermissions(
+  user: User | null,
+  permissions: Permission[]
+): boolean {
+  if (!user || permissions.length === 0) return false;
+  return permissions.every((perm) => hasPermission(user, perm));
+}
+
+/**
+ * Helper para verificar múltiples permisos (requiere AL MENOS UNO)
+ * @param user - Usuario a verificar
+ * @param permissions - Lista de permisos requeridos
+ * @returns true si el usuario tiene AL MENOS UNO de los permisos
+ */
+export function hasAnyPermission(
+  user: User | null,
+  permissions: Permission[]
+): boolean {
+  if (!user || permissions.length === 0) return false;
+  return permissions.some((perm) => hasPermission(user, perm));
 }
 
 /**

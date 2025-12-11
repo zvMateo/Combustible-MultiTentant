@@ -53,6 +53,7 @@ import WarningIcon from "@mui/icons-material/Warning";
 import { toast } from "sonner";
 import { useTheme } from "@/components/providers/theme/use-theme";
 import { useAuthStore } from "@/stores/auth.store";
+import { useRoleLogic } from "@/hooks/useRoleLogic";
 import { mt } from "date-fns/locale";
 
 // ==================== PERSONALIZACIÓN ====================
@@ -1695,8 +1696,9 @@ function WhiteListTab() {
 // ==================== PÁGINA PRINCIPAL ====================
 export default function SettingsPage() {
   const [tab, setTab] = useState(0);
+  const { canManageSettings, isReadOnly } = useRoleLogic();
   const { hasPermission } = useAuthStore();
-  const canEdit = hasPermission("configuracion:editar");
+  const canEdit = hasPermission("configuracion:editar") && canManageSettings;
 
   return (
     <Box sx={{ p: 3 }}>

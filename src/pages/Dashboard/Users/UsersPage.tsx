@@ -36,6 +36,7 @@ import { useRoles, useUserRoles, useAddUserRole } from "@/hooks/queries";
 import { useCompanies, useBusinessUnits } from "@/hooks/queries";
 import { userRolesApi } from "@/services/api";
 import { useAuthStore } from "@/stores/auth.store";
+import { useRoleLogic } from "@/hooks/useRoleLogic";
 import type {
   ApiUser,
   CreateUserRequest,
@@ -102,12 +103,25 @@ function UserRoleChips({ userId }: { userId: string }) {
 
 export default function UsersPage() {
   const { user } = useAuthStore();
+  const {
+    canManageUsers,
+    canEdit,
+    showCreateButtons,
+    showEditButtons,
+    showExportButtons,
+    isReadOnly,
+    companyIdFilter,
+    unidadIdsFilter,
+    isSupervisor,
+    isAuditor,
+  } = useRoleLogic();
 
   const [openDialog, setOpenDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<ApiUser | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   // Usar idCompany del usuario autenticado si es admin
-  const userCompanyId = user?.idCompany || user?.empresaId || 0;
+  const userCompanyId =
+    user?.idCompany || user?.empresaId || companyIdFilter || 0;
 
   const [formData, setFormData] = useState<CreateUserRequest>({
     firstName: "",
@@ -142,11 +156,76 @@ export default function UsersPage() {
     }
   }, [editingUser, userRoles, selectedRoleId]);
 
-  // Filtrar usuarios por búsqueda y empresa
+  // Filtrar usuarios por empresa, unidad y búsqueda según el rol
   const filteredUsers = useMemo(() => {
     let filtered = users;
 
-    // ✅ SOLO filtrar por búsqueda, NO por empresa
+    // 1. Filtrar por empresa (si no es superadmin)
+    // ⚠️ PROBLEMA: El endpoint GetAllUsers no devuelve idCompany en la respuesta
+    // Por ahora, mostramos todos los usuarios si no tienen idCompany definido
+    // TODO: El backend debe incluir idCompany en la respuesta de GetAllUsers
+    if (companyIdFilter && companyIdFilter > 0) {
+      const usersWithCompany = filtered.filter(
+        (u) => u.idCompany !== undefined && u.idCompany !== null
+      );
+      const usersWithoutCompany = filtered.filter(
+        (u) => u.idCompany === undefined || u.idCompany === null
+      );
+
+      // Filtrar usuarios que tienen idCompany
+      filtered = usersWithCompany.filter(
+        (u) => u.idCompany === companyIdFilter
+      );
+
+      // ⚠️ Si hay usuarios sin idCompany, mostrarlos también (asumiendo que son de la empresa actual)
+      // Esto es un workaround hasta que el backend devuelva idCompany
+      if (usersWithoutCompany.length > 0) {
+        console.warn(
+          `⚠️ [UsersPage] ${usersWithoutCompany.length} usuarios sin idCompany. El backend debe incluirlo en la respuesta de GetAllUsers.`
+        );
+        // Por ahora, mostramos todos los usuarios si no tienen idCompany
+        // En producción, esto debería estar filtrado por el backend
+        filtered = [...filtered, ...usersWithoutCompany];
+      }
+
+      if (import.meta.env.DEV) {
+        console.log("🔍 [UsersPage] Filtrado por empresa:", {
+          totalUsers: users.length,
+          usersWithCompany: usersWithCompany.length,
+          usersWithoutCompany: usersWithoutCompany.length,
+          filteredUsers: filtered.length,
+          companyIdFilter,
+        });
+      }
+    }
+
+    // 2. Filtrar por unidad de negocio (Supervisor y Auditor solo ven usuarios de su(s) unidad(es))
+    if (
+      (isSupervisor || isAuditor) &&
+      unidadIdsFilter &&
+      unidadIdsFilter.length > 0
+    ) {
+      const beforeUnidadFilter = filtered.length;
+      filtered = filtered.filter((u) => {
+        // Si el usuario tiene unidad asignada, verificar que esté en las unidades del supervisor/auditor
+        if (u.idBusinessUnit) {
+          return unidadIdsFilter.includes(u.idBusinessUnit);
+        }
+        // Si no tiene unidad asignada, no mostrarlo para supervisor/auditor
+        return false;
+      });
+
+      if (import.meta.env.DEV) {
+        console.log("🔍 [UsersPage] Filtrado por unidad de negocio:", {
+          beforeFilter: beforeUnidadFilter,
+          afterFilter: filtered.length,
+          unidadIdsFilter,
+          role: isSupervisor ? "Supervisor" : isAuditor ? "Auditor" : "Otro",
+        });
+      }
+    }
+
+    // 3. Filtrar por búsqueda
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -159,7 +238,14 @@ export default function UsersPage() {
     }
 
     return filtered;
-  }, [users, searchTerm]);
+  }, [
+    users,
+    searchTerm,
+    companyIdFilter,
+    isSupervisor,
+    isAuditor,
+    unidadIdsFilter,
+  ]);
 
   const handleNew = () => {
     setEditingUser(null);
@@ -301,20 +387,15 @@ export default function UsersPage() {
         const newUser = await createMutation.mutateAsync(dataToSend);
 
         // 🔍 Extraer userId de la respuesta
-        let userId: string | undefined;
-
-        if (newUser && typeof newUser === "object") {
-          userId = newUser.id || newUser.userId || (newUser as any).user?.id;
-        }
-
-        if (!userId) {
+        // La API devuelve ApiUser que tiene 'id' como string
+        if (!newUser || !newUser.id) {
           throw new Error("No se pudo obtener el ID del usuario creado");
         }
 
         // ✅ Asignar rol si se seleccionó uno
         if (selectedRoleId) {
           await addRoleMutation.mutateAsync({
-            userId: userId,
+            userId: newUser.id,
             data: { roleId: selectedRoleId },
           });
         }
@@ -322,18 +403,22 @@ export default function UsersPage() {
 
       setOpenDialog(false);
       setErrors({});
-    } catch (error: any) {
+    } catch (error) {
       console.error("❌ Error al guardar:", error);
 
       // ✅ Mostrar error específico
-      if (error.response?.status === 409) {
+      const errorResponse = error as {
+        response?: { status?: number; data?: { message?: string } };
+      };
+      if (errorResponse.response?.status === 409) {
         setErrors({
           userName: "El nombre de usuario o email ya existe",
           email: "El nombre de usuario o email ya existe",
         });
       } else {
         setErrors({
-          general: error.response?.data?.message || "Error al guardar usuario",
+          general:
+            errorResponse.response?.data?.message || "Error al guardar usuario",
         });
       }
     }
@@ -422,35 +507,39 @@ export default function UsersPage() {
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExport}
-            disabled={filteredUsers.length === 0}
-            sx={{
-              borderColor: "#10b981",
-              color: "#10b981",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
-            }}
-          >
-            Exportar
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleNew}
-            disabled={createMutation.isPending}
-            sx={{
-              bgcolor: "#3b82f6",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { bgcolor: "#2563eb" },
-            }}
-          >
-            Nuevo Usuario
-          </Button>
+          {showExportButtons && (
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadIcon />}
+              onClick={handleExport}
+              disabled={filteredUsers.length === 0}
+              sx={{
+                borderColor: "#10b981",
+                color: "#10b981",
+                fontWeight: 600,
+                textTransform: "none",
+                "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
+              }}
+            >
+              Exportar
+            </Button>
+          )}
+          {showCreateButtons && canManageUsers && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleNew}
+              disabled={createMutation.isPending || isReadOnly}
+              sx={{
+                bgcolor: "#3b82f6",
+                fontWeight: 600,
+                textTransform: "none",
+                "&:hover": { bgcolor: "#2563eb" },
+              }}
+            >
+              Nuevo Usuario
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -563,27 +652,29 @@ export default function UsersPage() {
                     </Box>
 
                     {/* Acciones */}
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 1,
-                        ml: 0.5,
-                      }}
-                    >
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEdit(userItem)}
-                        disabled={updateMutation.isPending}
+                    {!isReadOnly && showEditButtons && canManageUsers && (
+                      <Box
                         sx={{
-                          bgcolor: "#eef2ff",
-                          color: "#1d4ed8",
-                          "&:hover": { bgcolor: "#e0e7ff" },
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 1,
+                          ml: 0.5,
                         }}
                       >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEdit(userItem)}
+                          disabled={updateMutation.isPending || !canEdit}
+                          sx={{
+                            bgcolor: "#eef2ff",
+                            color: "#1d4ed8",
+                            "&:hover": { bgcolor: "#e0e7ff" },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    )}
                   </Box>
 
                   {/* Detalles */}

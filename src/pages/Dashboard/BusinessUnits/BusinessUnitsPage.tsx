@@ -38,6 +38,7 @@ import {
 } from "@/hooks/queries";
 import { useCompanies } from "@/hooks/queries";
 import { useAuthStore } from "@/stores/auth.store";
+import { useRoleLogic } from "@/hooks/useRoleLogic";
 import type {
   BusinessUnit,
   CreateBusinessUnitRequest,
@@ -54,7 +55,19 @@ const initialFormData: CreateBusinessUnitRequest = {
 
 export default function BusinessUnitsPage() {
   const { user } = useAuthStore();
-  const idCompany = user?.empresaId ?? 0;
+  const {
+    canManageBusinessUnits,
+    canEdit,
+    canDelete,
+    showCreateButtons,
+    showEditButtons,
+    showDeleteButtons,
+    showExportButtons,
+    isReadOnly,
+    companyIdFilter,
+  } = useRoleLogic();
+
+  const idCompany = user?.empresaId ?? companyIdFilter ?? 0;
   const isSuperAdmin = (user?.role || "").toLowerCase() === "superadmin";
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -581,31 +594,36 @@ export default function BusinessUnitsPage() {
         />
 
         <Box sx={{ display: "flex", gap: 1.5 }}>
-          <Button
-            variant="outlined"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExport}
-            disabled={filteredUnits.length === 0}
-            sx={{ borderRadius: 2 }}
-          >
-            Exportar
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleNew}
-            disabled={
-              createMutation.isPending ||
-              (!idCompany && companies.length === 0 && !loadingCompanies)
-            }
-            sx={{
-              borderRadius: 2,
-              bgcolor: "#3b82f6",
-              "&:hover": { bgcolor: "#2563eb" },
-            }}
-          >
-            Nueva Unidad
-          </Button>
+          {showExportButtons && (
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadIcon />}
+              onClick={handleExport}
+              disabled={filteredUnits.length === 0}
+              sx={{ borderRadius: 2 }}
+            >
+              Exportar
+            </Button>
+          )}
+          {showCreateButtons && canManageBusinessUnits && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleNew}
+              disabled={
+                createMutation.isPending ||
+                isReadOnly ||
+                (!idCompany && companies.length === 0 && !loadingCompanies)
+              }
+              sx={{
+                borderRadius: 2,
+                bgcolor: "#3b82f6",
+                "&:hover": { bgcolor: "#2563eb" },
+              }}
+            >
+              Nueva Unidad
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -711,37 +729,43 @@ export default function BusinessUnitsPage() {
                   )}
 
                   {/* Acciones */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "flex-end",
-                      gap: 1,
-                      pt: 1,
-                    }}
-                  >
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEdit(unit)}
-                      disabled={updateMutation.isPending}
+                  {!isReadOnly && (
+                    <Box
                       sx={{
-                        bgcolor: "#f1f5f9",
-                        "&:hover": { bgcolor: "#e2e8f0" },
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        gap: 1,
+                        pt: 1,
                       }}
                     >
-                      <EditIcon sx={{ fontSize: 18, color: "#3b82f6" }} />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDelete(unit)}
-                      disabled={deactivateMutation.isPending}
-                      sx={{
-                        bgcolor: "#fef2f2",
-                        "&:hover": { bgcolor: "#fee2e2" },
-                      }}
-                    >
-                      <DeleteIcon sx={{ fontSize: 18, color: "#ef4444" }} />
-                    </IconButton>
-                  </Box>
+                      {showEditButtons && canManageBusinessUnits && (
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEdit(unit)}
+                          disabled={updateMutation.isPending || !canEdit}
+                          sx={{
+                            bgcolor: "#f1f5f9",
+                            "&:hover": { bgcolor: "#e2e8f0" },
+                          }}
+                        >
+                          <EditIcon sx={{ fontSize: 18, color: "#3b82f6" }} />
+                        </IconButton>
+                      )}
+                      {showDeleteButtons && canManageBusinessUnits && (
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(unit)}
+                          disabled={deactivateMutation.isPending || !canDelete}
+                          sx={{
+                            bgcolor: "#fef2f2",
+                            "&:hover": { bgcolor: "#fee2e2" },
+                          }}
+                        >
+                          <DeleteIcon sx={{ fontSize: 18, color: "#ef4444" }} />
+                        </IconButton>
+                      )}
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             </Fade>

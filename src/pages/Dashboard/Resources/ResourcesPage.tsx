@@ -38,6 +38,7 @@ import { toast } from "sonner";
 
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
+import { useRoleLogic } from "@/hooks/useRoleLogic";
 import {
   useResources,
   useCreateResource,
@@ -66,7 +67,22 @@ type ResourceFilter = "all" | number; // number es el idType
 
 export default function ResourcesPage() {
   const { user } = useAuthStore();
-  const idCompany = user?.empresaId ?? 0;
+  const {
+    isSupervisor,
+    isAuditor,
+    canManageResources,
+    canEdit,
+    canDelete,
+    showCreateButtons,
+    showEditButtons,
+    showDeleteButtons,
+    showExportButtons,
+    isReadOnly,
+    unidadIdsFilter,
+    companyIdFilter,
+  } = useRoleLogic();
+
+  const idCompany = user?.empresaId ?? companyIdFilter ?? 0;
 
   // Estados locales
   const [searchTerm, setSearchTerm] = useState("");
@@ -128,9 +144,20 @@ export default function ResourcesPage() {
       (r) => r.active !== false && r.isActive !== false
     );
 
-    // Filtrar por empresa si no es superadmin
-    if (user?.role !== "superadmin" && idCompany) {
-      filtered = filtered.filter((r) => r.idCompany === idCompany);
+    // 2. Filtrar por unidad de negocio (Supervisor y Auditor solo ven recursos de su(s) unidad(es))
+    if (
+      (isSupervisor || isAuditor) &&
+      unidadIdsFilter &&
+      unidadIdsFilter.length > 0
+    ) {
+      filtered = filtered.filter((r) => {
+        // Si el recurso tiene unidad asignada, verificar que esté en las unidades del usuario
+        if (r.idBusinessUnit) {
+          return unidadIdsFilter.includes(r.idBusinessUnit);
+        }
+        // Si no tiene unidad asignada, no mostrarlo para supervisor/auditor
+        return false;
+      });
     }
 
     // Filtrar por tipo (excluir vehículos que tienen idType: 1)
@@ -171,7 +198,15 @@ export default function ResourcesPage() {
       `🔍 [ResourcesPage] Recursos filtrados: ${filtered.length} de ${allResources.length}`
     );
     return filtered;
-  }, [allResources, searchTerm, idCompany, user?.role, filterType]);
+  }, [
+    allResources,
+    searchTerm,
+    companyIdFilter,
+    isSupervisor,
+    isAuditor,
+    unidadIdsFilter,
+    filterType,
+  ]);
 
   // Obtener tipos de recursos que no sean vehículos
   const nonVehicleTypes = useMemo(() => {
@@ -513,49 +548,56 @@ export default function ResourcesPage() {
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExport}
-            disabled={filteredResources.length === 0}
-            sx={{
-              borderColor: "#10b981",
-              color: "#10b981",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
-            }}
-          >
-            Exportar
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<CategoryIcon />}
-            onClick={handleNewResourceType}
-            sx={{
-              borderColor: "#3b82f6",
-              color: "#3b82f6",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { borderColor: "#2563eb", bgcolor: "#3b82f610" },
-            }}
-          >
-            Tipos de Recursos
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleNew}
-            disabled={createMutation.isPending}
-            sx={{
-              bgcolor: "#1E2C56",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { bgcolor: "#16213E" },
-            }}
-          >
-            Nuevo Recurso
-          </Button>
+          {showExportButtons && (
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadIcon />}
+              onClick={handleExport}
+              disabled={filteredResources.length === 0}
+              sx={{
+                borderColor: "#10b981",
+                color: "#10b981",
+                fontWeight: 600,
+                textTransform: "none",
+                "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
+              }}
+            >
+              Exportar
+            </Button>
+          )}
+          {canManageResources && (
+            <Button
+              variant="outlined"
+              startIcon={<CategoryIcon />}
+              onClick={handleNewResourceType}
+              disabled={isReadOnly}
+              sx={{
+                borderColor: "#3b82f6",
+                color: "#3b82f6",
+                fontWeight: 600,
+                textTransform: "none",
+                "&:hover": { borderColor: "#2563eb", bgcolor: "#3b82f610" },
+              }}
+            >
+              Tipos de Recursos
+            </Button>
+          )}
+          {showCreateButtons && canManageResources && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleNew}
+              disabled={createMutation.isPending || isReadOnly}
+              sx={{
+                bgcolor: "#1E2C56",
+                fontWeight: 600,
+                textTransform: "none",
+                "&:hover": { bgcolor: "#16213E" },
+              }}
+            >
+              Nuevo Recurso
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -719,31 +761,37 @@ export default function ResourcesPage() {
                   )}
 
                   {/* Acciones */}
-                  <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEdit(resource)}
-                      disabled={updateMutation.isPending}
-                      sx={{
-                        bgcolor: "#f3f4f6",
-                        "&:hover": { bgcolor: "#e5e7eb" },
-                      }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDeleteClick(resource)}
-                      disabled={deactivateMutation.isPending}
-                      sx={{
-                        bgcolor: "#fee2e2",
-                        color: "#dc2626",
-                        "&:hover": { bgcolor: "#fecaca" },
-                      }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
+                  {!isReadOnly && (
+                    <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}>
+                      {showEditButtons && canManageResources && (
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEdit(resource)}
+                          disabled={updateMutation.isPending || !canEdit}
+                          sx={{
+                            bgcolor: "#f3f4f6",
+                            "&:hover": { bgcolor: "#e5e7eb" },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                      {showDeleteButtons && canManageResources && (
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteClick(resource)}
+                          disabled={deactivateMutation.isPending || !canDelete}
+                          sx={{
+                            bgcolor: "#fee2e2",
+                            color: "#dc2626",
+                            "&:hover": { bgcolor: "#fecaca" },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             </Grid>

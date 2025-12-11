@@ -30,6 +30,7 @@ import {
   useUpdateTrip,
   useDrivers,
 } from "@/hooks/queries";
+import { useRoleLogic } from "@/hooks/useRoleLogic";
 import type {
   Trip,
   CreateTripRequest,
@@ -47,6 +48,9 @@ interface TripFormData {
 }
 
 export default function TripsTab() {
+  const { canEdit, showCreateButtons, showEditButtons, isReadOnly } =
+    useRoleLogic();
+
   const [openDialog, setOpenDialog] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [formData, setFormData] = useState<TripFormData>({
@@ -189,15 +193,17 @@ export default function TripsTab() {
               Gestión de viajes y recorridos
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleNew}
-            disabled={createMutation.isPending}
-            size="small"
-          >
-            Nuevo Viaje
-          </Button>
+          {showCreateButtons && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleNew}
+              disabled={createMutation.isPending || isReadOnly}
+              size="small"
+            >
+              Nuevo Viaje
+            </Button>
+          )}
         </Box>
 
         {/* Tabla */}
@@ -226,17 +232,19 @@ export default function TripsTab() {
                   <TableCell>{trip.finalLocation || "-"}</TableCell>
                   <TableCell>{trip.totalKm || "-"}</TableCell>
                   <TableCell>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEdit(trip)}
-                      disabled={updateMutation.isPending}
-                      sx={{
-                        bgcolor: "#f3f4f6",
-                        "&:hover": { bgcolor: "#e5e7eb" },
-                      }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
+                    {!isReadOnly && showEditButtons && (
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEdit(trip)}
+                        disabled={updateMutation.isPending || !canEdit}
+                        sx={{
+                          bgcolor: "#f3f4f6",
+                          "&:hover": { bgcolor: "#e5e7eb" },
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

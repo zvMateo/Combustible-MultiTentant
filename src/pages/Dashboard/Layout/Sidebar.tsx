@@ -14,14 +14,12 @@ import {
   Chip,
 } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
-import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import PeopleIcon from "@mui/icons-material/People";
 import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
 import PersonIcon from "@mui/icons-material/Person";
 import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
@@ -31,6 +29,7 @@ import PropaneTankIcon from "@mui/icons-material/PropaneTank";
 import StoreIcon from "@mui/icons-material/Store";
 import { useAuthStore } from "@/stores/auth.store";
 import { useUnidadStore } from "@/stores/unidad.store";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { UserRole, Permission } from "@/types";
 import { useTheme } from "@/components/providers/theme/use-theme";
 
@@ -58,12 +57,12 @@ const menuStructure: MenuItem[] = [
   },
 
   // ============================================
-  // ADMINISTRACIÓN - Solo Admin
+  // ADMINISTRACIÓN - Admin y Supervisor
   // ============================================
   {
     label: "Administración",
     icon: <AdminPanelSettingsIcon />,
-    roles: ["admin"],
+    roles: ["admin", "supervisor"],
     submenu: [
       {
         label: "Unidades de Negocio",
@@ -76,39 +75,40 @@ const menuStructure: MenuItem[] = [
         label: "Usuarios",
         icon: <PeopleIcon />,
         path: "/dashboard/users",
-        roles: ["admin"],
+        roles: ["admin", "supervisor"],
         permission: "usuarios:gestionar",
       },
-      {
-        label: "Centros de Costo",
-        icon: <AccountTreeIcon />,
-        path: "/dashboard/cost-centers",
-        roles: ["admin"],
-        permission: "centros-costo:gestionar",
-      },
+      // Comentado temporalmente - Vista de Centros de Costo deshabilitada
+      // {
+      //   label: "Centros de Costo",
+      //   icon: <AccountTreeIcon />,
+      //   path: "/dashboard/cost-centers",
+      //   roles: ["admin"],
+      //   permission: "centros-costo:gestionar",
+      // },
     ],
   },
 
   // ============================================
-  // FLOTA - Solo Admin
+  // FLOTA - Admin y Supervisor
   // ============================================
   {
     label: "Flota",
     icon: <LocalShippingIcon />,
-    roles: ["admin"],
+    roles: ["admin", "supervisor"],
     submenu: [
       {
         label: "Vehículos",
         icon: <DirectionsCarIcon />,
         path: "/dashboard/vehicles",
-        roles: ["admin"],
+        roles: ["admin", "supervisor"],
         permission: "vehiculos:gestionar",
       },
       {
         label: "Choferes",
         icon: <PersonIcon />,
         path: "/dashboard/drivers",
-        roles: ["admin"],
+        roles: ["admin", "supervisor"],
         permission: "choferes:gestionar",
       },
     ],
@@ -131,26 +131,25 @@ const menuStructure: MenuItem[] = [
         permission: "eventos:ver",
       },
 
-
-      // RECURSOS - Admin y Operador
+      // RECURSOS - Admin, Supervisor y Operador
       {
         label: "Recursos",
         icon: <PropaneTankIcon />,
         path: "/dashboard/resources",
-        roles: ["admin", "operador"],
+        roles: ["admin", "supervisor", "operador"],
         permission: "recursos:gestionar",
       },
     ],
   },
 
   // ============================================
-  // REPORTES - Admin y Auditor
+  // REPORTES - Admin, Supervisor y Auditor
   // ============================================
   {
     label: "Reportes",
     icon: <AssessmentIcon />,
     path: "/dashboard/reports",
-    roles: ["admin", "auditor"],
+    roles: ["admin", "supervisor", "auditor"],
     permission: "reportes:ver",
   },
 
@@ -169,9 +168,10 @@ const menuStructure: MenuItem[] = [
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasRole, user } = useAuthStore();
+  const { user } = useAuthStore();
   const { unidadActiva, unidades } = useUnidadStore();
   const { tenantTheme } = useTheme();
+  const { hasRole, can } = usePermissions();
 
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
     Administración: true,
@@ -200,8 +200,20 @@ export default function Sidebar() {
     return location.pathname === path;
   };
 
-  const hasAccess = (roles: UserRole[]) => {
-    return hasRole(roles);
+  /**
+   * Verifica si el usuario tiene acceso a un item del menú
+   * Valida tanto roles como permisos específicos
+   */
+  const hasAccess = (roles: UserRole[], permission?: Permission): boolean => {
+    // Primero verificar rol
+    if (!hasRole(roles)) return false;
+
+    // Si hay un permiso específico, validarlo también
+    if (permission) {
+      return can(permission);
+    }
+
+    return true;
   };
 
   // Nombre de la unidad activa para mostrar
@@ -272,13 +284,13 @@ export default function Sidebar() {
       {/* Lista de Menú */}
       <List sx={{ px: 2, py: 1 }}>
         {menuStructure.map((item) => {
-          // Verificar acceso por roles
+          // Verificar acceso por roles (items principales no tienen permission)
           if (!hasAccess(item.roles)) return null;
 
           // Renderizar items con submenu
           if (item.submenu) {
             const filteredSubmenu = item.submenu.filter((subItem) =>
-              hasAccess(subItem.roles)
+              hasAccess(subItem.roles, subItem.permission)
             );
 
             if (filteredSubmenu.length === 0) return null;

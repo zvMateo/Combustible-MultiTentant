@@ -33,6 +33,7 @@ import { toast } from "sonner";
 
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
+import { useRoleLogic } from "@/hooks/useRoleLogic";
 import {
   useDrivers,
   useCreateDriver,
@@ -74,7 +75,19 @@ const getInitials = (name: string): string => {
 
 export default function DriversPage() {
   const { user } = useAuthStore();
-  const idCompany = user?.empresaId ?? 0;
+  const {
+    canManageDrivers,
+    canEdit,
+    canDelete,
+    showCreateButtons,
+    showEditButtons,
+    showDeleteButtons,
+    showExportButtons,
+    isReadOnly,
+    companyIdFilter,
+  } = useRoleLogic();
+
+  const idCompany = user?.empresaId ?? companyIdFilter ?? 0;
   const isSuperAdmin = (user?.role || "").toLowerCase() === "superadmin";
 
   // Estados locales
@@ -98,39 +111,21 @@ export default function DriversPage() {
   const updateMutation = useUpdateDriver();
   const deactivateMutation = useDeactivateDriver();
 
-  // Filtrar choferes por empresa (si no es superadmin) y por búsqueda
+  // Filtrar choferes por empresa, unidad y búsqueda según el rol
   const filteredDrivers = useMemo(() => {
     let filtered = Array.isArray(driversAll) ? driversAll : [];
 
-    // Debug: mostrar todos los choferes antes de filtrar
-    if (import.meta.env.DEV) {
-      console.log("🔍 [DriversPage] Antes de filtrar:", {
-        totalDrivers: filtered.length,
-        drivers: filtered.map((d) => ({
-          id: d.id,
-          name: d.name,
-          idCompany: d.idCompany,
-        })),
-        userRole: user?.role,
-        idCompany,
-        isSuperAdmin,
-      });
+    // 1. Filtrar por empresa (si no es superadmin)
+    if (!isSuperAdmin && companyIdFilter && companyIdFilter > 0) {
+      filtered = filtered.filter((d) => d.idCompany === companyIdFilter);
     }
 
-    // Filtrar por empresa si el usuario no es superadmin
-    if (!isSuperAdmin && idCompany && idCompany > 0) {
-      filtered = filtered.filter((d) => d.idCompany === idCompany);
+    // 2. Filtrar por unidad de negocio (Supervisor y Auditor solo ven su(s) unidad(es))
+    // Nota: Los choferes no tienen idBusinessUnit directo, pero se pueden filtrar
+    // por la empresa y luego por otras relaciones si es necesario
+    // Por ahora, supervisor y auditor ven todos los choferes de su empresa
 
-      if (import.meta.env.DEV) {
-        console.log("🔍 [DriversPage] Filtrando por empresa:", {
-          idCompany,
-          beforeFilter: driversAll.length,
-          afterFilter: filtered.length,
-        });
-      }
-    }
-
-    // Filtrar por búsqueda
+    // 3. Filtrar por búsqueda
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -141,20 +136,8 @@ export default function DriversPage() {
       );
     }
 
-    // Debug: mostrar choferes después de filtrar
-    if (import.meta.env.DEV) {
-      console.log("🔍 [DriversPage] Después de filtrar:", {
-        filteredCount: filtered.length,
-        filteredDrivers: filtered.map((d) => ({
-          id: d.id,
-          name: d.name,
-          idCompany: d.idCompany,
-        })),
-      });
-    }
-
     return filtered;
-  }, [driversAll, searchTerm, idCompany, user?.role, isSuperAdmin]);
+  }, [driversAll, searchTerm, companyIdFilter, isSuperAdmin]);
 
   // Handlers
   const handleNew = () => {
@@ -384,43 +367,47 @@ export default function DriversPage() {
             variant="h5"
             sx={{ fontWeight: 700, lineHeight: 1.1, mb: 0.5 }}
           >
-            Driver Management
+            Choferes
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {filteredDrivers.length}{" "}
-            {filteredDrivers.length === 1 ? "driver" : "drivers"} registrados
+            {filteredDrivers.length === 1 ? "chofer" : "choferes"} registrados
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExport}
-            disabled={filteredDrivers.length === 0}
-            sx={{
-              borderColor: "#10b981",
-              color: "#10b981",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
-            }}
-          >
-            Export
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleNew}
-            disabled={createMutation.isPending}
-            sx={{
-              bgcolor: "#1E2C56",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { bgcolor: "#16213E" },
-            }}
-          >
-            New Driver
-          </Button>
+          {showExportButtons && (
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadIcon />}
+              onClick={handleExport}
+              disabled={filteredDrivers.length === 0}
+              sx={{
+                borderColor: "#10b981",
+                color: "#10b981",
+                fontWeight: 600,
+                textTransform: "none",
+                "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
+              }}
+            >
+              Exportar
+            </Button>
+          )}
+          {showCreateButtons && canManageDrivers && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleNew}
+              disabled={createMutation.isPending || isReadOnly}
+              sx={{
+                bgcolor: "#1E2C56",
+                fontWeight: 600,
+                textTransform: "none",
+                "&:hover": { bgcolor: "#16213E" },
+              }}
+            >
+              Nuevo Chofer
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -568,31 +555,37 @@ export default function DriversPage() {
                   </Box>
 
                   {/* Acciones */}
-                  <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEdit(driver)}
-                      disabled={updateMutation.isPending}
-                      sx={{
-                        bgcolor: "#f3f4f6",
-                        "&:hover": { bgcolor: "#e5e7eb" },
-                      }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDeleteClick(driver)}
-                      disabled={deactivateMutation.isPending}
-                      sx={{
-                        bgcolor: "#fee2e2",
-                        color: "#dc2626",
-                        "&:hover": { bgcolor: "#fecaca" },
-                      }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
+                  {!isReadOnly && (
+                    <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}>
+                      {showEditButtons && canManageDrivers && (
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEdit(driver)}
+                          disabled={updateMutation.isPending || !canEdit}
+                          sx={{
+                            bgcolor: "#f3f4f6",
+                            "&:hover": { bgcolor: "#e5e7eb" },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                      {showDeleteButtons && canManageDrivers && (
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteClick(driver)}
+                          disabled={deactivateMutation.isPending || !canDelete}
+                          sx={{
+                            bgcolor: "#fee2e2",
+                            color: "#dc2626",
+                            "&:hover": { bgcolor: "#fecaca" },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             </Grid>

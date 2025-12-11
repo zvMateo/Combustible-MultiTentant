@@ -157,6 +157,16 @@ const getTipoColor = (tipo: TipoCentroCosto): string =>
   tipoColorMap[tipo] || tipoColorMap.Otro;
 
 export default function CostCentersPage() {
+  // VISTA COMENTADA TEMPORALMENTE
+  return (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h6" color="text.secondary">
+        Vista de Centros de Costo temporalmente deshabilitada
+      </Typography>
+    </Box>
+  );
+
+  /* COMENTADO - Código original de la vista de centros de costos
   const { user } = useAuthStore();
   const [items, setItems] = useState<CentroCosto[]>(mockCentrosCosto);
   const [openDialog, setOpenDialog] = useState(false);
@@ -277,7 +287,6 @@ export default function CostCentersPage() {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Header alineado a Usuarios */}
       <Box
         sx={{
           display: "flex",
@@ -334,7 +343,6 @@ export default function CostCentersPage() {
         </Box>
       </Box>
 
-      {/* Filtros en card compacta */}
       <Box
         sx={{
           mb: 3,
@@ -364,7 +372,6 @@ export default function CostCentersPage() {
         />
       </Box>
 
-      {/* Grid de Items */}
       <Grid container spacing={3}>
         {filteredItems.map((item) => (
           <Grid
@@ -400,7 +407,6 @@ export default function CostCentersPage() {
                   height: "100%",
                 }}
               >
-                {/* Header + info principal */}
                 <Box sx={{ flexGrow: 1 }}>
                   <Box
                     sx={{
@@ -506,7 +512,6 @@ export default function CostCentersPage() {
                   </Box>
                 </Box>
 
-                {/* Footer: empresa solo para admin */}
                 {user?.role === "admin" && (
                   <Box sx={{ mt: 1 }}>
                     <Typography
@@ -536,7 +541,6 @@ export default function CostCentersPage() {
         </Box>
       )}
 
-      {/* Dialog crear / editar */}
       <Dialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
@@ -618,7 +622,6 @@ export default function CostCentersPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Dialog eliminar */}
       <Dialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
@@ -642,4 +645,5 @@ export default function CostCentersPage() {
       </Dialog>
     </Box>
   );
+  */
 }

@@ -38,7 +38,7 @@ import {
   useUpdateLoadLiters,
 } from "@/hooks/queries";
 import { useResources, useFuelTypes } from "@/hooks/queries";
-import { useAuthStore } from "@/stores/auth.store";
+import { useRoleLogic } from "@/hooks/useRoleLogic";
 import type {
   LoadLiters,
   CreateLoadLitersRequest,
@@ -50,7 +50,15 @@ interface FormErrors {
 }
 
 export default function LoadLitersTab() {
-  const { user } = useAuthStore();
+  const {
+    showCreateButtons,
+    showExportButtons,
+    isReadOnly,
+    companyIdFilter,
+    unidadIdsFilter,
+    isSupervisor,
+    isAuditor,
+  } = useRoleLogic();
 
   const [openDialog, setOpenDialog] = useState(false);
   const [editingLoad, setEditingLoad] = useState<LoadLiters | null>(null);
@@ -73,17 +81,34 @@ export default function LoadLitersTab() {
   const createMutation = useCreateLoadLiters();
   const updateMutation = useUpdateLoadLiters();
 
-  // Filtrar cargas
+  // Filtrar cargas por empresa, unidad y búsqueda según el rol
   const filteredLoads = useMemo(() => {
     let filtered = loads;
 
-    // Filtrar por empresa si no es superadmin
-    // Nota: La API no devuelve idCompany directamente, así que no podemos filtrar por empresa aquí
-    // Si necesitas filtrar por empresa, necesitarías obtener el idCompany del recurso
-    // if (user?.role !== "superadmin" && idCompany) {
-    //   filtered = filtered.filter((l) => l.resource?.idCompany === idCompany);
-    // }
+    // 1. Filtrar por empresa (a través del recurso)
+    if (companyIdFilter && companyIdFilter > 0) {
+      filtered = filtered.filter(
+        (l) => l.resource?.idCompany === companyIdFilter
+      );
+    }
 
+    // 2. Filtrar por unidad de negocio (Supervisor y Auditor solo ven cargas de su(s) unidad(es))
+    if (
+      (isSupervisor || isAuditor) &&
+      unidadIdsFilter &&
+      unidadIdsFilter.length > 0
+    ) {
+      filtered = filtered.filter((l) => {
+        // Si el recurso tiene unidad asignada, verificar que esté en las unidades del usuario
+        if (l.resource?.idBusinessUnit) {
+          return unidadIdsFilter.includes(l.resource.idBusinessUnit);
+        }
+        // Si no tiene unidad asignada, no mostrarlo para supervisor/auditor
+        return false;
+      });
+    }
+
+    // 3. Filtrar por búsqueda
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -97,7 +122,14 @@ export default function LoadLitersTab() {
     }
 
     return filtered;
-  }, [loads, searchTerm]);
+  }, [
+    loads,
+    searchTerm,
+    companyIdFilter,
+    isSupervisor,
+    isAuditor,
+    unidadIdsFilter,
+  ]);
 
   const handleNew = () => {
     setEditingLoad(null);
@@ -242,24 +274,28 @@ export default function LoadLitersTab() {
             </Typography>
           </Box>
           <Box sx={{ display: "flex", gap: 1 }}>
-            <Button
-              variant="outlined"
-              startIcon={<FileDownloadIcon />}
-              onClick={handleExport}
-              disabled={filteredLoads.length === 0}
-              size="small"
-            >
-              Exportar
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleNew}
-              disabled={createMutation.isPending}
-              size="small"
-            >
-              Nueva Carga
-            </Button>
+            {showExportButtons && (
+              <Button
+                variant="outlined"
+                startIcon={<FileDownloadIcon />}
+                onClick={handleExport}
+                disabled={filteredLoads.length === 0}
+                size="small"
+              >
+                Exportar
+              </Button>
+            )}
+            {showCreateButtons && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleNew}
+                disabled={createMutation.isPending || isReadOnly}
+                size="small"
+              >
+                Nueva Carga
+              </Button>
+            )}
           </Box>
         </Box>
 

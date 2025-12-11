@@ -104,12 +104,20 @@ export const useAuthStore = create<AuthState>()(
       clearError: () => set({ error: null }),
 
       // Verificar permiso (usa ROLE_PERMISSIONS centralizado)
+      // Soporta permisos personalizados del usuario si vienen de la API
       hasPermission: (permission: Permission) => {
         const user = get().user;
         if (!user) return false;
+        
+        // Superadmin tiene acceso a todo
         if (user.role === "superadmin") return true;
 
-        // Usa el mapeo centralizado de types/auth.ts
+        // Si el usuario tiene permisos personalizados, usarlos (tienen prioridad)
+        if (user.permissions && Array.isArray(user.permissions)) {
+          return user.permissions.includes(permission);
+        }
+
+        // De lo contrario, usar los permisos del rol desde ROLE_PERMISSIONS
         return ROLE_PERMISSIONS[user.role]?.includes(permission) ?? false;
       },
 

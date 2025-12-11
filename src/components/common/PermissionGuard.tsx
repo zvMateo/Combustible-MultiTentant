@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
-import { usePermissions } from "../../hooks/usePermissions";
-import type { Permission } from "../../utils/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { Permission } from "@/types";
 
 interface PermissionGuardProps {
   /** Permiso requerido para mostrar el contenido */

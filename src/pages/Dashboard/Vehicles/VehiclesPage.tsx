@@ -35,6 +35,7 @@ import { toast } from "sonner";
 
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
+import { useRoleLogic } from "@/hooks/useRoleLogic";
 import {
   useVehicles,
   useCreateResource,
@@ -56,7 +57,22 @@ interface FormErrors {
 
 export default function VehiclesPage() {
   const { user } = useAuthStore();
-  const idCompany = 2; // Hardcoded para desarrollo
+  const {
+    isSupervisor,
+    isAuditor,
+    canManageVehicles,
+    canEdit,
+    canDelete,
+    showCreateButtons,
+    showEditButtons,
+    showDeleteButtons,
+    showExportButtons,
+    isReadOnly,
+    unidadIdsFilter,
+    companyIdFilter,
+  } = useRoleLogic();
+
+  const idCompany = companyIdFilter || 2; // Usar companyIdFilter del hook o 2 por defecto
 
   // Estados locales
   const [searchTerm, setSearchTerm] = useState("");
@@ -106,21 +122,37 @@ export default function VehiclesPage() {
     }
   }, [vehicleTypeId, editingVehicle, openDialog]);
 
-  // Filtrar vehículos por búsqueda y empresa
+  // Filtrar vehículos por empresa, unidad y búsqueda según el rol
   const filteredVehicles = useMemo(() => {
     let filtered = vehicles;
 
-    // Filtrar recursos inactivos (active: false)
+    // 1. Filtrar recursos inactivos (active: false)
     filtered = filtered.filter(
       (v) => v.active !== false && v.isActive !== false
     );
 
-    // Filtrar por empresa si no es superadmin
-    if (user?.role !== "superadmin" && idCompany) {
-      filtered = filtered.filter((v) => v.idCompany === idCompany);
+    // 2. Filtrar por empresa (si no es superadmin)
+    if (companyIdFilter && companyIdFilter > 0) {
+      filtered = filtered.filter((v) => v.idCompany === companyIdFilter);
     }
 
-    // Filtrar por búsqueda
+    // 3. Filtrar por unidad de negocio (Supervisor y Auditor solo ven su(s) unidad(es))
+    if (
+      (isSupervisor || isAuditor) &&
+      unidadIdsFilter &&
+      unidadIdsFilter.length > 0
+    ) {
+      filtered = filtered.filter((v) => {
+        // Si el vehículo tiene unidad asignada, verificar que esté en las unidades del usuario
+        if (v.idBusinessUnit) {
+          return unidadIdsFilter.includes(v.idBusinessUnit);
+        }
+        // Si no tiene unidad asignada, no mostrarlo para supervisor/auditor
+        return false;
+      });
+    }
+
+    // 4. Filtrar por búsqueda
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -131,7 +163,14 @@ export default function VehiclesPage() {
     }
 
     return filtered;
-  }, [vehicles, searchTerm, idCompany, user?.role]);
+  }, [
+    vehicles,
+    searchTerm,
+    companyIdFilter,
+    isSupervisor,
+    isAuditor,
+    unidadIdsFilter,
+  ]);
 
   // Handlers
   const handleNew = () => {
@@ -350,7 +389,7 @@ export default function VehiclesPage() {
             variant="h5"
             sx={{ fontWeight: 700, lineHeight: 1.1, mb: 0.5 }}
           >
-            Vehicle Management
+            Vehiculos
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {filteredVehicles.length}{" "}
@@ -358,35 +397,39 @@ export default function VehiclesPage() {
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExport}
-            disabled={filteredVehicles.length === 0}
-            sx={{
-              borderColor: "#10b981",
-              color: "#10b981",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
-            }}
-          >
-            Export
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleNew}
-            disabled={createMutation.isPending}
-            sx={{
-              bgcolor: "#1E2C56",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { bgcolor: "#16213E" },
-            }}
-          >
-            New Vehicle
-          </Button>
+          {showExportButtons && (
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadIcon />}
+              onClick={handleExport}
+              disabled={filteredVehicles.length === 0}
+              sx={{
+                borderColor: "#10b981",
+                color: "#10b981",
+                fontWeight: 600,
+                textTransform: "none",
+                "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
+              }}
+            >
+              Exportar
+            </Button>
+          )}
+          {showCreateButtons && canManageVehicles && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleNew}
+              disabled={createMutation.isPending || isReadOnly}
+              sx={{
+                bgcolor: "#1E2C56",
+                fontWeight: 600,
+                textTransform: "none",
+                "&:hover": { bgcolor: "#16213E" },
+              }}
+            >
+              Nuevo Vehículo
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -525,31 +568,37 @@ export default function VehiclesPage() {
                   )}
 
                   {/* Acciones */}
-                  <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEdit(vehicle)}
-                      disabled={updateMutation.isPending}
-                      sx={{
-                        bgcolor: "#f3f4f6",
-                        "&:hover": { bgcolor: "#e5e7eb" },
-                      }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDeleteClick(vehicle)}
-                      disabled={deactivateMutation.isPending}
-                      sx={{
-                        bgcolor: "#fee2e2",
-                        color: "#dc2626",
-                        "&:hover": { bgcolor: "#fecaca" },
-                      }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
+                  {!isReadOnly && (
+                    <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}>
+                      {showEditButtons && canManageVehicles && (
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEdit(vehicle)}
+                          disabled={updateMutation.isPending || !canEdit}
+                          sx={{
+                            bgcolor: "#f3f4f6",
+                            "&:hover": { bgcolor: "#e5e7eb" },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                      {showDeleteButtons && canManageVehicles && (
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteClick(vehicle)}
+                          disabled={deactivateMutation.isPending || !canDelete}
+                          sx={{
+                            bgcolor: "#fee2e2",
+                            color: "#dc2626",
+                            "&:hover": { bgcolor: "#fecaca" },
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             </Grid>

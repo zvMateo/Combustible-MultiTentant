@@ -60,6 +60,7 @@ import {
   useBusinessUnits,
   loadLitersKeys,
 } from "@/hooks/queries";
+import { useRoleLogic } from "@/hooks/useRoleLogic";
 import type {
   ConsumoVehiculoData,
   LitrosSurtidorData,
@@ -123,6 +124,8 @@ function TableSkeleton({
 }
 
 export default function ReportsPage() {
+  const { canExport, showExportButtons } = useRoleLogic();
+
   const [tipoReporte, setTipoReporte] =
     useState<TipoReporte>("consumo-vehiculos");
   const [periodoReporte, setPeriodoReporte] = useState<PeriodoReporte>("mes");
@@ -537,20 +540,22 @@ export default function ReportsPage() {
               <RefreshIcon sx={{ fontSize: 20 }} />
             </IconButton>
           </Tooltip>
-          <Button
-            variant="contained"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExport}
-            disabled={isLoading || loads.length === 0}
-            sx={{
-              bgcolor: "#10b981",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { bgcolor: "#059669" },
-            }}
-          >
-            Exportar a Excel
-          </Button>
+          {showExportButtons && (
+            <Button
+              variant="contained"
+              startIcon={<FileDownloadIcon />}
+              onClick={handleExport}
+              disabled={isLoading || loads.length === 0 || !canExport}
+              sx={{
+                bgcolor: "#10b981",
+                fontWeight: 600,
+                textTransform: "none",
+                "&:hover": { bgcolor: "#059669" },
+              }}
+            >
+              Exportar a Excel
+            </Button>
+          )}
         </Box>
       </Box>
 
