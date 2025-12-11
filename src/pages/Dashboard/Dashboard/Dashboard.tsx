@@ -43,6 +43,7 @@ import TrendingFlatIcon from "@mui/icons-material/TrendingFlat";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import { Fuel, Droplet, Calendar } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   APIProvider,
@@ -1196,34 +1197,180 @@ export default function Dashboard() {
                             position={{ lat: carga.lat, lng: carga.lng }}
                             onCloseClick={() => setSelectedCarga(null)}
                           >
-                            <div style={{ padding: "8px", minWidth: "200px" }}>
+                            <div
+                              style={{
+                                padding: "16px",
+                                minWidth: "260px",
+                                fontFamily: "Inter, system-ui, sans-serif",
+                              }}
+                            >
+                              {/* Header con ícono */}
                               <div
                                 style={{
-                                  fontWeight: 700,
-                                  marginBottom: "4px",
-                                  fontSize: "0.875rem",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "12px",
+                                  marginBottom: "16px",
+                                  paddingBottom: "12px",
+                                  borderBottom: "2px solid #e2e8f0",
                                 }}
                               >
-                                {carga.recurso}
+                                <div
+                                  style={{
+                                    width: "40px",
+                                    height: "40px",
+                                    borderRadius: "10px",
+                                    background:
+                                      "linear-gradient(135deg, #1E2C56 0%, #4A90E2 100%)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    color: "white",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <Fuel size={22} strokeWidth={2.5} />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div
+                                    style={{
+                                      fontWeight: 700,
+                                      fontSize: "0.95rem",
+                                      color: "#1e293b",
+                                      marginBottom: "2px",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {carga.nombre}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: "0.75rem",
+                                      color: "#64748b",
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    {carga.recurso}
+                                  </div>
+                                </div>
                               </div>
+
+                              {/* Info de litros */}
                               <div
                                 style={{
-                                  fontSize: "0.875rem",
-                                  color: "#64748b",
-                                  marginBottom: "4px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                  marginBottom: "12px",
+                                  padding: "12px",
+                                  background:
+                                    "linear-gradient(135deg, #1E2C5610 0%, #4A90E215 100%)",
+                                  borderRadius: "8px",
+                                  border: "1px solid #1E2C5620",
                                 }}
                               >
-                                <strong>Litros:</strong>{" "}
-                                {carga.litros.toLocaleString()} L
+                                <div
+                                  style={{
+                                    color: "#1E2C56",
+                                  }}
+                                >
+                                  <Droplet
+                                    size={24}
+                                    strokeWidth={2}
+                                    fill="#1E2C56"
+                                  />
+                                </div>
+                                <div>
+                                  <div
+                                    style={{
+                                      fontSize: "0.7rem",
+                                      color: "#64748b",
+                                      fontWeight: 600,
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.5px",
+                                      marginBottom: "2px",
+                                    }}
+                                  >
+                                    Litros Cargados
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: "1.25rem",
+                                      fontWeight: 700,
+                                      color: "#1E2C56",
+                                      lineHeight: 1,
+                                    }}
+                                  >
+                                    {carga.litros.toLocaleString()} L
+                                  </div>
+                                </div>
                               </div>
+
+                              {/* Fecha y hora */}
                               <div
                                 style={{
-                                  fontSize: "0.75rem",
-                                  color: "#64748b",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  padding: "10px 12px",
+                                  background: "#f8fafc",
+                                  borderRadius: "6px",
                                 }}
                               >
-                                <strong>Fecha:</strong>{" "}
-                                {new Date(carga.fecha).toLocaleDateString()}
+                                <div
+                                  style={{
+                                    color: "#64748b",
+                                  }}
+                                >
+                                  <Calendar size={18} strokeWidth={2} />
+                                </div>
+                                <div>
+                                  <div
+                                    style={{
+                                      fontSize: "0.7rem",
+                                      color: "#64748b",
+                                      fontWeight: 600,
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.3px",
+                                      marginBottom: "2px",
+                                    }}
+                                  >
+                                    Fecha de carga
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: "0.85rem",
+                                      fontWeight: 600,
+                                      color: "#1e293b",
+                                    }}
+                                  >
+                                    {new Date(carga.fecha).toLocaleDateString(
+                                      "es-AR",
+                                      {
+                                        day: "2-digit",
+                                        month: "long",
+                                        year: "numeric",
+                                      }
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Footer con ID */}
+                              <div
+                                style={{
+                                  marginTop: "12px",
+                                  paddingTop: "10px",
+                                  borderTop: "1px solid #e2e8f0",
+                                  fontSize: "0.7rem",
+                                  color: "#94a3b8",
+                                  textAlign: "center",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                ID de Carga: #{carga.id}
                               </div>
                             </div>
                           </InfoWindow>
