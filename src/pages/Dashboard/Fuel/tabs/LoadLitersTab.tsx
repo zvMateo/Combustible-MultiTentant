@@ -16,7 +16,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Chip,
   IconButton,
   Card,
@@ -52,7 +51,6 @@ interface FormErrors {
 
 export default function LoadLitersTab() {
   const { user } = useAuthStore();
-  const idCompany = user?.idCompany ?? 0;
 
   const [openDialog, setOpenDialog] = useState(false);
   const [editingLoad, setEditingLoad] = useState<LoadLiters | null>(null);
@@ -79,22 +77,27 @@ export default function LoadLitersTab() {
   const filteredLoads = useMemo(() => {
     let filtered = loads;
 
-    if (user?.role !== "superadmin" && idCompany) {
-      filtered = filtered.filter((l) => l.resource?.idCompany === idCompany);
-    }
+    // Filtrar por empresa si no es superadmin
+    // Nota: La API no devuelve idCompany directamente, así que no podemos filtrar por empresa aquí
+    // Si necesitas filtrar por empresa, necesitarías obtener el idCompany del recurso
+    // if (user?.role !== "superadmin" && idCompany) {
+    //   filtered = filtered.filter((l) => l.resource?.idCompany === idCompany);
+    // }
 
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (l) =>
-          l.resource?.name.toLowerCase().includes(term) ||
-          l.resource?.identifier.toLowerCase().includes(term) ||
+          (l.nameResource && l.nameResource.toLowerCase().includes(term)) ||
+          (l.resource?.name && l.resource.name.toLowerCase().includes(term)) ||
+          (l.resource?.identifier &&
+            l.resource.identifier.toLowerCase().includes(term)) ||
           (l.detail && l.detail.toLowerCase().includes(term))
       );
     }
 
     return filtered;
-  }, [loads, searchTerm, idCompany, user?.role]);
+  }, [loads, searchTerm]);
 
   const handleNew = () => {
     setEditingLoad(null);
@@ -196,12 +199,12 @@ export default function LoadLitersTab() {
   const handleExport = () => {
     const dataToExport = filteredLoads.map((l) => ({
       Fecha: l.loadDate.split("T")[0],
-      Recurso: l.resource?.name || "",
+      Recurso: l.nameResource || l.resource?.name || "",
       Identificador: l.resource?.identifier || "",
       "Litros Iniciales": l.initialLiters,
       "Litros Finales": l.finalLiters,
       "Total Litros": l.totalLiters,
-      "Tipo Combustible": l.fuelType?.name || "",
+      "Tipo Combustible": l.nameFuelType || l.fuelType?.name || "",
       Detalle: l.detail || "",
     }));
 
@@ -233,7 +236,9 @@ export default function LoadLitersTab() {
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {filteredLoads.length}{" "}
-              {filteredLoads.length === 1 ? "carga registrada" : "cargas registradas"}
+              {filteredLoads.length === 1
+                ? "carga registrada"
+                : "cargas registradas"}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", gap: 1 }}>
@@ -301,7 +306,9 @@ export default function LoadLitersTab() {
                   <TableCell>
                     {new Date(load.loadDate).toLocaleDateString()}
                   </TableCell>
-                  <TableCell>{load.resource?.name || "-"}</TableCell>
+                  <TableCell>
+                    {load.nameResource || load.resource?.name || "-"}
+                  </TableCell>
                   <TableCell align="right">{load.initialLiters} L</TableCell>
                   <TableCell align="right">{load.finalLiters} L</TableCell>
                   <TableCell align="right">
@@ -315,7 +322,9 @@ export default function LoadLitersTab() {
                       }}
                     />
                   </TableCell>
-                  <TableCell>{load.fuelType?.name || "-"}</TableCell>
+                  <TableCell>
+                    {load.nameFuelType || load.fuelType?.name || "-"}
+                  </TableCell>
                   <TableCell>
                     <IconButton
                       size="small"
@@ -378,7 +387,11 @@ export default function LoadLitersTab() {
                     ))}
                   </Select>
                   {errors.idResource && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5 }}
+                    >
                       {errors.idResource}
                     </Typography>
                   )}
@@ -484,7 +497,11 @@ export default function LoadLitersTab() {
                     ))}
                   </Select>
                   {errors.idFuelType && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5 }}
+                    >
                       {errors.idFuelType}
                     </Typography>
                   )}

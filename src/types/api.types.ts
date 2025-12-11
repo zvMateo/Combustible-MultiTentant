@@ -292,14 +292,16 @@ export interface UpdateFuelStockMovementRequest
 export interface LoadLiters {
   id: number;
   idResource: number;
+  nameResource?: string | null; // Nombre del recurso desde la API
   loadDate: string;
   initialLiters: number;
   finalLiters: number;
   totalLiters: number;
   detail?: string;
   idFuelType: number;
-  resource?: Resource;
-  fuelType?: FuelType;
+  nameFuelType?: string | null; // Nombre del tipo de combustible desde la API
+  resource?: Resource; // Objeto resource anidado (opcional, para compatibilidad)
+  fuelType?: FuelType; // Objeto fuelType anidado (opcional, para compatibilidad)
 }
 
 export interface CreateLoadLitersRequest {
