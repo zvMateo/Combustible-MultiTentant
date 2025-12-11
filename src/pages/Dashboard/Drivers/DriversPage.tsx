@@ -91,43 +91,82 @@ export default function DriversPage() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
-  // React Query hooks
-  const { data: drivers = [], isLoading, error } = useDrivers(idCompany);
+  // React Query hooks - Siempre usar GetAll
+  const { data: driversAll = [], isLoading, error } = useDrivers();
   const { data: companies = [] } = useCompanies();
   const createMutation = useCreateDriver();
   const updateMutation = useUpdateDriver();
   const deactivateMutation = useDeactivateDriver();
 
-  // Filtrar choferes por búsqueda
+  // Filtrar choferes por empresa (si no es superadmin) y por búsqueda
   const filteredDrivers = useMemo(() => {
-    if (!searchTerm.trim()) return drivers;
-    const term = searchTerm.toLowerCase();
-    return drivers.filter(
-      (d) =>
-        d.name.toLowerCase().includes(term) ||
-        d.dni.toLowerCase().includes(term) ||
-        (d.phoneNumber && d.phoneNumber.toLowerCase().includes(term))
-    );
-  }, [drivers, searchTerm]);
+    let filtered = Array.isArray(driversAll) ? driversAll : [];
+
+    // Debug: mostrar todos los choferes antes de filtrar
+    if (import.meta.env.DEV) {
+      console.log("🔍 [DriversPage] Antes de filtrar:", {
+        totalDrivers: filtered.length,
+        drivers: filtered.map((d) => ({
+          id: d.id,
+          name: d.name,
+          idCompany: d.idCompany,
+        })),
+        userRole: user?.role,
+        idCompany,
+        isSuperAdmin,
+      });
+    }
+
+    // Filtrar por empresa si el usuario no es superadmin
+    if (!isSuperAdmin && idCompany && idCompany > 0) {
+      filtered = filtered.filter((d) => d.idCompany === idCompany);
+
+      if (import.meta.env.DEV) {
+        console.log("🔍 [DriversPage] Filtrando por empresa:", {
+          idCompany,
+          beforeFilter: driversAll.length,
+          afterFilter: filtered.length,
+        });
+      }
+    }
+
+    // Filtrar por búsqueda
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (d) =>
+          d.name.toLowerCase().includes(term) ||
+          d.dni.toLowerCase().includes(term) ||
+          (d.phoneNumber && d.phoneNumber.toLowerCase().includes(term))
+      );
+    }
+
+    // Debug: mostrar choferes después de filtrar
+    if (import.meta.env.DEV) {
+      console.log("🔍 [DriversPage] Después de filtrar:", {
+        filteredCount: filtered.length,
+        filteredDrivers: filtered.map((d) => ({
+          id: d.id,
+          name: d.name,
+          idCompany: d.idCompany,
+        })),
+      });
+    }
+
+    return filtered;
+  }, [driversAll, searchTerm, idCompany, user?.role, isSuperAdmin]);
 
   // Handlers
   const handleNew = () => {
-    const fallbackCompanyId =
-      idCompany ||
-      companies[0]?.id ||
-      (companies.length > 0 ? companies[0].id : 0);
-
     setEditingDriver(null);
     setFormData({
-      idCompany: 2,
+      idCompany: idCompany || 2, // Usar idCompany del usuario o 2 por defecto
       name: "",
       dni: "",
       phoneNumber: "",
     });
     setErrors({});
     setOpenDialog(true);
-
-    console.log(formData);
   };
 
   const handleEdit = (driver: Driver) => {
@@ -188,12 +227,20 @@ export default function DriversPage() {
   };
 
   const handleSave = async () => {
-    // Asegurar idCompany antes de validar
+    // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
     const finalIdCompany =
-      formData.idCompany || idCompany || companies[0]?.id || 0;
+      user?.role === "superadmin"
+        ? formData.idCompany || idCompany || companies[0]?.id || 0
+        : idCompany || user?.idCompany || user?.empresaId || 0;
+
     if (finalIdCompany && finalIdCompany !== formData.idCompany) {
       setFormData((prev) => ({ ...prev, idCompany: finalIdCompany }));
     }
+
+    console.log(
+      "🏢 [DriversPage] Multi-tenant: idCompany del usuario autenticado:",
+      finalIdCompany
+    );
 
     if (!validate()) {
       toast.error("Completa los campos obligatorios");
@@ -211,12 +258,15 @@ export default function DriversPage() {
     }
 
     try {
-      // Usar el idCompany final (puede haber sido corregido)
+      // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
       const finalIdCompany =
-        formData.idCompany || idCompany || companies[0]?.id || 0;
+        user?.role === "superadmin"
+          ? formData.idCompany || idCompany || companies[0]?.id || 0
+          : idCompany || user?.idCompany || user?.empresaId || 0;
+
       const dataToSend = {
         ...formData,
-        idCompany: finalIdCompany,
+        idCompany: finalIdCompany, // ✅ Usar idCompany del usuario autenticado
       };
 
       if (editingDriver) {

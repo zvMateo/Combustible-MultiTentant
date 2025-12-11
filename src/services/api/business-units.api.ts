@@ -1,7 +1,7 @@
 /**
  * Servicio de Unidades de Negocio - API Real con Axios
  */
-import axiosInstance from "@/lib/axios";
+import axiosInstance, { toArray } from "@/lib/axios";
 import type {
   BusinessUnit,
   CreateBusinessUnitRequest,
@@ -25,7 +25,7 @@ export const businessUnitsApi = {
     const { data } = await axiosInstance.get<BusinessUnit[]>(
       BUSINESS_UNITS_ENDPOINTS.getAll
     );
-    return data;
+    return toArray<BusinessUnit>(data);
   },
 
   /**
@@ -47,7 +47,7 @@ export const businessUnitsApi = {
       BUSINESS_UNITS_ENDPOINTS.getByCompany,
       { params: { idCompany } }
     );
-    return data;
+    return toArray<BusinessUnit>(data);
   },
 
   /**

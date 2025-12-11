@@ -62,8 +62,19 @@ export function getRoleFromToken(token: string): string | null {
 export function getCompanyIdFromToken(token: string): number | null {
   try {
     const decoded = jwtDecode<JwtPayload>(token);
-    return decoded.IdCompany ? parseInt(decoded.IdCompany) : null;
-  } catch {
+    console.log("🔍 [JWT] Token decodificado completo:", decoded);
+    console.log("🔍 [JWT] IdCompany del token:", decoded.IdCompany);
+    
+    if (decoded.IdCompany) {
+      const idCompany = parseInt(decoded.IdCompany, 10);
+      console.log("✅ [JWT] idCompany extraído del token:", idCompany);
+      return idCompany;
+    }
+    
+    console.warn("⚠️ [JWT] IdCompany no encontrado en el token");
+    return null;
+  } catch (error) {
+    console.error("❌ [JWT] Error decodificando token para idCompany:", error);
     return null;
   }
 }

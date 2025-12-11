@@ -23,14 +23,12 @@ export const driversKeys = {
 
 /**
  * Obtener todos los choferes
+ * Siempre usa GetAll, el filtrado por idCompany se hace en el frontend
  */
-export function useDrivers(idCompany?: number) {
+export function useDrivers() {
   return useQuery({
-    queryKey: driversKeys.list(idCompany),
-    queryFn: () =>
-      idCompany && idCompany > 0
-        ? driversApi.getByCompany(idCompany)
-        : driversApi.getAll(),
+    queryKey: driversKeys.lists(),
+    queryFn: () => driversApi.getAll(),
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
@@ -67,9 +65,15 @@ export function useCreateDriver() {
 
   return useMutation({
     mutationFn: (data: CreateDriverRequest) => driversApi.create(data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success("Chofer creado correctamente");
+      // Invalidar todas las queries relacionadas
       queryClient.invalidateQueries({ queryKey: driversKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: driversKeys.all });
+      // Invalidar también la query por empresa si existe
+      if (variables.idCompany) {
+        queryClient.invalidateQueries({ queryKey: driversKeys.byCompany(variables.idCompany) });
+      }
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -87,10 +91,16 @@ export function useUpdateDriver() {
     mutationFn: (data: UpdateDriverRequest) => driversApi.update(data),
     onSuccess: (_, variables) => {
       toast.success("Chofer actualizado correctamente");
+      // Invalidar todas las queries relacionadas
       queryClient.invalidateQueries({ queryKey: driversKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: driversKeys.all });
       queryClient.invalidateQueries({
         queryKey: driversKeys.detail(variables.id),
       });
+      // Invalidar también la query por empresa si existe
+      if (variables.idCompany) {
+        queryClient.invalidateQueries({ queryKey: driversKeys.byCompany(variables.idCompany) });
+      }
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -108,7 +118,9 @@ export function useDeactivateDriver() {
     mutationFn: (id: number) => driversApi.deactivate(id),
     onSuccess: () => {
       toast.success("Chofer desactivado");
+      // Invalidar todas las queries relacionadas
       queryClient.invalidateQueries({ queryKey: driversKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: driversKeys.all });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));

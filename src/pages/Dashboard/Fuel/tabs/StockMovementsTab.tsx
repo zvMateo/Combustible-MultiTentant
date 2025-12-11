@@ -59,7 +59,8 @@ export default function StockMovementsTab() {
   const idBusinessUnit = user?.idBusinessUnit ?? 0;
 
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingMovement, setEditingMovement] = useState<FuelStockMovement | null>(null);
+  const [editingMovement, setEditingMovement] =
+    useState<FuelStockMovement | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState<CreateFuelStockMovementRequest>({
     idFuelType: 0,
@@ -154,15 +155,32 @@ export default function StockMovementsTab() {
   const handleSave = async () => {
     if (!validate()) return;
 
+    // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
+    const finalIdCompany =
+      user?.role === "superadmin"
+        ? formData.idCompany
+        : idCompany || user?.idCompany || user?.empresaId || 0;
+
+    console.log(
+      "🏢 [StockMovementsTab] Multi-tenant: idCompany del usuario autenticado:",
+      finalIdCompany
+    );
+
     try {
       if (editingMovement) {
         const updateData: UpdateFuelStockMovementRequest = {
           id: editingMovement.id,
           ...formData,
+          idCompany: finalIdCompany, // ✅ Usar idCompany del usuario autenticado
         };
         await updateMutation.mutateAsync(updateData);
       } else {
-        await createMutation.mutateAsync(formData);
+        // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado
+        const createData: CreateFuelStockMovementRequest = {
+          ...formData,
+          idCompany: finalIdCompany, // ✅ Usar idCompany del usuario autenticado
+        };
+        await createMutation.mutateAsync(createData);
       }
       setOpenDialog(false);
     } catch {
@@ -207,7 +225,8 @@ export default function StockMovementsTab() {
       <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
         <Box sx={{ p: 3 }}>
           <Alert severity="error">
-            Error al cargar movimientos: {error instanceof Error ? error.message : "Error desconocido"}
+            Error al cargar movimientos:{" "}
+            {error instanceof Error ? error.message : "Error desconocido"}
           </Alert>
         </Box>
       </Card>
@@ -231,7 +250,9 @@ export default function StockMovementsTab() {
               Movimientos de Stock
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {filteredMovements.length} {filteredMovements.length === 1 ? "movimiento" : "movimientos"} registrados
+              {filteredMovements.length}{" "}
+              {filteredMovements.length === 1 ? "movimiento" : "movimientos"}{" "}
+              registrados
             </Typography>
           </Box>
           <Box sx={{ display: "flex", gap: 1 }}>
@@ -350,7 +371,12 @@ export default function StockMovementsTab() {
       </Box>
 
       {/* Dialog Crear/Editar */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={openDialog}
+        onClose={() => setOpenDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>
           {editingMovement ? "Editar Movimiento" : "Nuevo Movimiento de Stock"}
         </DialogTitle>
@@ -364,7 +390,10 @@ export default function StockMovementsTab() {
                     value={formData.idFuelType}
                     label="Tipo de Combustible *"
                     onChange={(e) =>
-                      setFormData({ ...formData, idFuelType: Number(e.target.value) })
+                      setFormData({
+                        ...formData,
+                        idFuelType: Number(e.target.value),
+                      })
                     }
                   >
                     {fuelTypes.map((ft) => (
@@ -374,7 +403,11 @@ export default function StockMovementsTab() {
                     ))}
                   </Select>
                   {errors.idFuelType && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5 }}
+                    >
                       {errors.idFuelType}
                     </Typography>
                   )}
@@ -388,7 +421,10 @@ export default function StockMovementsTab() {
                     value={formData.idResource}
                     label="Recurso *"
                     onChange={(e) =>
-                      setFormData({ ...formData, idResource: Number(e.target.value) })
+                      setFormData({
+                        ...formData,
+                        idResource: Number(e.target.value),
+                      })
                     }
                   >
                     {resources.map((r) => (
@@ -398,7 +434,11 @@ export default function StockMovementsTab() {
                     ))}
                   </Select>
                   {errors.idResource && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5 }}
+                    >
                       {errors.idResource}
                     </Typography>
                   )}
@@ -410,7 +450,12 @@ export default function StockMovementsTab() {
                   label="Fecha"
                   type="datetime-local"
                   value={formData.date.split(".")[0]}
-                  onChange={(e) => setFormData({ ...formData, date: new Date(e.target.value).toISOString() })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      date: new Date(e.target.value).toISOString(),
+                    })
+                  }
                   fullWidth
                   size="small"
                   InputLabelProps={{ shrink: true }}
@@ -418,13 +463,20 @@ export default function StockMovementsTab() {
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth size="small" error={!!errors.idMovementType}>
+                <FormControl
+                  fullWidth
+                  size="small"
+                  error={!!errors.idMovementType}
+                >
                   <InputLabel>Tipo de Movimiento *</InputLabel>
                   <Select
                     value={formData.idMovementType}
                     label="Tipo de Movimiento *"
                     onChange={(e) =>
-                      setFormData({ ...formData, idMovementType: Number(e.target.value) })
+                      setFormData({
+                        ...formData,
+                        idMovementType: Number(e.target.value),
+                      })
                     }
                   >
                     {movementTypes.map((mt) => (
@@ -434,7 +486,11 @@ export default function StockMovementsTab() {
                     ))}
                   </Select>
                   {errors.idMovementType && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5 }}
+                    >
                       {errors.idMovementType}
                     </Typography>
                   )}
@@ -454,7 +510,9 @@ export default function StockMovementsTab() {
                   fullWidth
                   size="small"
                   InputProps={{
-                    endAdornment: <InputAdornment position="end">L</InputAdornment>,
+                    endAdornment: (
+                      <InputAdornment position="end">L</InputAdornment>
+                    ),
                   }}
                 />
               </Grid>

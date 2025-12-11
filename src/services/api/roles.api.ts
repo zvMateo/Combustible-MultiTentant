@@ -92,7 +92,13 @@ export const userRolesApi = {
       );
 
       // ✅ Mapear de {roleId, roleName} a {id, name}
-      return data.userRoles.map((ur: any) => ({
+      // Nota: idCompany se obtiene del token JWT, no del endpoint de roles
+      interface UserRoleResponse {
+        roleId: string;
+        roleName: string;
+        description?: string;
+      }
+      return data.userRoles.map((ur: UserRoleResponse) => ({
         id: ur.roleId,
         name: ur.roleName,
         description: ur.description || "",

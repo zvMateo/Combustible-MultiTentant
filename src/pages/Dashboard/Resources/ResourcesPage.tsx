@@ -204,9 +204,11 @@ export default function ResourcesPage() {
   const handleNew = () => {
     setEditingResource(null);
     const defaultType = nonVehicleTypes[0]?.id || 2; // Default a tanque si existe
+    // Usar idCompany del usuario autenticado si es admin
+    const finalIdCompany = user?.idCompany || user?.empresaId || idCompany || 0;
     setFormData({
       idType: defaultType,
-      idCompany: 2,
+      idCompany: finalIdCompany,
       idBusinessUnit: undefined,
       nativeLiters: undefined,
       name: "",
@@ -285,15 +287,25 @@ export default function ResourcesPage() {
         await updateMutation.mutateAsync(updateData);
       } else {
         // Preparar payload para creación
-        // La API requiere todos los campos como números, usar 0 si no están definidos
+        // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
+        const finalIdCompany =
+          user?.role === "superadmin"
+            ? formData.idCompany || user?.idCompany || user?.empresaId || 0
+            : user?.idCompany || user?.empresaId || 0;
+
         const createPayload: CreateResourceRequest = {
           idType: formData.idType,
-          idCompany: formData.idCompany,
-          idBusinessUnit: formData.idBusinessUnit ?? 0, // Usar ?? en lugar de || para manejar 0 correctamente
+          idCompany: finalIdCompany, // ✅ Usar idCompany del usuario autenticado
+          idBusinessUnit: formData.idBusinessUnit ?? 0,
           nativeLiters: formData.nativeLiters ?? 0,
           name: formData.name.trim(),
           identifier: formData.identifier.trim(),
         };
+
+        console.log(
+          "🏢 [ResourcesPage] Multi-tenant: idCompany del usuario autenticado:",
+          finalIdCompany
+        );
         console.log(
           "➕ [ResourcesPage] Creando recurso con payload:",
           createPayload

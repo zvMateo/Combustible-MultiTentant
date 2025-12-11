@@ -32,7 +32,6 @@ import StoreIcon from "@mui/icons-material/Store";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import {
   useBusinessUnits,
-  useBusinessUnitsByCompany,
   useCreateBusinessUnit,
   useUpdateBusinessUnit,
   useDeactivateBusinessUnit,
@@ -68,21 +67,59 @@ export default function BusinessUnitsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // React Query hooks
-  // Si hay idCompany, usar getByCompany; si no, usar getAll
+  // SIEMPRE usar GetAll para mostrar todas las unidades
+  // Luego filtrar por idCompany si es necesario
   const {
     data: businessUnitsAll = [],
     isLoading: loadingAll,
     error: errorAll,
   } = useBusinessUnits();
-  const {
-    data: businessUnitsByCompany = [],
-    isLoading: loadingByCompany,
-    error: errorByCompany,
-  } = useBusinessUnitsByCompany(idCompany);
 
-  const businessUnits = idCompany ? businessUnitsByCompany : businessUnitsAll;
-  const isLoading = idCompany ? loadingByCompany : loadingAll;
-  const error = idCompany ? errorByCompany : errorAll;
+  // Debug: verificar qué queries se están ejecutando
+  if (import.meta.env.DEV) {
+    console.log("🔍 [BusinessUnitsPage] Estado de queries:", {
+      idCompany,
+      userEmpresaId: user?.empresaId,
+      userIdCompany: user?.idCompany,
+      loadingAll,
+      businessUnitsAllLength: Array.isArray(businessUnitsAll)
+        ? businessUnitsAll.length
+        : 0,
+      businessUnitsAll: businessUnitsAll,
+      errorAll: errorAll ? String(errorAll) : null,
+    });
+  }
+
+  // Asegurar que siempre sean arrays usando useMemo
+  const businessUnits = useMemo(() => {
+    const result = Array.isArray(businessUnitsAll) ? businessUnitsAll : [];
+
+    // Debug logs
+    if (import.meta.env.DEV) {
+      console.log("🔍 [BusinessUnitsPage] Datos cargados desde GetAll:", {
+        idCompany,
+        usingQuery: "getAll",
+        unitsFromQuery: businessUnitsAll,
+        resultLength: result.length,
+        businessUnitsAllLength: Array.isArray(businessUnitsAll)
+          ? businessUnitsAll.length
+          : 0,
+        user: user
+          ? {
+              id: user.id,
+              empresaId: user.empresaId,
+              idCompany: user.idCompany,
+              role: user.role,
+            }
+          : null,
+      });
+    }
+
+    return result;
+  }, [businessUnitsAll, idCompany, user]);
+
+  const isLoading = loadingAll;
+  const error = errorAll;
 
   const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
   const createMutation = useCreateBusinessUnit();
@@ -108,11 +145,55 @@ export default function BusinessUnitsPage() {
 
   // Filtrar por búsqueda y por empresa si no es superadmin
   const filteredUnits = useMemo(() => {
+    // businessUnits ya está garantizado como array por el useMemo anterior
     let filtered = businessUnits;
 
+    // Debug: mostrar todas las unidades antes de filtrar
+    if (import.meta.env.DEV) {
+      console.log("🔍 [BusinessUnitsPage] Antes de filtrar:", {
+        totalUnits: filtered.length,
+        units: filtered.map((u) => ({
+          id: u.id,
+          name: u.name,
+          idCompany: u.idCompany,
+        })),
+        userRole: user?.role,
+        idCompany,
+        isSuperAdmin,
+        usingQuery: "getAll",
+        businessUnitsAllLength: Array.isArray(businessUnitsAll)
+          ? businessUnitsAll.length
+          : 0,
+      });
+    }
+
     // Filtrar por empresa si el usuario no es superadmin
-    if (user?.role !== "superadmin" && idCompany) {
+    // Como siempre usamos getAll, necesitamos filtrar por idCompany del usuario
+    if (!isSuperAdmin && idCompany && idCompany > 0) {
+      // Filtrar por empresa del usuario
       filtered = filtered.filter((u) => u.idCompany === idCompany);
+
+      if (import.meta.env.DEV) {
+        console.log(
+          "🔍 [BusinessUnitsPage] Filtrando por empresa del usuario:",
+          {
+            idCompany,
+            userEmpresaId: user?.empresaId,
+            beforeFilter: businessUnits.length,
+            afterFilter: filtered.length,
+            unitsBeforeFilter: businessUnits.map((u) => ({
+              id: u.id,
+              name: u.name,
+              idCompany: u.idCompany,
+            })),
+            unitsAfterFilter: filtered.map((u) => ({
+              id: u.id,
+              name: u.name,
+              idCompany: u.idCompany,
+            })),
+          }
+        );
+      }
     }
 
     // Filtrar por búsqueda
@@ -125,8 +206,27 @@ export default function BusinessUnitsPage() {
       );
     }
 
+    // Debug: mostrar unidades después de filtrar
+    if (import.meta.env.DEV) {
+      console.log("🔍 [BusinessUnitsPage] Después de filtrar:", {
+        filteredCount: filtered.length,
+        filteredUnits: filtered.map((u) => ({
+          id: u.id,
+          name: u.name,
+          idCompany: u.idCompany,
+        })),
+      });
+    }
+
     return filtered;
-  }, [businessUnits, searchTerm, idCompany, user?.role]);
+  }, [
+    businessUnits,
+    searchTerm,
+    idCompany,
+    user?.role,
+    user?.empresaId,
+    isSuperAdmin,
+  ]);
 
   // Handlers
   const handleNew = () => {
@@ -231,12 +331,20 @@ export default function BusinessUnitsPage() {
   };
 
   const handleSave = async () => {
-    // Asegurar idCompany antes de validar
+    // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
     const finalIdCompany =
-      formData.idCompany || idCompany || companies[0]?.id || 0;
+      user?.role === "superadmin"
+        ? formData.idCompany || idCompany || companies[0]?.id || 0
+        : idCompany || user?.idCompany || user?.empresaId || 0;
+
     if (finalIdCompany && finalIdCompany !== formData.idCompany) {
       setFormData((prev) => ({ ...prev, idCompany: finalIdCompany }));
     }
+
+    console.log(
+      "🏢 [BusinessUnitsPage] Multi-tenant: idCompany del usuario autenticado:",
+      finalIdCompany
+    );
 
     if (!validateForm()) {
       if (import.meta.env.DEV) {
@@ -253,10 +361,15 @@ export default function BusinessUnitsPage() {
     }
 
     try {
-      // Usar el idCompany final calculado arriba
+      // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
+      const finalIdCompany =
+        user?.role === "superadmin"
+          ? formData.idCompany || idCompany || companies[0]?.id || 0
+          : idCompany || user?.idCompany || user?.empresaId || 0;
+
       const dataToSend = {
         ...formData,
-        idCompany: finalIdCompany,
+        idCompany: finalIdCompany, // ✅ Usar idCompany del usuario autenticado
       };
 
       if (editingUnit) {
@@ -285,7 +398,7 @@ export default function BusinessUnitsPage() {
         await deactivateMutation.mutateAsync(deleteUnit.id);
         setOpenDeleteDialog(false);
         setDeleteUnit(null);
-      } catch (error) {
+      } catch {
         // Error manejado por el mutation
       }
     }
@@ -514,7 +627,8 @@ export default function BusinessUnitsPage() {
                   boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                   border: "1px solid rgba(0,0,0,0.06)",
                   transition: "all 0.2s",
-                  opacity: unit.isActive !== false ? 1 : 0.7,
+                  opacity:
+                    unit.active !== false && unit.isActive !== false ? 1 : 0.7,
                   "&:hover": {
                     transform: "translateY(-4px)",
                     boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
@@ -565,15 +679,24 @@ export default function BusinessUnitsPage() {
                     </Box>
 
                     <Chip
-                      label={unit.isActive !== false ? "Activa" : "Inactiva"}
+                      label={
+                        unit.active !== false && unit.isActive !== false
+                          ? "Activa"
+                          : "Inactiva"
+                      }
                       size="small"
                       sx={{
                         fontSize: 10,
                         fontWeight: 700,
                         textTransform: "uppercase",
                         bgcolor:
-                          unit.isActive !== false ? "#10b98115" : "#f59e0b15",
-                        color: unit.isActive !== false ? "#10b981" : "#f59e0b",
+                          unit.active !== false && unit.isActive !== false
+                            ? "#10b98115"
+                            : "#f59e0b15",
+                        color:
+                          unit.active !== false && unit.isActive !== false
+                            ? "#10b981"
+                            : "#f59e0b",
                       }}
                     />
                   </Box>

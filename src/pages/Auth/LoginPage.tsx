@@ -100,20 +100,33 @@ export default function LoginPage() {
         width: "100vw",
         display: "flex",
         flexDirection: "column",
-        background:
-          "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%)",
+        backgroundImage: "url('/images/LoginFondo.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
         overflow: "auto",
+        // Overlay oscuro para mejorar legibilidad del contenido
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.4)",
+          zIndex: 0,
+        },
       }}
     >
       {/* Back Button */}
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 2, position: "relative", zIndex: 1 }}>
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate("/")}
           sx={{
-            color: "rgba(255,255,255,0.8)",
+            color: "rgba(255,255,255,0.9)",
             textTransform: "none",
-            "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
+            "&:hover": { bgcolor: "rgba(255,255,255,0.15)" },
           }}
         >
           Volver al inicio
@@ -129,6 +142,8 @@ export default function LoginPage() {
           justifyContent: "center",
           alignItems: "center",
           py: 4,
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <Card

@@ -106,6 +106,9 @@ export default function UsersPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<ApiUser | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  // Usar idCompany del usuario autenticado si es admin
+  const userCompanyId = user?.idCompany || user?.empresaId || 0;
+
   const [formData, setFormData] = useState<CreateUserRequest>({
     firstName: "",
     lastName: "",
@@ -113,7 +116,7 @@ export default function UsersPage() {
     userName: "",
     password: "",
     confirmPassword: "",
-    idCompany: 2,
+    idCompany: userCompanyId,
     idBusinessUnit: undefined,
     phoneNumber: "",
   });
@@ -143,16 +146,7 @@ export default function UsersPage() {
   const filteredUsers = useMemo(() => {
     let filtered = users;
 
-    // ✅ Admin y superadmin ven solo empresa 2 (hardcoded)
-    if (user?.role === "admin" || user?.role === "superadmin") {
-      filtered = filtered.filter((u) => u.idCompany === 2);
-    }
-    // Otros roles filtran por su empresa asignada
-    else if (user?.idCompany) {
-      filtered = filtered.filter((u) => u.idCompany === user.idCompany);
-    }
-
-    // Filtrar por búsqueda
+    // ✅ SOLO filtrar por búsqueda, NO por empresa
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -165,7 +159,7 @@ export default function UsersPage() {
     }
 
     return filtered;
-  }, [users, searchTerm, user?.role, user?.idCompany]);
+  }, [users, searchTerm]);
 
   const handleNew = () => {
     setEditingUser(null);
@@ -281,6 +275,17 @@ export default function UsersPage() {
         // CASO 2: CREAR NUEVO USUARIO
         // ==========================================
 
+        // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
+        const finalIdCompany =
+          user?.role === "superadmin"
+            ? formData.idCompany || user?.idCompany || user?.empresaId || 0
+            : user?.idCompany || user?.empresaId || 0;
+
+        console.log(
+          "🏢 [UsersPage] Multi-tenant: idCompany del usuario autenticado:",
+          finalIdCompany
+        );
+
         const dataToSend: CreateUserRequest = {
           firstName: formData.firstName,
           lastName: formData.lastName,
@@ -288,7 +293,7 @@ export default function UsersPage() {
           userName: formData.userName,
           password: formData.password,
           confirmPassword: "",
-          idCompany: 2,
+          idCompany: finalIdCompany,
           idBusinessUnit: formData.idBusinessUnit,
           phoneNumber: formData.phoneNumber || "",
         };

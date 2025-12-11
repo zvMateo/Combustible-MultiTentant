@@ -3,24 +3,24 @@ import type { User, UserRole } from "@/types";
 import { authApi } from "./api/auth.api";
 import { userRolesApi } from "./api/roles.api";
 import { tokenStorage } from "@/lib/axios";
-import { 
-  getUserIdFromToken, 
-  getUserNameFromToken, 
-  getCompanyIdFromToken, 
-  getBusinessUnitIdFromToken 
+import {
+  getUserIdFromToken,
+  getUserNameFromToken,
+  getCompanyIdFromToken,
+  getBusinessUnitIdFromToken,
 } from "@/lib/jwt";
 
 /**
  * Mapeo de nombres de roles de la API a roles de la aplicación
  */
 const ROLE_MAPPING: Record<string, UserRole> = {
-  "Admin": "admin",
-  "Administrador": "admin",
-  "SuperAdmin": "superadmin",
+  Admin: "admin",
+  Administrador: "admin",
+  SuperAdmin: "superadmin",
   "Super Admin": "superadmin",
-  "Supervisor": "supervisor",
-  "Auditor": "auditor",
-  "Operador": "operador",
+  Supervisor: "supervisor",
+  Auditor: "auditor",
+  Operador: "operador",
 };
 
 /**
@@ -58,13 +58,16 @@ class AuthService {
   /**
    * Login de usuario - Obtiene el rol real desde la API
    */
-  async login(credentials: { userName: string; password: string }): Promise<User> {
+  async login(credentials: {
+    userName: string;
+    password: string;
+  }): Promise<User> {
     try {
       console.log("🔐 [AuthService] Iniciando login...");
-      
+
       // 1️⃣ Login y obtener token
       const response = await authApi.login(credentials);
-      
+
       if (!response.token) {
         throw new Error("Token no encontrado en la respuesta");
       }
@@ -72,37 +75,54 @@ class AuthService {
       console.log("✅ [AuthService] Login exitoso, token recibido");
 
       // 2️⃣ Extraer datos del token JWT
+      console.log("🔍 [AuthService] Extrayendo datos del token JWT...");
       const userId = getUserIdFromToken(response.token);
       const userName = getUserNameFromToken(response.token);
       const idCompany = getCompanyIdFromToken(response.token);
       const idBusinessUnit = getBusinessUnitIdFromToken(response.token);
-      
+
       if (!userId) {
         throw new Error("No se pudo extraer el userId del token");
       }
 
-      console.log("✅ [AuthService] Datos extraídos del token:", {
+      console.log("✅ [AuthService] Datos extraídos del token JWT:", {
         userId,
         userName,
         idCompany,
         idBusinessUnit,
       });
 
+      if (!idCompany) {
+        console.warn(
+          "⚠️ [AuthService] idCompany no encontrado en el token JWT"
+        );
+      } else {
+        console.log(
+          "✅ [AuthService] idCompany capturado del token JWT:",
+          idCompany
+        );
+      }
+
       // 3️⃣ Obtener roles del usuario desde la API
       let userRole: UserRole = "operador"; // Default fallback
-      
+
       try {
         console.log("🔍 [AuthService] Buscando roles para userId:", userId);
         const userRoles = await userRolesApi.getByUser(userId);
-        
+
         console.log("🔍 [AuthService] Roles recibidos:", userRoles);
-        
+
         if (userRoles && userRoles.length > 0) {
-          const apiRoleName = userRoles[0].name;
+          const firstRole = userRoles[0];
+          const apiRoleName = firstRole.name;
           userRole = normalizeRole(apiRoleName);
-          console.log(`✅ [AuthService] Rol obtenido: "${apiRoleName}" → "${userRole}"`);
+          console.log(
+            `✅ [AuthService] Rol obtenido: "${apiRoleName}" → "${userRole}"`
+          );
         } else {
-          console.warn("⚠️ [AuthService] Usuario sin roles asignados, usando 'operador'");
+          console.warn(
+            "⚠️ [AuthService] Usuario sin roles asignados, usando 'operador'"
+          );
         }
       } catch (roleError) {
         console.error("❌ [AuthService] Error al obtener roles:", roleError);
@@ -110,6 +130,7 @@ class AuthService {
       }
 
       // 4️⃣ Construir objeto User
+      // idCompany se obtiene del token JWT (extraído en el paso 2)
       const user: User = {
         id: userId,
         email: credentials.userName, // El backend no devuelve email
@@ -117,28 +138,46 @@ class AuthService {
         role: userRole,
         idCompany: idCompany || undefined,
         idBusinessUnit: idBusinessUnit || undefined,
-        empresaId: idCompany,
+        empresaId: idCompany || null,
         empresaNombre: undefined,
         empresaSubdomain: undefined,
         unidadesAsignadas: idBusinessUnit ? [idBusinessUnit] : [],
         telefono: undefined,
       };
 
-      console.log("✅ [AuthService] Usuario completo:", {
+      console.log("✅ [AuthService] Usuario completo creado:", {
         id: user.id,
         name: user.name,
         role: user.role,
         idCompany: user.idCompany,
         idBusinessUnit: user.idBusinessUnit,
+        empresaId: user.empresaId,
       });
+
+      if (idCompany) {
+        console.log(
+          "✅ [AuthService] ✅ idCompany capturado del token JWT y guardado en el contexto:",
+          idCompany
+        );
+      } else {
+        console.warn(
+          "⚠️ [AuthService] ⚠️ idCompany NO encontrado en el token JWT. Verifica que el backend incluya 'IdCompany' en el token."
+        );
+      }
+
+      console.log(
+        "✅ [AuthService] idCompany obtenido del token JWT:",
+        idCompany
+      );
 
       // 5️⃣ Guardar sesión
       this.saveSession(user);
-      
+
       return user;
     } catch (error) {
       console.error("❌ [AuthService] Error en login:", error);
-      const message = error instanceof Error ? error.message : "Error al iniciar sesión";
+      const message =
+        error instanceof Error ? error.message : "Error al iniciar sesión";
       throw new Error(message);
     }
   }

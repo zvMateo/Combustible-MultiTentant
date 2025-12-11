@@ -63,9 +63,15 @@ export function useCreateBusinessUnit() {
 
   return useMutation({
     mutationFn: (data: CreateBusinessUnitRequest) => businessUnitsApi.create(data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success("Unidad de negocio creada correctamente");
+      // Invalidar todas las queries relacionadas
       queryClient.invalidateQueries({ queryKey: businessUnitsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: businessUnitsKeys.all });
+      // Invalidar también la query por empresa si existe
+      if (variables.idCompany) {
+        queryClient.invalidateQueries({ queryKey: businessUnitsKeys.byCompany(variables.idCompany) });
+      }
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -83,8 +89,14 @@ export function useUpdateBusinessUnit() {
     mutationFn: (data: UpdateBusinessUnitRequest) => businessUnitsApi.update(data),
     onSuccess: (_, variables) => {
       toast.success("Unidad de negocio actualizada correctamente");
+      // Invalidar todas las queries relacionadas
       queryClient.invalidateQueries({ queryKey: businessUnitsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: businessUnitsKeys.all });
       queryClient.invalidateQueries({ queryKey: businessUnitsKeys.detail(variables.id) });
+      // Invalidar también la query por empresa si existe
+      if (variables.idCompany) {
+        queryClient.invalidateQueries({ queryKey: businessUnitsKeys.byCompany(variables.idCompany) });
+      }
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -102,7 +114,9 @@ export function useDeactivateBusinessUnit() {
     mutationFn: (id: number) => businessUnitsApi.deactivate(id),
     onSuccess: () => {
       toast.success("Unidad de negocio desactivada");
+      // Invalidar todas las queries relacionadas
       queryClient.invalidateQueries({ queryKey: businessUnitsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: businessUnitsKeys.all });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));

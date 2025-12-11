@@ -125,9 +125,11 @@ export interface UpdateCompanyRequest extends CreateCompanyRequest {
 export interface BusinessUnit {
   id: number;
   idCompany: number;
+  company?: Company; // Objeto company anidado (viene en la respuesta)
   name: string;
   detail?: string;
-  isActive?: boolean;
+  active?: boolean; // La API usa "active" en lugar de "isActive"
+  isActive?: boolean; // Mantener para compatibilidad
   createdAt?: string;
   updatedAt?: string;
 }
