@@ -10,6 +10,7 @@ import type {
 
 const TRIPS_ENDPOINTS = {
   getAll: "/Trips/GetAll",
+  getByCompany: "/Trips/GetByIdCompany",
   getById: "/Trips/GetById",
   getByDriver: "/Trips/GetByIdDriver",
   create: "/Trips/Create",
@@ -18,10 +19,15 @@ const TRIPS_ENDPOINTS = {
 
 export const tripsApi = {
   /**
-   * Obtener todos los viajes
+   * Obtener viajes por empresa
    */
-  async getAll(): Promise<Trip[]> {
-    const { data } = await axiosInstance.get<Trip[]>(TRIPS_ENDPOINTS.getAll);
+  async getByCompany(idCompany: number): Promise<Trip[]> {
+    const { data } = await axiosInstance.get<Trip[]>(
+      TRIPS_ENDPOINTS.getByCompany,
+      {
+        params: { idCompany },
+      }
+    );
     return data;
   },
 
@@ -39,9 +45,12 @@ export const tripsApi = {
    * Obtener viajes por chofer
    */
   async getByDriver(idDriver: number): Promise<Trip[]> {
-    const { data } = await axiosInstance.get<Trip[]>(TRIPS_ENDPOINTS.getByDriver, {
-      params: { idDriver },
-    });
+    const { data } = await axiosInstance.get<Trip[]>(
+      TRIPS_ENDPOINTS.getByDriver,
+      {
+        params: { idDriver },
+      }
+    );
     return data;
   },
 
@@ -49,7 +58,10 @@ export const tripsApi = {
    * Crear nuevo viaje
    */
   async create(tripData: CreateTripRequest): Promise<Trip> {
-    const { data } = await axiosInstance.post<Trip>(TRIPS_ENDPOINTS.create, tripData);
+    const { data } = await axiosInstance.post<Trip>(
+      TRIPS_ENDPOINTS.create,
+      tripData
+    );
     return data;
   },
 
@@ -57,7 +69,10 @@ export const tripsApi = {
    * Actualizar viaje
    */
   async update(tripData: UpdateTripRequest): Promise<Trip> {
-    const { data } = await axiosInstance.put<Trip>(TRIPS_ENDPOINTS.update, tripData);
+    const { data } = await axiosInstance.put<Trip>(
+      TRIPS_ENDPOINTS.update,
+      tripData
+    );
     return data;
   },
 };

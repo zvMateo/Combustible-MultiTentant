@@ -9,27 +9,43 @@ import { AppRoutes } from "./routes";
 import { useEffect } from "react";
 import { useAuthStore } from "./stores/auth.store";
 import { queryClient } from "./lib/query-client";
-import Profile from "./pages/Auth/components/Profile";
-import LoginButton from "./pages/Auth/components/LoginButton";
-import LogoutButton from "./pages/Auth/components/LogoutButton";
-import { useAuth0 } from "@auth0/auth0-react";
+import { Box, CircularProgress } from "@mui/material";
+import { setUnauthorizedHandler } from "./lib/axios";
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { checkAuth, isLoading } = useAuthStore();
 
   useEffect(() => {
+    setUnauthorizedHandler(() => {
+      useAuthStore.getState().handleSessionExpired();
+      queryClient.clear();
+    });
     checkAuth();
+    return () => {
+      setUnauthorizedHandler(null);
+    };
   }, [checkAuth]);
 
   if (isLoading) {
-    return null;
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          bgcolor: "#F8FAFB",
+        }}
+      >
+        <CircularProgress sx={{ color: "#284057" }} />
+      </Box>
+    );
   }
 
   return <>{children}</>;
 }
 
 function App() {
-  const { isAuthenticated, isLoading, error } = useAuth0();
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>

@@ -27,7 +27,7 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import PropaneTankIcon from "@mui/icons-material/PropaneTank";
 import StoreIcon from "@mui/icons-material/Store";
-import { useAuthStore } from "@/stores/auth.store";
+import { useTenantContext } from "@/stores/auth.store";
 import { useUnidadStore } from "@/stores/unidad.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { UserRole, Permission } from "@/types";
@@ -168,7 +168,7 @@ const menuStructure: MenuItem[] = [
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuthStore();
+  const tenant = useTenantContext();
   const { unidadActiva, unidades } = useUnidadStore();
   const { tenantTheme } = useTheme();
   const { hasRole, can } = usePermissions();
@@ -179,7 +179,7 @@ export default function Sidebar() {
     Combustible: true,
   });
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = tenant.role === "admin";
 
   // ✅ Aplicar tema cuando cambie
   useEffect(() => {
@@ -256,7 +256,18 @@ export default function Sidebar() {
           fontWeight="bold"
           sx={{ color: tenantTheme?.sidebarText || "#ffffff", mb: 0.5 }}
         >
-          {user?.empresaNombre || "Gestión Combustibles"}
+          {tenant.empresaNombre || "Gestión Combustibles"}
+        </Typography>
+
+        <Typography
+          variant="caption"
+          sx={{
+            color: "rgba(255, 255, 255, 0.65)",
+            fontSize: 11,
+            fontWeight: 600,
+          }}
+        >
+          {tenant.name || ""}
         </Typography>
 
         {/* Indicador de Unidad Activa */}

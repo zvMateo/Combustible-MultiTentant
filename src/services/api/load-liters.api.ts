@@ -12,6 +12,7 @@ import type {
 
 const LOAD_LITERS_ENDPOINTS = {
   getAll: "/LoadLiters/GetAll",
+  getByCompany: "/LoadLiters/GetByIdCompany",
   getById: "/LoadLiters/GetById",
   create: "/LoadLiters/Create",
   update: "/LoadLiters/Update",
@@ -23,11 +24,12 @@ const LOAD_LITERS_ENDPOINTS = {
 
 export const loadLitersApi = {
   /**
-   * Obtener todas las cargas de combustible
+   * Obtener cargas de combustible por empresa
    */
-  async getAll(): Promise<LoadLiters[]> {
+  async getByCompany(idCompany: number): Promise<LoadLiters[]> {
     const { data } = await axiosInstance.get<LoadLiters[]>(
-      LOAD_LITERS_ENDPOINTS.getAll
+      LOAD_LITERS_ENDPOINTS.getByCompany,
+      { params: { idCompany } }
     );
     return data;
   },
@@ -57,7 +59,10 @@ export const loadLitersApi = {
   /**
    * Actualizar carga de combustible
    */
-  async update(id: number, loadData: UpdateLoadLitersRequest): Promise<LoadLiters> {
+  async update(
+    id: number,
+    loadData: UpdateLoadLitersRequest
+  ): Promise<LoadLiters> {
     const { data } = await axiosInstance.put<LoadLiters>(
       LOAD_LITERS_ENDPOINTS.update,
       loadData,
@@ -111,4 +116,3 @@ export const loadLitersApi = {
 };
 
 export default loadLitersApi;
-

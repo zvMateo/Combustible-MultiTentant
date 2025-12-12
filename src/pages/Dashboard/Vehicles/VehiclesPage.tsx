@@ -131,7 +131,7 @@ export default function VehiclesPage() {
       (v) => v.active !== false && v.isActive !== false
     );
 
-    // 2. Filtrar por empresa (si no es superadmin)
+    // 2. Filtrar por empresa del usuario
     if (companyIdFilter && companyIdFilter > 0) {
       filtered = filtered.filter((v) => v.idCompany === companyIdFilter);
     }
@@ -189,15 +189,6 @@ export default function VehiclesPage() {
     setFormData(newFormData);
     setErrors({});
     setOpenDialog(true);
-    console.log("🆕 [VehiclesPage] Modal de nuevo vehículo abierto", {
-      vehicleTypeId,
-      idCompany,
-      initialIdCompany,
-      companiesCount: companies.length,
-      companies: companies.map((c) => ({ id: c.id, name: c.name })),
-      userRole: user?.role,
-      formData: newFormData,
-    });
   };
 
   const handleEdit = (vehicle: Resource) => {
@@ -220,42 +211,28 @@ export default function VehiclesPage() {
   };
 
   const handleSave = async () => {
-    console.log("🔍 [VehiclesPage] handleSave llamado");
-    console.log("🔍 [VehiclesPage] formData:", formData);
-    console.log("🔍 [VehiclesPage] Context:", {
-      idCompany,
-      companiesCount: companies.length,
-      companies: companies.map((c) => ({ id: c.id, name: c.name })),
-      vehicleTypeId,
-    });
-
-    // Asegurar que idCompany sea siempre 2
     const finalFormData = { ...formData };
     if (finalFormData.idCompany !== 2) {
       finalFormData.idCompany = 2;
       setFormData(finalFormData);
-      console.log("⚠️ [VehiclesPage] Forzando idCompany a 2");
     }
 
-    // Usar finalFormData para validación
-    const validationFormData = finalFormData;
     const newErrors: FormErrors = {};
-    if (!validationFormData.name.trim()) {
+    if (!finalFormData.name.trim()) {
       newErrors.name = "El nombre es obligatorio";
     }
-    if (!validationFormData.identifier.trim()) {
+    if (!finalFormData.identifier.trim()) {
       newErrors.identifier = "El identificador es obligatorio";
     }
-    if (validationFormData.idCompany !== 2) {
+    if (finalFormData.idCompany !== 2) {
       newErrors.idCompany = "La empresa debe ser 2";
     }
-    if (!validationFormData.idType || validationFormData.idType === 0) {
+    if (!finalFormData.idType || finalFormData.idType === 0) {
       newErrors.idType = "Debe seleccionar un tipo de recurso";
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      console.log("❌ [VehiclesPage] Validación falló, errors:", newErrors);
       return;
     }
 
@@ -272,11 +249,8 @@ export default function VehiclesPage() {
           name: formData.name,
           identifier: formData.identifier,
         };
-        console.log("🔄 [VehiclesPage] Actualizando vehículo:", updateData);
         await updateMutation.mutateAsync(updateData);
       } else {
-        // Preparar payload para creación
-        // La API requiere todos los campos como números, usar 0 si no están definidos
         const createPayload: CreateResourceRequest = {
           idType: finalFormData.idType,
           idCompany: finalFormData.idCompany,
@@ -285,21 +259,10 @@ export default function VehiclesPage() {
           name: finalFormData.name.trim(),
           identifier: finalFormData.identifier.trim(),
         };
-        console.log(
-          "➕ [VehiclesPage] Creando vehículo con payload:",
-          createPayload
-        );
-        console.log("➕ [VehiclesPage] Mutation state:", {
-          isPending: createMutation.isPending,
-          isError: createMutation.isError,
-          error: createMutation.error,
-        });
         await createMutation.mutateAsync(createPayload);
-        console.log("✅ [VehiclesPage] Vehículo creado exitosamente");
       }
       setOpenDialog(false);
-    } catch (error) {
-      console.error("❌ [VehiclesPage] Error al guardar vehículo:", error);
+    } catch {
       // Error manejado por el mutation
     }
   };
@@ -311,8 +274,7 @@ export default function VehiclesPage() {
       await deactivateMutation.mutateAsync(deleteVehicle.id);
       setOpenDeleteDialog(false);
       setDeleteVehicle(null);
-    } catch (error) {
-      console.error("❌ [VehiclesPage] Error al guardar vehículo:", error);
+    } catch {
       // Error manejado por el mutation
     }
   };
@@ -631,8 +593,8 @@ export default function VehiclesPage() {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
-            {/* Empresa (solo si es superadmin o hay múltiples empresas) */}
-            {(user?.role === "superadmin" || companies.length > 1) && (
+            {/* Empresa (solo si hay múltiples empresas) */}
+            {companies.length > 1 && (
               <FormControl fullWidth error={!!errors.idCompany}>
                 <InputLabel>Empresa *</InputLabel>
                 <Select

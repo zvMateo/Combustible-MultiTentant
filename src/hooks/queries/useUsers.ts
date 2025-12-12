@@ -2,8 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
+import { useIdCompany } from "@/stores/auth.store";
 import type {
-  ApiUser,
   CreateUserRequest,
   UpdateUserRequest,
   ChangePasswordRequest,
@@ -13,6 +13,8 @@ import type {
 export const usersKeys = {
   all: ["users"] as const,
   lists: () => [...usersKeys.all, "list"] as const,
+  byCompany: (idCompany: number) =>
+    [...usersKeys.all, "byCompany", idCompany] as const,
   detail: (userId: string) => [...usersKeys.all, "detail", userId] as const,
 };
 
@@ -20,13 +22,16 @@ export const usersKeys = {
  * Obtener todos los usuarios
  */
 export function useUsers() {
+  const storeCompanyId = useIdCompany();
+  const companyId = storeCompanyId ?? 0;
+
   return useQuery({
-    queryKey: usersKeys.lists(),
+    queryKey: usersKeys.byCompany(companyId),
     queryFn: () => {
-      console.log("🚀 [useUsers] Ejecutando queryFn - Llamando a usersApi.getAll()");
-      return usersApi.getAll();
+      return usersApi.getByCompany(companyId);
     },
-    staleTime: 1000 * 60 * 5, 
+    enabled: !!companyId,
+    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -56,7 +61,7 @@ export function useCreateUser() {
     onSuccess: (newUser) => {
       console.log("✅ [useCreateUser] Usuario creado:", newUser);
       toast.success("Usuario creado correctamente");
-      queryClient.invalidateQueries({ queryKey: usersKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: usersKeys.all });
     },
     onError: (error) => {
       console.error("❌ [useCreateUser] Error:", error);
@@ -72,12 +77,19 @@ export function useUpdateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ userId, data }: { userId: string; data: UpdateUserRequest }) =>
-      usersApi.update(userId, data),
+    mutationFn: ({
+      userId,
+      data,
+    }: {
+      userId: string;
+      data: UpdateUserRequest;
+    }) => usersApi.update(userId, data),
     onSuccess: (_, variables) => {
       toast.success("Usuario actualizado correctamente");
-      queryClient.invalidateQueries({ queryKey: usersKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: usersKeys.detail(variables.userId) });
+      queryClient.invalidateQueries({ queryKey: usersKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: usersKeys.detail(variables.userId),
+      });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -90,8 +102,13 @@ export function useUpdateUser() {
  */
 export function useChangePassword() {
   return useMutation({
-    mutationFn: ({ userId, passwords }: { userId: string; passwords: ChangePasswordRequest }) =>
-      usersApi.changePassword(userId, passwords),
+    mutationFn: ({
+      userId,
+      passwords,
+    }: {
+      userId: string;
+      passwords: ChangePasswordRequest;
+    }) => usersApi.changePassword(userId, passwords),
     onSuccess: () => {
       toast.success("Contraseña actualizada correctamente");
     },

@@ -85,7 +85,7 @@ export default function StockMovementsTab() {
   const filteredMovements = useMemo(() => {
     let filtered = movements;
 
-    if (user?.role !== "superadmin" && idCompany) {
+    if (idCompany) {
       filtered = filtered.filter((m) => m.idCompany === idCompany);
     }
 
@@ -155,11 +155,8 @@ export default function StockMovementsTab() {
   const handleSave = async () => {
     if (!validate()) return;
 
-    // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
-    const finalIdCompany =
-      user?.role === "superadmin"
-        ? formData.idCompany
-        : idCompany || user?.idCompany || user?.empresaId || 0;
+    // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado
+    const finalIdCompany = idCompany || user?.idCompany || user?.empresaId || 0;
 
     console.log(
       "🏢 [StockMovementsTab] Multi-tenant: idCompany del usuario autenticado:",

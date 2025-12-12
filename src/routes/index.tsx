@@ -1,6 +1,9 @@
 // src/routes/index.tsx
 import { useRoutes, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
+import { Box, CircularProgress } from "@mui/material";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { Permission, UserRole } from "@/types";
 
 // Pages
 import LandingPage from "@/pages/Landing/LandingPage";
@@ -17,7 +20,7 @@ import CostCentersPage from "@/pages/Dashboard/CostCenters/CostCentersPage";
 import SettingsPage from "@/pages/Dashboard/Settings/SettingsPage";
 import VehiclesPage from "@/pages/Dashboard/Vehicles/VehiclesPage";
 import DriversPage from "@/pages/Dashboard/Drivers/DriversPage";
-import FuelManagementPage from "@/pages/Dashboard/Fuel/FuelManagementPage"; 
+import FuelManagementPage from "@/pages/Dashboard/Fuel/FuelManagementPage";
 import ResourcesPage from "@/pages/Dashboard/Resources/ResourcesPage";
 import ReportsPage from "@/pages/Dashboard/Reports/ReportsPage";
 
@@ -26,11 +29,45 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
 
   if (isLoading) {
-    return null;
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          bgcolor: "#F8FAFB",
+        }}
+      >
+        <CircularProgress sx={{ color: "#284057" }} />
+      </Box>
+    );
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function RbacGuard({
+  children,
+  roles,
+  permission,
+}: {
+  children: React.ReactNode;
+  roles?: UserRole[];
+  permission?: Permission;
+}) {
+  const { hasRole, can } = usePermissions();
+
+  if (roles && roles.length > 0 && !hasRole(roles)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (permission && !can(permission)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -53,16 +90,107 @@ export function AppRoutes() {
       ),
       children: [
         { index: true, element: <Dashboard /> },
-        { path: "companies", element: <CompaniesPage /> },
-        { path: "business-units", element: <BusinessUnitsPage /> },
-        { path: "users", element: <UsersPage /> },
-        { path: "cost-centers", element: <CostCentersPage /> },
-        { path: "settings", element: <SettingsPage /> },
-        { path: "vehicles", element: <VehiclesPage /> },
-        { path: "drivers", element: <DriversPage /> },
-        { path: "fuel", element: <FuelManagementPage /> },
-        { path: "resources", element: <ResourcesPage /> },
-        { path: "reports", element: <ReportsPage /> },
+        {
+          path: "companies",
+          element: (
+            <RbacGuard roles={["admin"]} permission="empresas:gestionar">
+              <CompaniesPage />
+            </RbacGuard>
+          ),
+        },
+        {
+          path: "business-units",
+          element: (
+            <RbacGuard roles={["admin"]} permission="unidades:gestionar">
+              <BusinessUnitsPage />
+            </RbacGuard>
+          ),
+        },
+        {
+          path: "users",
+          element: (
+            <RbacGuard
+              roles={["admin", "supervisor"]}
+              permission="usuarios:gestionar"
+            >
+              <UsersPage />
+            </RbacGuard>
+          ),
+        },
+        {
+          path: "cost-centers",
+          element: (
+            <RbacGuard
+              roles={["admin", "supervisor"]}
+              permission="centros-costo:gestionar"
+            >
+              <CostCentersPage />
+            </RbacGuard>
+          ),
+        },
+        {
+          path: "settings",
+          element: (
+            <RbacGuard roles={["admin"]} permission="configuracion:editar">
+              <SettingsPage />
+            </RbacGuard>
+          ),
+        },
+        {
+          path: "vehicles",
+          element: (
+            <RbacGuard
+              roles={["admin", "supervisor"]}
+              permission="vehiculos:gestionar"
+            >
+              <VehiclesPage />
+            </RbacGuard>
+          ),
+        },
+        {
+          path: "drivers",
+          element: (
+            <RbacGuard
+              roles={["admin", "supervisor"]}
+              permission="choferes:gestionar"
+            >
+              <DriversPage />
+            </RbacGuard>
+          ),
+        },
+        {
+          path: "fuel",
+          element: (
+            <RbacGuard
+              roles={["admin", "supervisor", "operador", "auditor"]}
+              permission="eventos:ver"
+            >
+              <FuelManagementPage />
+            </RbacGuard>
+          ),
+        },
+        {
+          path: "resources",
+          element: (
+            <RbacGuard
+              roles={["admin", "supervisor", "operador"]}
+              permission="recursos:gestionar"
+            >
+              <ResourcesPage />
+            </RbacGuard>
+          ),
+        },
+        {
+          path: "reports",
+          element: (
+            <RbacGuard
+              roles={["admin", "supervisor", "auditor"]}
+              permission="reportes:ver"
+            >
+              <ReportsPage />
+            </RbacGuard>
+          ),
+        },
       ],
     },
 

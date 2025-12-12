@@ -84,8 +84,8 @@ export default function TanksPage() {
   const filteredTanks = useMemo(() => {
     let filtered = tanks;
 
-    // Filtrar por empresa si no es superadmin
-    if (user?.role !== "superadmin" && idCompany) {
+    // Filtrar por empresa del usuario
+    if (idCompany) {
       filtered = filtered.filter((t) => t.idCompany === idCompany);
     }
 
@@ -192,7 +192,9 @@ export default function TanksPage() {
   const handleExport = () => {
     const dataToExport = filteredTanks.map((t) => {
       const company = companies.find((c) => c.id === t.idCompany);
-      const businessUnit = businessUnits.find((bu) => bu.id === t.idBusinessUnit);
+      const businessUnit = businessUnits.find(
+        (bu) => bu.id === t.idBusinessUnit
+      );
       return {
         Nombre: t.name,
         Identificador: t.identifier,
@@ -206,10 +208,7 @@ export default function TanksPage() {
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Tanks");
-    XLSX.writeFile(
-      wb,
-      `tanks_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
+    XLSX.writeFile(wb, `tanks_${new Date().toISOString().split("T")[0]}.xlsx`);
     toast.success("Archivo exportado correctamente");
   };
 
@@ -424,7 +423,9 @@ export default function TanksPage() {
                   )}
 
                   {/* Estado */}
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+                  <Box
+                    sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}
+                  >
                     <Chip
                       label={tank.isActive !== false ? "Activo" : "Inactivo"}
                       size="small"
@@ -495,8 +496,8 @@ export default function TanksPage() {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
-            {/* Empresa (solo si es superadmin o hay múltiples empresas) */}
-            {(user?.role === "superadmin" || companies.length > 1) && (
+            {/* Empresa (solo si hay múltiples empresas) */}
+            {companies.length > 1 && (
               <FormControl fullWidth error={!!errors.idCompany}>
                 <InputLabel>Empresa *</InputLabel>
                 <Select
@@ -532,7 +533,9 @@ export default function TanksPage() {
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    idBusinessUnit: e.target.value ? Number(e.target.value) : undefined,
+                    idBusinessUnit: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
                   })
                 }
               >
@@ -578,7 +581,9 @@ export default function TanksPage() {
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  nativeLiters: e.target.value ? Number(e.target.value) : undefined,
+                  nativeLiters: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
                 })
               }
               fullWidth
@@ -613,7 +618,8 @@ export default function TanksPage() {
         <DialogTitle>Confirmar Desactivación</DialogTitle>
         <DialogContent>
           <Typography>
-            ¿Estás seguro de desactivar el tanque <strong>{deleteTank?.name}</strong>?
+            ¿Estás seguro de desactivar el tanque{" "}
+            <strong>{deleteTank?.name}</strong>?
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             Esta acción no se puede deshacer.

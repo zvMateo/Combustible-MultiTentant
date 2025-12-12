@@ -137,7 +137,7 @@ export default function UsersPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
 
-  // React Query hooks
+  // React Query hooks (multi-tenant: ya vienen filtrados por IdCompany)
   const { data: users = [], isLoading, error } = useUsers();
   const { data: roles = [] } = useRoles();
   const { data: companies = [] } = useCompanies();
@@ -159,45 +159,6 @@ export default function UsersPage() {
   // Filtrar usuarios por empresa, unidad y búsqueda según el rol
   const filteredUsers = useMemo(() => {
     let filtered = users;
-
-    // 1. Filtrar por empresa (si no es superadmin)
-    // ⚠️ PROBLEMA: El endpoint GetAllUsers no devuelve idCompany en la respuesta
-    // Por ahora, mostramos todos los usuarios si no tienen idCompany definido
-    // TODO: El backend debe incluir idCompany en la respuesta de GetAllUsers
-    if (companyIdFilter && companyIdFilter > 0) {
-      const usersWithCompany = filtered.filter(
-        (u) => u.idCompany !== undefined && u.idCompany !== null
-      );
-      const usersWithoutCompany = filtered.filter(
-        (u) => u.idCompany === undefined || u.idCompany === null
-      );
-
-      // Filtrar usuarios que tienen idCompany
-      filtered = usersWithCompany.filter(
-        (u) => u.idCompany === companyIdFilter
-      );
-
-      // ⚠️ Si hay usuarios sin idCompany, mostrarlos también (asumiendo que son de la empresa actual)
-      // Esto es un workaround hasta que el backend devuelva idCompany
-      if (usersWithoutCompany.length > 0) {
-        console.warn(
-          `⚠️ [UsersPage] ${usersWithoutCompany.length} usuarios sin idCompany. El backend debe incluirlo en la respuesta de GetAllUsers.`
-        );
-        // Por ahora, mostramos todos los usuarios si no tienen idCompany
-        // En producción, esto debería estar filtrado por el backend
-        filtered = [...filtered, ...usersWithoutCompany];
-      }
-
-      if (import.meta.env.DEV) {
-        console.log("🔍 [UsersPage] Filtrado por empresa:", {
-          totalUsers: users.length,
-          usersWithCompany: usersWithCompany.length,
-          usersWithoutCompany: usersWithoutCompany.length,
-          filteredUsers: filtered.length,
-          companyIdFilter,
-        });
-      }
-    }
 
     // 2. Filtrar por unidad de negocio (Supervisor y Auditor solo ven usuarios de su(s) unidad(es))
     if (
@@ -238,14 +199,7 @@ export default function UsersPage() {
     }
 
     return filtered;
-  }, [
-    users,
-    searchTerm,
-    companyIdFilter,
-    isSupervisor,
-    isAuditor,
-    unidadIdsFilter,
-  ]);
+  }, [users, searchTerm, isSupervisor, isAuditor, unidadIdsFilter]);
 
   const handleNew = () => {
     setEditingUser(null);
@@ -361,11 +315,8 @@ export default function UsersPage() {
         // CASO 2: CREAR NUEVO USUARIO
         // ==========================================
 
-        // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
-        const finalIdCompany =
-          user?.role === "superadmin"
-            ? formData.idCompany || user?.idCompany || user?.empresaId || 0
-            : user?.idCompany || user?.empresaId || 0;
+        // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado
+        const finalIdCompany = user?.idCompany || user?.empresaId || 0;
 
         console.log(
           "🏢 [UsersPage] Multi-tenant: idCompany del usuario autenticado:",
@@ -900,37 +851,32 @@ export default function UsersPage() {
               }}
             />
 
-            {companies.length > 0 &&
-              (user?.role === "superadmin" || companies.length > 1) && (
-                <FormControl fullWidth error={!!errors.idCompany}>
-                  <InputLabel>Empresa *</InputLabel>
-                  <Select
-                    value={formData.idCompany}
-                    label="Empresa *"
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        idCompany: Number(e.target.value),
-                      })
-                    }
-                  >
-                    {companies.map((c) => (
-                      <MenuItem key={c.id} value={c.id}>
-                        {c.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {errors.idCompany && (
-                    <Typography
-                      variant="caption"
-                      color="error"
-                      sx={{ mt: 0.5 }}
-                    >
-                      {errors.idCompany}
-                    </Typography>
-                  )}
-                </FormControl>
-              )}
+            {companies.length > 0 && companies.length > 1 && (
+              <FormControl fullWidth error={!!errors.idCompany}>
+                <InputLabel>Empresa *</InputLabel>
+                <Select
+                  value={formData.idCompany}
+                  label="Empresa *"
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      idCompany: Number(e.target.value),
+                    })
+                  }
+                >
+                  {companies.map((c) => (
+                    <MenuItem key={c.id} value={c.id}>
+                      {c.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.idCompany && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                    {errors.idCompany}
+                  </Typography>
+                )}
+              </FormControl>
+            )}
 
             <FormControl fullWidth>
               <InputLabel>Unidad de Negocio (opcional)</InputLabel>

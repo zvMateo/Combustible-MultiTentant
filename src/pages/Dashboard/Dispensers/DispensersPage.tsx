@@ -60,7 +60,9 @@ export default function DispensersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [editingDispenser, setEditingDispenser] = useState<Resource | null>(null);
+  const [editingDispenser, setEditingDispenser] = useState<Resource | null>(
+    null
+  );
   const [deleteDispenser, setDeleteDispenser] = useState<Resource | null>(null);
   const [formData, setFormData] = useState<CreateResourceRequest>({
     idType: RESOURCE_TYPES.DISPENSER,
@@ -84,8 +86,8 @@ export default function DispensersPage() {
   const filteredDispensers = useMemo(() => {
     let filtered = dispensers;
 
-    // Filtrar por empresa si no es superadmin
-    if (user?.role !== "superadmin" && idCompany) {
+    // Filtrar por empresa del usuario
+    if (idCompany) {
       filtered = filtered.filter((d) => d.idCompany === idCompany);
     }
 
@@ -192,7 +194,9 @@ export default function DispensersPage() {
   const handleExport = () => {
     const dataToExport = filteredDispensers.map((d) => {
       const company = companies.find((c) => c.id === d.idCompany);
-      const businessUnit = businessUnits.find((bu) => bu.id === d.idBusinessUnit);
+      const businessUnit = businessUnits.find(
+        (bu) => bu.id === d.idBusinessUnit
+      );
       return {
         Nombre: d.name,
         Identificador: d.identifier,
@@ -263,7 +267,8 @@ export default function DispensersPage() {
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {filteredDispensers.length}{" "}
-            {filteredDispensers.length === 1 ? "dispenser" : "dispensers"} registrados
+            {filteredDispensers.length === 1 ? "dispenser" : "dispensers"}{" "}
+            registrados
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
@@ -424,14 +429,21 @@ export default function DispensersPage() {
                   )}
 
                   {/* Estado */}
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+                  <Box
+                    sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}
+                  >
                     <Chip
-                      label={dispenser.isActive !== false ? "Activo" : "Inactivo"}
+                      label={
+                        dispenser.isActive !== false ? "Activo" : "Inactivo"
+                      }
                       size="small"
                       sx={{
                         bgcolor:
-                          dispenser.isActive !== false ? "#10b98115" : "#f59e0b15",
-                        color: dispenser.isActive !== false ? "#10b981" : "#f59e0b",
+                          dispenser.isActive !== false
+                            ? "#10b98115"
+                            : "#f59e0b15",
+                        color:
+                          dispenser.isActive !== false ? "#10b981" : "#f59e0b",
                         fontWeight: 600,
                       }}
                     />
@@ -495,8 +507,8 @@ export default function DispensersPage() {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
-            {/* Empresa (solo si es superadmin o hay múltiples empresas) */}
-            {(user?.role === "superadmin" || companies.length > 1) && (
+            {/* Empresa (solo si hay múltiples empresas) */}
+            {companies.length > 1 && (
               <FormControl fullWidth error={!!errors.idCompany}>
                 <InputLabel>Empresa *</InputLabel>
                 <Select
@@ -532,7 +544,9 @@ export default function DispensersPage() {
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    idBusinessUnit: e.target.value ? Number(e.target.value) : undefined,
+                    idBusinessUnit: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
                   })
                 }
               >
@@ -578,7 +592,9 @@ export default function DispensersPage() {
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  nativeLiters: e.target.value ? Number(e.target.value) : undefined,
+                  nativeLiters: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
                 })
               }
               fullWidth

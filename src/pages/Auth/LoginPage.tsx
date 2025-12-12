@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
-import { toast } from "sonner";
 import {
   Box,
   Card,
@@ -13,28 +12,12 @@ import {
   Container,
   Alert,
   CircularProgress,
-  Divider,
   Link,
-  Stack,
 } from "@mui/material";
 import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import GoogleIcon from "@mui/icons-material/Google";
-
-// SVG Icons para OAuth providers
-const FacebookIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-  </svg>
-);
-
-const MicrosoftIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 23 23" fill="currentColor">
-    <path d="M0 0h11v11H0V0zm12 0h11v11H12V0zM0 12h11v11H0V12zm12 0h11v11H12V12z" />
-  </svg>
-);
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -67,27 +50,9 @@ export default function LoginPage() {
 
     try {
       await login(userName, password);
-      navigate("/dashboard");
     } catch {
       // Error ya manejado en el store
     }
-  };
-
-  // OAuth handlers - Por implementar cuando tengan los client IDs
-  const handleGoogleLogin = () => {
-    toast.info("Login con Google próximamente disponible");
-    // TODO: Implementar OAuth con Google
-    // window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?...`;
-  };
-
-  const handleFacebookLogin = () => {
-    toast.info("Login con Facebook próximamente disponible");
-    // TODO: Implementar OAuth con Facebook
-  };
-
-  const handleMicrosoftLogin = () => {
-    toast.info("Login con Microsoft próximamente disponible");
-    // TODO: Implementar OAuth con Microsoft
   };
 
   const displayError = localError || error;

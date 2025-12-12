@@ -1,14 +1,8 @@
 // src/services/auth.service.ts
 import type { User, UserRole } from "@/types";
 import { authApi } from "./api/auth.api";
-import { userRolesApi } from "./api/roles.api";
 import { tokenStorage } from "@/lib/axios";
-import {
-  getUserIdFromToken,
-  getUserNameFromToken,
-  getCompanyIdFromToken,
-  getBusinessUnitIdFromToken,
-} from "@/lib/jwt";
+import type { AuthClaimDto } from "./api/auth.api";
 
 /**
  * Mapeo de nombres de roles de la API a roles de la aplicación
@@ -16,8 +10,6 @@ import {
 const ROLE_MAPPING: Record<string, UserRole> = {
   Admin: "admin",
   Administrador: "admin",
-  SuperAdmin: "superadmin",
-  "Super Admin": "superadmin",
   Supervisor: "supervisor",
   Auditor: "auditor",
   Operador: "operador",
@@ -33,8 +25,10 @@ function normalizeRole(apiRoleName: string): UserRole {
 
   // Buscar por coincidencia parcial
   const lowerName = apiRoleName.toLowerCase();
+  // En este proyecto NO existe superadmin. Si la API devuelve algo tipo "super",
+  // lo tratamos como "admin".
   if (lowerName.includes("superadmin") || lowerName.includes("super")) {
-    return "superadmin";
+    return "admin";
   }
   if (lowerName.includes("admin")) {
     return "admin";
@@ -52,6 +46,63 @@ function normalizeRole(apiRoleName: string): UserRole {
   // Por defecto, operador (menor privilegio)
   console.warn(`⚠️ Rol desconocido: "${apiRoleName}", asignando "operador"`);
   return "operador";
+}
+
+function getClaimValues(claims: AuthClaimDto[], type: string): string[] {
+  return claims.filter((c) => c.type === type).map((c) => c.value);
+}
+
+function getFirstClaimValue(
+  claims: AuthClaimDto[],
+  type: string
+): string | null {
+  return claims.find((c) => c.type === type)?.value ?? null;
+}
+
+function parseCompanyId(claims: AuthClaimDto[]): number | null {
+  const value = getFirstClaimValue(claims, "IdCompany");
+  if (!value) return null;
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseBusinessUnitId(claims: AuthClaimDto[]): number | null {
+  const value = getFirstClaimValue(claims, "IdBusinessUnit");
+  if (!value) return null;
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseRole(claims: AuthClaimDto[]): UserRole {
+  const role = getFirstClaimValue(
+    claims,
+    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+  );
+  return normalizeRole(role ?? "Operador");
+}
+
+function parseUserName(claims: AuthClaimDto[], fallback: string): string {
+  return (
+    getFirstClaimValue(
+      claims,
+      "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
+    ) ?? fallback
+  );
+}
+
+function parseUserId(claims: AuthClaimDto[]): string | null {
+  const nameIdentifiers = getClaimValues(
+    claims,
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
+  );
+
+  if (!nameIdentifiers.length) return null;
+
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  const uuid = nameIdentifiers.find((v) => uuidRegex.test(v));
+  return uuid ?? nameIdentifiers[nameIdentifiers.length - 1] ?? null;
 }
 
 class AuthService {
@@ -74,63 +125,19 @@ class AuthService {
 
       console.log("✅ [AuthService] Login exitoso, token recibido");
 
-      // 2️⃣ Extraer datos del token JWT
-      console.log("🔍 [AuthService] Extrayendo datos del token JWT...");
-      const userId = getUserIdFromToken(response.token);
-      const userName = getUserNameFromToken(response.token);
-      const idCompany = getCompanyIdFromToken(response.token);
-      const idBusinessUnit = getBusinessUnitIdFromToken(response.token);
-
+      // 2️⃣ Obtener claims desde la API (backend deserializa el token)
+      const claims = await authApi.getClaims();
+      const userId = parseUserId(claims);
       if (!userId) {
-        throw new Error("No se pudo extraer el userId del token");
+        throw new Error("No se pudo obtener el userId desde los claims");
       }
 
-      console.log("✅ [AuthService] Datos extraídos del token JWT:", {
-        userId,
-        userName,
-        idCompany,
-        idBusinessUnit,
-      });
-
-      if (!idCompany) {
-        console.warn(
-          "⚠️ [AuthService] idCompany no encontrado en el token JWT"
-        );
-      } else {
-        console.log(
-          "✅ [AuthService] idCompany capturado del token JWT:",
-          idCompany
-        );
-      }
-
-      // 3️⃣ Obtener roles del usuario desde la API
-      let userRole: UserRole = "operador"; // Default fallback
-
-      try {
-        console.log("🔍 [AuthService] Buscando roles para userId:", userId);
-        const userRoles = await userRolesApi.getByUser(userId);
-
-        console.log("🔍 [AuthService] Roles recibidos:", userRoles);
-
-        if (userRoles && userRoles.length > 0) {
-          const firstRole = userRoles[0];
-          const apiRoleName = firstRole.name;
-          userRole = normalizeRole(apiRoleName);
-          console.log(
-            `✅ [AuthService] Rol obtenido: "${apiRoleName}" → "${userRole}"`
-          );
-        } else {
-          console.warn(
-            "⚠️ [AuthService] Usuario sin roles asignados, usando 'operador'"
-          );
-        }
-      } catch (roleError) {
-        console.error("❌ [AuthService] Error al obtener roles:", roleError);
-        console.warn("⚠️ [AuthService] Usando rol por defecto: 'operador'");
-      }
+      const userName = parseUserName(claims, credentials.userName);
+      const idCompany = parseCompanyId(claims);
+      const idBusinessUnit = parseBusinessUnitId(claims);
+      const userRole = parseRole(claims);
 
       // 4️⃣ Construir objeto User
-      // idCompany se obtiene del token JWT (extraído en el paso 2)
       const user: User = {
         id: userId,
         email: credentials.userName, // El backend no devuelve email
@@ -153,22 +160,6 @@ class AuthService {
         idBusinessUnit: user.idBusinessUnit,
         empresaId: user.empresaId,
       });
-
-      if (idCompany) {
-        console.log(
-          "✅ [AuthService] ✅ idCompany capturado del token JWT y guardado en el contexto:",
-          idCompany
-        );
-      } else {
-        console.warn(
-          "⚠️ [AuthService] ⚠️ idCompany NO encontrado en el token JWT. Verifica que el backend incluya 'IdCompany' en el token."
-        );
-      }
-
-      console.log(
-        "✅ [AuthService] idCompany obtenido del token JWT:",
-        idCompany
-      );
 
       // 5️⃣ Guardar sesión
       this.saveSession(user);
@@ -246,13 +237,8 @@ class AuthService {
     const user = this.getCurrentUser();
     if (!user) return false;
 
-    const isAdminRoute = window.location.pathname.startsWith("/a");
-
-    if (isAdminRoute) {
-      return user.role === "superadmin";
-    }
-
-    return user.role !== "superadmin";
+    // No existe superadmin ni rutas /a en este proyecto.
+    return true;
   }
 
   /**
@@ -262,7 +248,9 @@ class AuthService {
     currentPassword: string,
     newPassword: string
   ): Promise<void> {
-    // TODO: Implementar endpoint de cambio de contraseña
+    // TODO: Implementar endpoint de cambio de contraseña cuando esté disponible en el backend
+    void currentPassword;
+    void newPassword;
     throw new Error("Cambio de contraseña no implementado en la API");
   }
 
@@ -270,7 +258,7 @@ class AuthService {
    * Solicitar recuperación de contraseña
    */
   async requestPasswordReset(email: string): Promise<void> {
-    // TODO: Implementar endpoint de recuperación de contraseña
+    void email;
     throw new Error("Recuperación de contraseña no implementada en la API");
   }
 
@@ -278,7 +266,8 @@ class AuthService {
    * Resetear contraseña con token
    */
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    // TODO: Implementar endpoint de reset de contraseña
+    void token;
+    void newPassword;
     throw new Error("Reset de contraseña no implementado en la API");
   }
 }

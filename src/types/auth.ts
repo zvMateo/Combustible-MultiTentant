@@ -2,18 +2,12 @@
 
 /**
  * Roles del sistema
- * - superadmin: Administrador de GoodApps (acceso a /a)
  * - admin: Administrador de empresa/tenant
  * - supervisor: Puede validar eventos
  * - operador: Solo puede registrar cargas
  * - auditor: Solo lectura para auditorías
  */
-export type UserRole =
-  | "superadmin"
-  | "admin"
-  | "supervisor"
-  | "operador"
-  | "auditor";
+export type UserRole = "admin" | "supervisor" | "operador" | "auditor";
 
 /**
  * Permisos granulares del sistema
@@ -46,12 +40,6 @@ export type Permission =
  * - auditor: Solo lectura de su unidad asignada
  */
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  superadmin: [
-    "empresas:gestionar",
-    "eventos:ver",
-    "reportes:ver",
-    "reportes:exportar",
-  ],
   admin: [
     // Gestión completa de la empresa
     "unidades:ver",
@@ -146,7 +134,7 @@ export interface UserFormData {
 export function canViewAllUnits(user: User | null): boolean {
   if (!user) return false;
   // Admin ve todas, supervisor/auditor solo las asignadas
-  return user.role === "admin" || user.role === "superadmin";
+  return user.role === "admin";
 }
 
 /**
@@ -154,10 +142,10 @@ export function canViewAllUnits(user: User | null): boolean {
  */
 export function canAccessUnit(user: User | null, unidadId: number): boolean {
   if (!user) return false;
-  // Admin y superadmin acceden a todo
-  if (user.role === "admin" || user.role === "superadmin") return true;
+  // Admin accede a todo
+  if (user.role === "admin") return true;
   // Otros roles solo si está en sus unidades asignadas
-  return user.unidadesAsignadas.includes(unidadId);
+  return (user.unidadesAsignadas ?? []).includes(unidadId);
 }
 
 /**
@@ -199,9 +187,6 @@ export function hasPermission(
   permission: Permission
 ): boolean {
   if (!user) return false;
-
-  // Superadmin tiene acceso a todo
-  if (user.role === "superadmin") return true;
 
   // Si el usuario tiene permisos personalizados, usarlos (tienen prioridad)
   if (user.permissions && Array.isArray(user.permissions)) {

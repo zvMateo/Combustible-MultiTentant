@@ -19,10 +19,6 @@ import {
   LinearProgress,
   Alert,
   Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -68,7 +64,6 @@ export default function BusinessUnitsPage() {
   } = useRoleLogic();
 
   const idCompany = user?.empresaId ?? companyIdFilter ?? 0;
-  const isSuperAdmin = (user?.role || "").toLowerCase() === "superadmin";
 
   const [searchTerm, setSearchTerm] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
@@ -88,48 +83,10 @@ export default function BusinessUnitsPage() {
     error: errorAll,
   } = useBusinessUnits();
 
-  // Debug: verificar qué queries se están ejecutando
-  if (import.meta.env.DEV) {
-    console.log("🔍 [BusinessUnitsPage] Estado de queries:", {
-      idCompany,
-      userEmpresaId: user?.empresaId,
-      userIdCompany: user?.idCompany,
-      loadingAll,
-      businessUnitsAllLength: Array.isArray(businessUnitsAll)
-        ? businessUnitsAll.length
-        : 0,
-      businessUnitsAll: businessUnitsAll,
-      errorAll: errorAll ? String(errorAll) : null,
-    });
-  }
-
-  // Asegurar que siempre sean arrays usando useMemo
-  const businessUnits = useMemo(() => {
-    const result = Array.isArray(businessUnitsAll) ? businessUnitsAll : [];
-
-    // Debug logs
-    if (import.meta.env.DEV) {
-      console.log("🔍 [BusinessUnitsPage] Datos cargados desde GetAll:", {
-        idCompany,
-        usingQuery: "getAll",
-        unitsFromQuery: businessUnitsAll,
-        resultLength: result.length,
-        businessUnitsAllLength: Array.isArray(businessUnitsAll)
-          ? businessUnitsAll.length
-          : 0,
-        user: user
-          ? {
-              id: user.id,
-              empresaId: user.empresaId,
-              idCompany: user.idCompany,
-              role: user.role,
-            }
-          : null,
-      });
-    }
-
-    return result;
-  }, [businessUnitsAll, idCompany, user]);
+  const businessUnits = useMemo(
+    () => (Array.isArray(businessUnitsAll) ? businessUnitsAll : []),
+    [businessUnitsAll]
+  );
 
   const isLoading = loadingAll;
   const error = errorAll;
@@ -156,60 +113,13 @@ export default function BusinessUnitsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openDialog, idCompany, companies]);
 
-  // Filtrar por búsqueda y por empresa si no es superadmin
   const filteredUnits = useMemo(() => {
-    // businessUnits ya está garantizado como array por el useMemo anterior
     let filtered = businessUnits;
 
-    // Debug: mostrar todas las unidades antes de filtrar
-    if (import.meta.env.DEV) {
-      console.log("🔍 [BusinessUnitsPage] Antes de filtrar:", {
-        totalUnits: filtered.length,
-        units: filtered.map((u) => ({
-          id: u.id,
-          name: u.name,
-          idCompany: u.idCompany,
-        })),
-        userRole: user?.role,
-        idCompany,
-        isSuperAdmin,
-        usingQuery: "getAll",
-        businessUnitsAllLength: Array.isArray(businessUnitsAll)
-          ? businessUnitsAll.length
-          : 0,
-      });
-    }
-
-    // Filtrar por empresa si el usuario no es superadmin
-    // Como siempre usamos getAll, necesitamos filtrar por idCompany del usuario
-    if (!isSuperAdmin && idCompany && idCompany > 0) {
-      // Filtrar por empresa del usuario
+    if (idCompany && idCompany > 0) {
       filtered = filtered.filter((u) => u.idCompany === idCompany);
-
-      if (import.meta.env.DEV) {
-        console.log(
-          "🔍 [BusinessUnitsPage] Filtrando por empresa del usuario:",
-          {
-            idCompany,
-            userEmpresaId: user?.empresaId,
-            beforeFilter: businessUnits.length,
-            afterFilter: filtered.length,
-            unitsBeforeFilter: businessUnits.map((u) => ({
-              id: u.id,
-              name: u.name,
-              idCompany: u.idCompany,
-            })),
-            unitsAfterFilter: filtered.map((u) => ({
-              id: u.id,
-              name: u.name,
-              idCompany: u.idCompany,
-            })),
-          }
-        );
-      }
     }
 
-    // Filtrar por búsqueda
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -219,27 +129,8 @@ export default function BusinessUnitsPage() {
       );
     }
 
-    // Debug: mostrar unidades después de filtrar
-    if (import.meta.env.DEV) {
-      console.log("🔍 [BusinessUnitsPage] Después de filtrar:", {
-        filteredCount: filtered.length,
-        filteredUnits: filtered.map((u) => ({
-          id: u.id,
-          name: u.name,
-          idCompany: u.idCompany,
-        })),
-      });
-    }
-
     return filtered;
-  }, [
-    businessUnits,
-    searchTerm,
-    idCompany,
-    user?.role,
-    user?.empresaId,
-    isSuperAdmin,
-  ]);
+  }, [businessUnits, searchTerm, idCompany]);
 
   // Handlers
   const handleNew = () => {
@@ -250,33 +141,17 @@ export default function BusinessUnitsPage() {
 
     setEditingUnit(null);
     setFormData({
-      idCompany: isSuperAdmin
-        ? fallbackCompanyId
-        : idCompany || fallbackCompanyId,
+      idCompany: idCompany || fallbackCompanyId,
       name: "",
       detail: "",
     });
     setErrors({});
     setOpenDialog(true);
 
-    // Mostrar advertencia si no hay empresa disponible, pero permitir abrir el modal
     if (!idCompany && companies.length === 0 && !loadingCompanies) {
       toast.error(
         "No hay empresas disponibles. Por favor, contacta al administrador."
       );
-    }
-
-    if (import.meta.env.DEV) {
-      console.log("✅ [BusinessUnitsPage] handleNew - Modal abierto:", {
-        idCompany: isSuperAdmin
-          ? fallbackCompanyId
-          : idCompany || fallbackCompanyId,
-        userIdCompany: idCompany,
-        companies: companies.map((c) => ({ id: c.id, name: c.name })),
-        isSuperAdmin,
-        loadingCompanies,
-        openDialog: true,
-      });
     }
   };
 
@@ -317,73 +192,19 @@ export default function BusinessUnitsPage() {
       } else {
         newErrors.idCompany = "Debe seleccionar una empresa";
       }
-
-      if (import.meta.env.DEV) {
-        console.error("❌ [BusinessUnitsPage] idCompany inválido:", {
-          formDataIdCompany: formData.idCompany,
-          userIdCompany: idCompany,
-          companies: companies.map((c) => ({ id: c.id, name: c.name })),
-          companiesLength: companies.length,
-          loadingCompanies,
-          user: user
-            ? { id: user.id, empresaId: user.empresaId, role: user.role }
-            : null,
-        });
-      }
     }
 
     setErrors(newErrors);
-    const isValid = Object.keys(newErrors).length === 0;
-
-    if (import.meta.env.DEV && !isValid) {
-      console.warn("⚠️ [BusinessUnitsPage] Validación falló:", newErrors);
-      console.warn("⚠️ [BusinessUnitsPage] formData actual:", formData);
-    }
-
-    return isValid;
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async () => {
-    // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
-    const finalIdCompany =
-      user?.role === "superadmin"
-        ? formData.idCompany || idCompany || companies[0]?.id || 0
-        : idCompany || user?.idCompany || user?.empresaId || 0;
-
-    if (finalIdCompany && finalIdCompany !== formData.idCompany) {
-      setFormData((prev) => ({ ...prev, idCompany: finalIdCompany }));
-    }
-
-    console.log(
-      "🏢 [BusinessUnitsPage] Multi-tenant: idCompany del usuario autenticado:",
-      finalIdCompany
-    );
-
-    if (!validateForm()) {
-      if (import.meta.env.DEV) {
-        console.error("❌ [BusinessUnitsPage] POST bloqueado por validación");
-      }
-      return;
-    }
-
-    if (import.meta.env.DEV) {
-      console.log("✅ [BusinessUnitsPage] Validación OK, ejecutando POST:", {
-        editing: !!editingUnit,
-        formData: { ...formData, idCompany: finalIdCompany },
-      });
-    }
+    if (!validateForm()) return;
 
     try {
-      // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
       const finalIdCompany =
-        user?.role === "superadmin"
-          ? formData.idCompany || idCompany || companies[0]?.id || 0
-          : idCompany || user?.idCompany || user?.empresaId || 0;
-
-      const dataToSend = {
-        ...formData,
-        idCompany: finalIdCompany, // ✅ Usar idCompany del usuario autenticado
-      };
+        idCompany || user?.idCompany || user?.empresaId || 0;
+      const dataToSend = { ...formData, idCompany: finalIdCompany };
 
       if (editingUnit) {
         const updateData: UpdateBusinessUnitRequest = {
@@ -397,11 +218,8 @@ export default function BusinessUnitsPage() {
         await createMutation.mutateAsync(dataToSend);
       }
       setOpenDialog(false);
-    } catch (error) {
+    } catch {
       // Error manejado por el mutation
-      if (import.meta.env.DEV) {
-        console.error("❌ [BusinessUnitsPage] Error en handleSave:", error);
-      }
     }
   };
 
@@ -818,42 +636,10 @@ export default function BusinessUnitsPage() {
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <Grid container spacing={3}>
-              {/* Empresa */}
-              {isSuperAdmin && companies.length > 0 && (
-                <Grid item xs={12}>
-                  <FormControl fullWidth error={!!errors.idCompany}>
-                    <InputLabel>Empresa *</InputLabel>
-                    <Select
-                      value={formData.idCompany}
-                      label="Empresa *"
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          idCompany: Number(e.target.value),
-                        })
-                      }
-                    >
-                      {companies.map((c) => (
-                        <MenuItem key={c.id} value={c.id}>
-                          {c.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {errors.idCompany && (
-                      <Typography
-                        variant="caption"
-                        color="error"
-                        sx={{ mt: 0.5 }}
-                      >
-                        {errors.idCompany}
-                      </Typography>
-                    )}
-                  </FormControl>
-                </Grid>
-              )}
+              {/* Empresa: No se muestra porque siempre usamos la del usuario autenticado */}
 
-              {/* Mensaje informativo para usuarios no superadmin */}
-              {!isSuperAdmin && idCompany > 0 && (
+              {/* Mensaje informativo para usuarios */}
+              {idCompany > 0 && (
                 <Grid item xs={12}>
                   <Alert severity="info" sx={{ mb: 1 }}>
                     Se usará tu empresa actual para crear la unidad de negocio

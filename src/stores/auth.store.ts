@@ -1,6 +1,7 @@
 // src/stores/auth.store.ts
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { useShallow } from "zustand/react/shallow";
 import type { User, Permission } from "@/types";
 import { ROLE_PERMISSIONS } from "@/types";
 import { authService } from "@/services";
@@ -16,6 +17,7 @@ interface AuthState {
   // Acciones
   login: (userName: string, password: string) => Promise<void>;
   logout: () => void;
+  handleSessionExpired: () => void;
   checkAuth: () => void;
   updateUser: (user: Partial<User>) => void;
   clearError: () => void;
@@ -23,8 +25,17 @@ interface AuthState {
   // Helpers
   hasPermission: (permission: Permission) => boolean;
   hasRole: (roles: User["role"][]) => boolean;
-  isSuperAdmin: () => boolean;
   isAdmin: () => boolean;
+}
+
+export interface TenantContext {
+  userId: string | null;
+  name: string | null;
+  email: string | null;
+  role: User["role"] | null;
+  idCompany: number | null;
+  idBusinessUnit: number | null;
+  empresaNombre: string | null;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -49,7 +60,8 @@ export const useAuthStore = create<AuthState>()(
           });
           toast.success(`¡Bienvenido, ${user.name}!`);
         } catch (err) {
-          const message = err instanceof Error ? err.message : "Error al iniciar sesión";
+          const message =
+            err instanceof Error ? err.message : "Error al iniciar sesión";
           set({
             user: null,
             isAuthenticated: false,
@@ -70,6 +82,16 @@ export const useAuthStore = create<AuthState>()(
           error: null,
         });
         toast.info("Sesión cerrada correctamente");
+      },
+
+      // Sesión expirada (401) - no mostrar toast de logout manual
+      handleSessionExpired: () => {
+        set({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: null,
+        });
       },
 
       // Verificar autenticación existente
@@ -108,9 +130,6 @@ export const useAuthStore = create<AuthState>()(
       hasPermission: (permission: Permission) => {
         const user = get().user;
         if (!user) return false;
-        
-        // Superadmin tiene acceso a todo
-        if (user.role === "superadmin") return true;
 
         // Si el usuario tiene permisos personalizados, usarlos (tienen prioridad)
         if (user.permissions && Array.isArray(user.permissions)) {
@@ -128,9 +147,6 @@ export const useAuthStore = create<AuthState>()(
         return roles.includes(user.role);
       },
 
-      // Es SuperAdmin
-      isSuperAdmin: () => get().user?.role === "superadmin",
-
       // Es Admin de empresa
       isAdmin: () => get().user?.role === "admin",
     }),
@@ -147,6 +163,29 @@ export const useAuthStore = create<AuthState>()(
 
 // Selector hooks para mejor rendimiento
 export const useUser = () => useAuthStore((state) => state.user);
-export const useIsAuthenticated = () => useAuthStore((state) => state.isAuthenticated);
+export const useIsAuthenticated = () =>
+  useAuthStore((state) => state.isAuthenticated);
 export const useAuthLoading = () => useAuthStore((state) => state.isLoading);
 export const useAuthError = () => useAuthStore((state) => state.error);
+
+export const useUserName = () =>
+  useAuthStore((state) => state.user?.name ?? null);
+export const useUserRole = () =>
+  useAuthStore((state) => state.user?.role ?? null);
+export const useIdCompany = () =>
+  useAuthStore((state) => state.user?.idCompany ?? null);
+export const useIdBusinessUnit = () =>
+  useAuthStore((state) => state.user?.idBusinessUnit ?? null);
+
+export const useTenantContext = (): TenantContext =>
+  useAuthStore(
+    useShallow((state) => ({
+      userId: state.user?.id ?? null,
+      name: state.user?.name ?? null,
+      email: state.user?.email ?? null,
+      role: state.user?.role ?? null,
+      idCompany: state.user?.idCompany ?? null,
+      idBusinessUnit: state.user?.idBusinessUnit ?? null,
+      empresaNombre: state.user?.empresaNombre ?? null,
+    }))
+  );

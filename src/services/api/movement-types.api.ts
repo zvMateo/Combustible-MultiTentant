@@ -10,6 +10,7 @@ import type {
 
 const MOVEMENT_TYPES_ENDPOINTS = {
   getAll: "/MovementTypes/GetAll",
+  getByCompany: "/MovementTypes/GetMovementsTypesByIdCompany",
   getById: "/MovementTypes/GetById",
   create: "/MovementTypes/Create",
   update: "/MovementTypes/Update",
@@ -18,11 +19,12 @@ const MOVEMENT_TYPES_ENDPOINTS = {
 
 export const movementTypesApi = {
   /**
-   * Obtener todos los tipos de movimiento
+   * Obtener tipos de movimiento por empresa
    */
-  async getAll(): Promise<MovementType[]> {
+  async getByCompany(idCompany: number): Promise<MovementType[]> {
     const { data } = await axiosInstance.get<MovementType[]>(
-      MOVEMENT_TYPES_ENDPOINTS.getAll
+      MOVEMENT_TYPES_ENDPOINTS.getByCompany,
+      { params: { idCompany } }
     );
     return data;
   },
@@ -41,7 +43,9 @@ export const movementTypesApi = {
   /**
    * Crear nuevo tipo de movimiento
    */
-  async create(movementTypeData: CreateMovementTypeRequest): Promise<MovementType> {
+  async create(
+    movementTypeData: CreateMovementTypeRequest
+  ): Promise<MovementType> {
     const { data } = await axiosInstance.post<MovementType>(
       MOVEMENT_TYPES_ENDPOINTS.create,
       movementTypeData
@@ -52,7 +56,9 @@ export const movementTypesApi = {
   /**
    * Actualizar tipo de movimiento
    */
-  async update(movementTypeData: UpdateMovementTypeRequest): Promise<MovementType> {
+  async update(
+    movementTypeData: UpdateMovementTypeRequest
+  ): Promise<MovementType> {
     const { data } = await axiosInstance.put<MovementType>(
       MOVEMENT_TYPES_ENDPOINTS.update,
       movementTypeData
@@ -65,7 +71,9 @@ export const movementTypesApi = {
    */
   async deactivate(id: number): Promise<void> {
     // ✅ CORRECTO: Query param en la URL directamente
-    await axiosInstance.patch(`${MOVEMENT_TYPES_ENDPOINTS.deactivate}?id=${id}`);
+    await axiosInstance.patch(
+      `${MOVEMENT_TYPES_ENDPOINTS.deactivate}?id=${id}`
+    );
   },
 };
 

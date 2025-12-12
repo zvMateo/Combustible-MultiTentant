@@ -5,8 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { movementTypesApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
+import { useIdCompany } from "@/stores/auth.store";
 import type {
-  MovementType,
   CreateMovementTypeRequest,
   UpdateMovementTypeRequest,
 } from "@/types/api.types";
@@ -15,6 +15,8 @@ import type {
 export const movementTypesKeys = {
   all: ["movementTypes"] as const,
   lists: () => [...movementTypesKeys.all, "list"] as const,
+  byCompany: (idCompany: number) =>
+    [...movementTypesKeys.all, "byCompany", idCompany] as const,
   detail: (id: number) => [...movementTypesKeys.all, "detail", id] as const,
 };
 
@@ -22,9 +24,13 @@ export const movementTypesKeys = {
  * Obtener todos los tipos de movimiento (ACTIVOS E INACTIVOS)
  */
 export function useMovementTypes() {
+  const storeCompanyId = useIdCompany();
+  const companyId = storeCompanyId ?? 0;
+
   return useQuery({
-    queryKey: movementTypesKeys.lists(),
-    queryFn: () => movementTypesApi.getAll(),
+    queryKey: movementTypesKeys.byCompany(companyId),
+    queryFn: () => movementTypesApi.getByCompany(companyId),
+    enabled: !!companyId,
     staleTime: 1000 * 60 * 10, // 10 minutos
   });
 }
@@ -48,10 +54,11 @@ export function useCreateMovementType() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateMovementTypeRequest) => movementTypesApi.create(data),
+    mutationFn: (data: CreateMovementTypeRequest) =>
+      movementTypesApi.create(data),
     onSuccess: () => {
       toast.success("Tipo de movimiento creado correctamente");
-      queryClient.invalidateQueries({ queryKey: movementTypesKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: movementTypesKeys.all });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -66,11 +73,14 @@ export function useUpdateMovementType() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: UpdateMovementTypeRequest) => movementTypesApi.update(data),
+    mutationFn: (data: UpdateMovementTypeRequest) =>
+      movementTypesApi.update(data),
     onSuccess: (_, variables) => {
       toast.success("Tipo de movimiento actualizado correctamente");
-      queryClient.invalidateQueries({ queryKey: movementTypesKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: movementTypesKeys.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: movementTypesKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: movementTypesKeys.detail(variables.id),
+      });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -88,7 +98,7 @@ export function useDeactivateMovementType() {
     mutationFn: (id: number) => movementTypesApi.deactivate(id),
     onSuccess: () => {
       toast.success("Estado actualizado correctamente");
-      queryClient.invalidateQueries({ queryKey: movementTypesKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: movementTypesKeys.all });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));

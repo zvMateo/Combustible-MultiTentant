@@ -5,8 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { businessUnitsApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
+import { useIdCompany } from "@/stores/auth.store";
 import type {
-  BusinessUnit,
   CreateBusinessUnitRequest,
   UpdateBusinessUnitRequest,
 } from "@/types/api.types";
@@ -15,18 +15,24 @@ import type {
 export const businessUnitsKeys = {
   all: ["businessUnits"] as const,
   lists: () => [...businessUnitsKeys.all, "list"] as const,
-  list: (idCompany?: number) => [...businessUnitsKeys.lists(), idCompany] as const,
+  list: (idCompany?: number) =>
+    [...businessUnitsKeys.lists(), idCompany] as const,
   detail: (id: number) => [...businessUnitsKeys.all, "detail", id] as const,
-  byCompany: (idCompany: number) => [...businessUnitsKeys.all, "byCompany", idCompany] as const,
+  byCompany: (idCompany: number) =>
+    [...businessUnitsKeys.all, "byCompany", idCompany] as const,
 };
 
 /**
  * Obtener todas las unidades de negocio
  */
-export function useBusinessUnits() {
+export function useBusinessUnits(idCompany?: number) {
+  const storeCompanyId = useIdCompany();
+  const companyId = idCompany ?? storeCompanyId ?? 0;
+
   return useQuery({
-    queryKey: businessUnitsKeys.lists(),
-    queryFn: () => businessUnitsApi.getAll(),
+    queryKey: businessUnitsKeys.byCompany(companyId),
+    queryFn: () => businessUnitsApi.getByCompany(companyId),
+    enabled: !!companyId,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
@@ -62,15 +68,17 @@ export function useCreateBusinessUnit() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateBusinessUnitRequest) => businessUnitsApi.create(data),
+    mutationFn: (data: CreateBusinessUnitRequest) =>
+      businessUnitsApi.create(data),
     onSuccess: (_, variables) => {
       toast.success("Unidad de negocio creada correctamente");
       // Invalidar todas las queries relacionadas
-      queryClient.invalidateQueries({ queryKey: businessUnitsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: businessUnitsKeys.all });
       // Invalidar también la query por empresa si existe
       if (variables.idCompany) {
-        queryClient.invalidateQueries({ queryKey: businessUnitsKeys.byCompany(variables.idCompany) });
+        queryClient.invalidateQueries({
+          queryKey: businessUnitsKeys.byCompany(variables.idCompany),
+        });
       }
     },
     onError: (error) => {
@@ -86,16 +94,20 @@ export function useUpdateBusinessUnit() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: UpdateBusinessUnitRequest) => businessUnitsApi.update(data),
+    mutationFn: (data: UpdateBusinessUnitRequest) =>
+      businessUnitsApi.update(data),
     onSuccess: (_, variables) => {
       toast.success("Unidad de negocio actualizada correctamente");
       // Invalidar todas las queries relacionadas
-      queryClient.invalidateQueries({ queryKey: businessUnitsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: businessUnitsKeys.all });
-      queryClient.invalidateQueries({ queryKey: businessUnitsKeys.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: businessUnitsKeys.detail(variables.id),
+      });
       // Invalidar también la query por empresa si existe
       if (variables.idCompany) {
-        queryClient.invalidateQueries({ queryKey: businessUnitsKeys.byCompany(variables.idCompany) });
+        queryClient.invalidateQueries({
+          queryKey: businessUnitsKeys.byCompany(variables.idCompany),
+        });
       }
     },
     onError: (error) => {
@@ -115,7 +127,6 @@ export function useDeactivateBusinessUnit() {
     onSuccess: () => {
       toast.success("Unidad de negocio desactivada");
       // Invalidar todas las queries relacionadas
-      queryClient.invalidateQueries({ queryKey: businessUnitsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: businessUnitsKeys.all });
     },
     onError: (error) => {
@@ -123,4 +134,3 @@ export function useDeactivateBusinessUnit() {
     },
   });
 }
-

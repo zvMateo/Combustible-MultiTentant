@@ -19,16 +19,6 @@ const BUSINESS_UNITS_ENDPOINTS = {
 
 export const businessUnitsApi = {
   /**
-   * Obtener todas las unidades de negocio
-   */
-  async getAll(): Promise<BusinessUnit[]> {
-    const { data } = await axiosInstance.get<BusinessUnit[]>(
-      BUSINESS_UNITS_ENDPOINTS.getAll
-    );
-    return toArray<BusinessUnit>(data);
-  },
-
-  /**
    * Obtener unidad de negocio por ID
    */
   async getById(id: number): Promise<BusinessUnit> {

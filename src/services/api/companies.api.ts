@@ -46,52 +46,30 @@ export const companiesApi = {
    * Crear nueva empresa
    */
   async create(companyData: CreateCompanyRequest): Promise<Company> {
-    console.log("🚀 [companiesApi.create] Enviando datos:", companyData);
-
     const response = await axiosInstance.post<Company>(
       COMPANIES_ENDPOINTS.create,
       companyData
     );
 
-    console.log("✅ [companiesApi.create] Response:", response.data);
-    console.log("✅ [companiesApi.create] Status:", response.status);
-
-    // Si el backend devuelve el objeto directamente con id, retornarlo
     if (
       response.data &&
       typeof response.data === "object" &&
       "id" in response.data
     ) {
-      console.log(
-        "✅ [companiesApi.create] Empresa con ID recibida:",
-        response.data
-      );
       return response.data;
     }
 
-    // Si el backend solo devuelve un mensaje, buscar la empresa recién creada
-    console.log(
-      "🔍 [companiesApi.create] Backend no devolvió el objeto, buscando empresa por nombre:",
-      companyData.name
-    );
-
-    // Esperar un momento para que la base de datos se actualice
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Buscar la empresa recién creada por nombre
     const allCompanies = await this.getAll();
     const newCompany = allCompanies.find((c) => c.name === companyData.name);
 
     if (!newCompany) {
-      console.error(
-        "❌ [companiesApi.create] No se encontró la empresa recién creada"
-      );
       throw new Error(
         "La empresa fue creada pero no se pudo recuperar su información"
       );
     }
 
-    console.log("✅ [companiesApi.create] Empresa encontrada:", newCompany);
     return newCompany;
   },
 
@@ -117,4 +95,3 @@ export const companiesApi = {
 };
 
 export default companiesApi;
-

@@ -1,21 +1,21 @@
 // src/hooks/usePermissions.ts
 /**
  * Hook centralizado para validar permisos y roles
- * 
+ *
  * Este hook proporciona una API consistente para validar permisos
  * en toda la aplicación, usando el store de autenticación.
- * 
+ *
  * @example
- * const { can, canAll, canAny, hasRole, isAdmin, isSuperAdmin } = usePermissions();
- * 
+ * const { can, canAll, canAny, hasRole, isAdmin } = usePermissions();
+ *
  * if (can("eventos:crear")) {
  *   // Mostrar botón de crear evento
  * }
- * 
+ *
  * if (canAll(["eventos:editar", "eventos:eliminar"])) {
  *   // Mostrar panel de administración
  * }
- * 
+ *
  * if (canAny(["reportes:ver", "dashboard:ver"])) {
  *   // Mostrar sección de analytics
  * }
@@ -30,42 +30,37 @@ interface UsePermissionsReturn {
    * Verifica si el usuario tiene un permiso específico
    */
   can: (permission: Permission) => boolean;
-  
+
   /**
    * Verifica si el usuario tiene TODOS los permisos especificados
    */
   canAll: (permissions: Permission[]) => boolean;
-  
+
   /**
    * Verifica si el usuario tiene AL MENOS UNO de los permisos especificados
    */
   canAny: (permissions: Permission[]) => boolean;
-  
+
   /**
    * Verifica si el usuario tiene uno de los roles especificados
    */
   hasRole: (roles: UserRole[]) => boolean;
-  
+
   /**
    * Verifica si el usuario es administrador de empresa
    */
   isAdmin: () => boolean;
-  
-  /**
-   * Verifica si el usuario es superadmin
-   */
-  isSuperAdmin: () => boolean;
-  
+
   /**
    * Verifica si el usuario es supervisor
    */
   isSupervisor: () => boolean;
-  
+
   /**
    * Verifica si el usuario es auditor
    */
   isAuditor: () => boolean;
-  
+
   /**
    * Verifica si el usuario es operador
    */
@@ -73,7 +68,12 @@ interface UsePermissionsReturn {
 }
 
 export function usePermissions(): UsePermissionsReturn {
-  const { user, hasPermission: storeHasPermission, hasRole: storeHasRole, isAdmin: storeIsAdmin, isSuperAdmin: storeIsSuperAdmin } = useAuthStore();
+  const {
+    user,
+    hasPermission: storeHasPermission,
+    hasRole: storeHasRole,
+    isAdmin: storeIsAdmin,
+  } = useAuthStore();
 
   return useMemo(() => {
     const can = (permission: Permission): boolean => {
@@ -98,10 +98,6 @@ export function usePermissions(): UsePermissionsReturn {
       return storeIsAdmin();
     };
 
-    const isSuperAdmin = (): boolean => {
-      return storeIsSuperAdmin();
-    };
-
     const isSupervisor = (): boolean => {
       return user?.role === "supervisor";
     };
@@ -120,11 +116,9 @@ export function usePermissions(): UsePermissionsReturn {
       canAny,
       hasRole,
       isAdmin,
-      isSuperAdmin,
       isSupervisor,
       isAuditor,
       isOperador,
     };
-  }, [user, storeHasPermission, storeHasRole, storeIsAdmin, storeIsSuperAdmin]);
+  }, [user, storeHasPermission, storeHasRole, storeIsAdmin]);
 }
-

@@ -66,7 +66,9 @@ export default function RegisterPage() {
     empresaRazonSocial: "",
     adminNombre: "",
     adminApellido: "",
+    adminUserName: "",
     adminEmail: "",
+    adminPhoneNumber: "",
     adminPassword: "",
     adminPasswordConfirm: "",
   });
@@ -109,6 +111,9 @@ export default function RegisterPage() {
     }
     if (!formData.adminApellido.trim()) {
       newErrors.adminApellido = "El apellido es obligatorio";
+    }
+    if (!formData.adminUserName.trim()) {
+      newErrors.adminUserName = "El nombre de usuario es obligatorio";
     }
     if (!formData.adminEmail.trim()) {
       newErrors.adminEmail = "El email es obligatorio";

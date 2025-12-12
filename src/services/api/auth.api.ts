@@ -2,11 +2,17 @@
  * Servicio de Autenticación - API Real con Axios
  */
 import axiosInstance, { tokenStorage } from "@/lib/axios";
-import type { LoginRequest, LoginResponse, ApiUser } from "@/types/api.types";
+import type { LoginRequest, LoginResponse } from "@/types/api.types";
 
 const AUTH_ENDPOINTS = {
   login: "/Auth/Login",
+  getClaims: "/Auth/GetClaims",
 } as const;
+
+export interface AuthClaimDto {
+  type: string;
+  value: string;
+}
 
 export const authApi = {
   /**
@@ -43,6 +49,13 @@ export const authApi = {
     }
 
     return data;
+  },
+
+  async getClaims(): Promise<AuthClaimDto[]> {
+    const { data } = await axiosInstance.get<AuthClaimDto[]>(
+      AUTH_ENDPOINTS.getClaims
+    );
+    return Array.isArray(data) ? data : [];
   },
 
   /**

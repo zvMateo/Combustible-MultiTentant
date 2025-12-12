@@ -25,6 +25,7 @@ const RESOURCE_ENDPOINTS = {
 
 const RESOURCE_TYPES_ENDPOINTS = {
   getAll: "/ResourceTypes/GetAll",
+  getByCompany: "/ResourceTypes/GetByIdCompany",
   getById: "/ResourceTypes/GetById",
   create: "/ResourceTypes/Create",
   update: "/ResourceTypes/Update",
@@ -33,40 +34,27 @@ const RESOURCE_TYPES_ENDPOINTS = {
 
 export const resourcesApi = {
   /**
-   * Obtener todos los recursos
-   */
-  async getAll(): Promise<Resource[]> {
-    const { data } = await axiosInstance.get<Resource[]>(RESOURCE_ENDPOINTS.getAll);
-    return data;
-  },
-
-  /**
    * Obtener recurso por ID
    */
   async getById(id: number): Promise<Resource> {
-    const { data } = await axiosInstance.get<Resource>(RESOURCE_ENDPOINTS.getById, {
-      params: { id },
-    });
+    const { data } = await axiosInstance.get<Resource>(
+      RESOURCE_ENDPOINTS.getById,
+      {
+        params: { id },
+      }
+    );
     return data;
   },
 
   /**
    * Obtener recursos por tipo (vehículos, tanques, surtidores)
-   * Si el endpoint falla, usa getAll() y filtra en el frontend
    */
   async getByType(idType: number): Promise<Resource[]> {
-    try {
-      const { data } = await axiosInstance.get<Resource[]>(
-        RESOURCE_ENDPOINTS.getByType,
-        { params: { IdType: idType } }
-      );
-      return data;
-    } catch (error) {
-      // Fallback: si el endpoint falla, obtener todos y filtrar
-      console.warn(`⚠️ [API] GetByIdType falló, usando fallback con GetAll para tipo ${idType}`);
-      const allResources = await this.getAll();
-      return allResources.filter((resource) => resource.idType === idType);
-    }
+    const { data } = await axiosInstance.get<Resource[]>(
+      RESOURCE_ENDPOINTS.getByType,
+      { params: { IdType: idType } }
+    );
+    return data;
   },
 
   /**
@@ -125,7 +113,7 @@ export const resourcesApi = {
   // ============================================
   // HELPERS PARA TIPOS ESPECÍFICOS
   // ============================================
-  
+
   /**
    * Obtener todos los vehículos
    */
@@ -150,11 +138,12 @@ export const resourcesApi = {
 
 export const resourceTypesApi = {
   /**
-   * Obtener todos los tipos de recursos
+   * Obtener tipos de recursos por empresa
    */
-  async getAll(): Promise<ResourceType[]> {
+  async getByCompany(idCompany: number): Promise<ResourceType[]> {
     const { data } = await axiosInstance.get<ResourceType[]>(
-      RESOURCE_TYPES_ENDPOINTS.getAll
+      RESOURCE_TYPES_ENDPOINTS.getByCompany,
+      { params: { idCompany } }
     );
     return data;
   },

@@ -19,16 +19,6 @@ const DRIVERS_ENDPOINTS = {
 
 export const driversApi = {
   /**
-   * Obtener todos los choferes
-   */
-  async getAll(): Promise<Driver[]> {
-    const { data } = await axiosInstance.get<Driver[]>(
-      DRIVERS_ENDPOINTS.getAll
-    );
-    return toArray<Driver>(data);
-  },
-
-  /**
    * Obtener chofer por ID
    */
   async getById(id: number): Promise<Driver> {

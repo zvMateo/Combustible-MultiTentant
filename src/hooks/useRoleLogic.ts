@@ -1,7 +1,7 @@
 // src/hooks/useRoleLogic.ts
 /**
  * Hook centralizado para lógica específica de roles
- * 
+ *
  * Proporciona funciones helper para determinar qué puede hacer cada rol:
  * - Administrador: Acceso completo a su empresa
  * - Supervisor: Solo su(s) unidad(es), puede validar eventos
@@ -21,11 +21,9 @@ interface RoleLogicReturn {
   isSupervisor: boolean;
   isOperador: boolean;
   isAuditor: boolean;
-  isSuperAdmin: boolean;
 
   // Permisos de visualización
   canViewAllUnits: boolean;
-  canViewAllCompanies: boolean;
   canViewAllData: boolean;
 
   // Permisos de gestión
@@ -60,7 +58,11 @@ interface RoleLogicReturn {
 
 export function useRoleLogic(): RoleLogicReturn {
   const { user } = useAuthStore();
-  const { unidadIdFilter, unidadIdsFilter, hasFilter: hasUnidadFilter } = useUnidadFilterLogic();
+  const {
+    unidadIdFilter,
+    unidadIdsFilter,
+    hasFilter: hasUnidadFilter,
+  } = useUnidadFilterLogic();
 
   return useMemo(() => {
     const role = user?.role || null;
@@ -68,30 +70,28 @@ export function useRoleLogic(): RoleLogicReturn {
     const isSupervisor = role === "supervisor";
     const isOperador = role === "operador";
     const isAuditor = role === "auditor";
-    const isSuperAdmin = role === "superadmin";
 
     // ============================================
     // PERMISOS DE VISUALIZACIÓN
     // ============================================
-    const canViewAllUnits = isAdmin || isSuperAdmin;
-    const canViewAllCompanies = isSuperAdmin;
-    const canViewAllData = isAdmin || isSuperAdmin;
+    const canViewAllUnits = isAdmin;
+    const canViewAllData = isAdmin;
 
     // ============================================
     // PERMISOS DE GESTIÓN GENERALES
     // ============================================
     // Crear: Admin, Supervisor, Operador
     const canCreate = isAdmin || isSupervisor || isOperador;
-    
+
     // Editar: Admin, Supervisor
     const canEdit = isAdmin || isSupervisor;
-    
+
     // Eliminar: Solo Admin
     const canDelete = isAdmin;
-    
+
     // Validar eventos: Admin, Supervisor
     const canValidate = isAdmin || isSupervisor;
-    
+
     // Exportar: Admin, Supervisor, Auditor
     const canExport = isAdmin || isSupervisor || isAuditor;
 
@@ -100,29 +100,29 @@ export function useRoleLogic(): RoleLogicReturn {
     // ============================================
     // Usuarios: Admin, Supervisor (solo para su unidad)
     const canManageUsers = isAdmin || isSupervisor;
-    
+
     // Unidades de Negocio: Solo Admin
     const canManageBusinessUnits = isAdmin;
-    
+
     // Vehículos: Admin, Supervisor
     const canManageVehicles = isAdmin || isSupervisor;
-    
+
     // Choferes: Admin, Supervisor
     const canManageDrivers = isAdmin || isSupervisor;
-    
+
     // Recursos (tanques, surtidores): Admin, Supervisor, Operador
     const canManageResources = isAdmin || isSupervisor || isOperador;
-    
+
     // Centros de Costo: Admin, Supervisor
     const canManageCostCenters = isAdmin || isSupervisor;
-    
+
     // Configuración: Solo Admin
     const canManageSettings = isAdmin;
 
     // ============================================
     // FILTRADO DE DATOS
     // ============================================
-    const companyIdFilter = isSuperAdmin ? undefined : user?.idCompany;
+    const companyIdFilter = user?.idCompany;
 
     // ============================================
     // HELPERS PARA UI
@@ -139,9 +139,7 @@ export function useRoleLogic(): RoleLogicReturn {
       isSupervisor,
       isOperador,
       isAuditor,
-      isSuperAdmin,
       canViewAllUnits,
-      canViewAllCompanies,
       canViewAllData,
       canCreate,
       canEdit,
@@ -167,4 +165,3 @@ export function useRoleLogic(): RoleLogicReturn {
     };
   }, [user, unidadIdFilter, unidadIdsFilter, hasUnidadFilter]);
 }
-

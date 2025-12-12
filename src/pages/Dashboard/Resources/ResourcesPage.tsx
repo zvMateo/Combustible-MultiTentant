@@ -134,11 +134,6 @@ export default function ResourcesPage() {
   const filteredResources = useMemo(() => {
     let filtered = allResources;
 
-    // Debug: Log de recursos recibidos
-    if (allResources.length > 0) {
-      console.log("🔍 [ResourcesPage] Recursos recibidos:", allResources);
-    }
-
     // Filtrar recursos inactivos (active: false)
     filtered = filtered.filter(
       (r) => r.active !== false && r.isActive !== false
@@ -194,9 +189,6 @@ export default function ResourcesPage() {
       );
     }
 
-    console.log(
-      `🔍 [ResourcesPage] Recursos filtrados: ${filtered.length} de ${allResources.length}`
-    );
     return filtered;
   }, [
     allResources,
@@ -289,23 +281,11 @@ export default function ResourcesPage() {
     }
 
     setErrors(newErrors);
-    const isValid = Object.keys(newErrors).length === 0;
-    console.log("🔍 [ResourcesPage] Validación:", {
-      isValid,
-      errors: newErrors,
-      formData,
-    });
-    return isValid;
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async () => {
-    console.log("🔍 [ResourcesPage] handleSave llamado");
-    console.log("🔍 [ResourcesPage] formData:", formData);
-
-    if (!validate()) {
-      console.log("❌ [ResourcesPage] Validación falló, errors:", errors);
-      return;
-    }
+    if (!validate()) return;
 
     try {
       if (editingResource) {
@@ -318,44 +298,21 @@ export default function ResourcesPage() {
           name: formData.name,
           identifier: formData.identifier,
         };
-        console.log("🔄 [ResourcesPage] Actualizando recurso:", updateData);
         await updateMutation.mutateAsync(updateData);
       } else {
-        // Preparar payload para creación
-        // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
-        const finalIdCompany =
-          user?.role === "superadmin"
-            ? formData.idCompany || user?.idCompany || user?.empresaId || 0
-            : user?.idCompany || user?.empresaId || 0;
-
+        const finalIdCompany = user?.idCompany || user?.empresaId || 0;
         const createPayload: CreateResourceRequest = {
           idType: formData.idType,
-          idCompany: finalIdCompany, // ✅ Usar idCompany del usuario autenticado
+          idCompany: finalIdCompany,
           idBusinessUnit: formData.idBusinessUnit ?? 0,
           nativeLiters: formData.nativeLiters ?? 0,
           name: formData.name.trim(),
           identifier: formData.identifier.trim(),
         };
-
-        console.log(
-          "🏢 [ResourcesPage] Multi-tenant: idCompany del usuario autenticado:",
-          finalIdCompany
-        );
-        console.log(
-          "➕ [ResourcesPage] Creando recurso con payload:",
-          createPayload
-        );
-        console.log("➕ [ResourcesPage] Mutation state:", {
-          isPending: createMutation.isPending,
-          isError: createMutation.isError,
-          error: createMutation.error,
-        });
         await createMutation.mutateAsync(createPayload);
-        console.log("✅ [ResourcesPage] Recurso creado exitosamente");
       }
       setOpenDialog(false);
-    } catch (error) {
-      console.error("❌ [ResourcesPage] Error al guardar recurso:", error);
+    } catch {
       // Error manejado por el mutation
     }
   };
@@ -850,8 +807,8 @@ export default function ResourcesPage() {
               )}
             </FormControl>
 
-            {/* Empresa (solo si es superadmin o hay múltiples empresas) */}
-            {(user?.role === "superadmin" || companies.length > 1) && (
+            {/* Empresa (solo si hay múltiples empresas) */}
+            {companies.length > 1 && (
               <FormControl fullWidth error={!!errors.idCompany}>
                 <InputLabel>Empresa *</InputLabel>
                 <Select

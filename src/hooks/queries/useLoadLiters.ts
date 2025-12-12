@@ -5,11 +5,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { loadLitersApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
+import { useIdCompany } from "@/stores/auth.store";
 import type {
-  LoadLiters,
   CreateLoadLitersRequest,
   UpdateLoadLitersRequest,
-  LoadTrip,
   CreateLoadTripRequest,
 } from "@/types/api.types";
 
@@ -17,19 +16,27 @@ import type {
 export const loadLitersKeys = {
   all: ["loadLiters"] as const,
   lists: () => [...loadLitersKeys.all, "list"] as const,
+  byCompany: (idCompany: number) =>
+    [...loadLitersKeys.all, "byCompany", idCompany] as const,
   detail: (id: number) => [...loadLitersKeys.all, "detail", id] as const,
   loadTrips: () => [...loadLitersKeys.all, "loadTrips"] as const,
-  loadTripDetail: (id: number) => [...loadLitersKeys.all, "loadTrip", id] as const,
-  byTrip: (idTrip: number) => [...loadLitersKeys.all, "byTrip", idTrip] as const,
+  loadTripDetail: (id: number) =>
+    [...loadLitersKeys.all, "loadTrip", id] as const,
+  byTrip: (idTrip: number) =>
+    [...loadLitersKeys.all, "byTrip", idTrip] as const,
 };
 
 /**
  * Obtener todas las cargas de combustible
  */
-export function useLoadLiters() {
+export function useLoadLiters(idCompany?: number) {
+  const storeCompanyId = useIdCompany();
+  const companyId = idCompany ?? storeCompanyId ?? 0;
+
   return useQuery({
-    queryKey: loadLitersKeys.lists(),
-    queryFn: () => loadLitersApi.getAll(),
+    queryKey: loadLitersKeys.byCompany(companyId),
+    queryFn: () => loadLitersApi.getByCompany(companyId),
+    enabled: !!companyId,
     staleTime: 1000 * 60 * 2, // 2 minutos
   });
 }
@@ -91,7 +98,7 @@ export function useCreateLoadLiters() {
     mutationFn: (data: CreateLoadLitersRequest) => loadLitersApi.create(data),
     onSuccess: () => {
       toast.success("Carga de combustible registrada correctamente");
-      queryClient.invalidateQueries({ queryKey: loadLitersKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: loadLitersKeys.all });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -110,8 +117,10 @@ export function useUpdateLoadLiters() {
       loadLitersApi.update(id, data),
     onSuccess: (_, variables) => {
       toast.success("Carga de combustible actualizada correctamente");
-      queryClient.invalidateQueries({ queryKey: loadLitersKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: loadLitersKeys.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: loadLitersKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: loadLitersKeys.detail(variables.id),
+      });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -126,15 +135,15 @@ export function useAssociateLoadTrip() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateLoadTripRequest) => loadLitersApi.associateLoadTrip(data),
+    mutationFn: (data: CreateLoadTripRequest) =>
+      loadLitersApi.associateLoadTrip(data),
     onSuccess: () => {
       toast.success("Carga asociada con viaje correctamente");
       queryClient.invalidateQueries({ queryKey: loadLitersKeys.loadTrips() });
-      queryClient.invalidateQueries({ queryKey: loadLitersKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: loadLitersKeys.all });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
     },
   });
 }
-

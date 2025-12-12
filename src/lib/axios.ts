@@ -15,6 +15,13 @@ import axios, {
 } from "axios";
 import { toast } from "sonner";
 
+let unauthorizedHandler: (() => void) | null = null;
+let unauthorizedHandled = false;
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
+}
+
 // ============================================
 // CONFIGURACIÓN
 // ============================================
@@ -48,6 +55,7 @@ export const tokenStorage = {
     if (persistent) {
       localStorage.setItem(TOKEN_KEY, token);
     }
+    unauthorizedHandled = false;
   },
 
   getRefreshToken: (): string | null => {
@@ -62,6 +70,7 @@ export const tokenStorage = {
     sessionStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    unauthorizedHandled = false;
   },
 };
 
@@ -156,6 +165,15 @@ axiosInstance.interceptors.response.use(
       tokenStorage.clearTokens();
       sessionStorage.removeItem("user");
       localStorage.removeItem("user");
+
+      if (!unauthorizedHandled) {
+        unauthorizedHandled = true;
+        try {
+          unauthorizedHandler?.();
+        } catch {
+          // No-op
+        }
+      }
 
       // Solo redirigir si no estamos ya en login
       if (!window.location.pathname.includes("/login")) {

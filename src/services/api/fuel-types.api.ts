@@ -10,6 +10,7 @@ import type {
 
 const FUEL_TYPES_ENDPOINTS = {
   getAll: "/FuelTypes/GetAll",
+  getByCompany: "/FuelTypes/GetFuelTypesByIdCompany",
   getById: "/FuelTypes/GetById",
   create: "/FuelTypes/Create",
   update: "/FuelTypes/Update",
@@ -18,10 +19,13 @@ const FUEL_TYPES_ENDPOINTS = {
 
 export const fuelTypesApi = {
   /**
-   * Obtener todos los tipos de combustible
+   * Obtener tipos de combustible por empresa
    */
-  async getAll(): Promise<FuelType[]> {
-    const { data } = await axiosInstance.get<FuelType[]>(FUEL_TYPES_ENDPOINTS.getAll);
+  async getByCompany(idCompany: number): Promise<FuelType[]> {
+    const { data } = await axiosInstance.get<FuelType[]>(
+      FUEL_TYPES_ENDPOINTS.getByCompany,
+      { params: { idCompany } }
+    );
     return data;
   },
 
@@ -29,9 +33,12 @@ export const fuelTypesApi = {
    * Obtener tipo de combustible por ID
    */
   async getById(id: number): Promise<FuelType> {
-    const { data } = await axiosInstance.get<FuelType>(FUEL_TYPES_ENDPOINTS.getById, {
-      params: { id },
-    });
+    const { data } = await axiosInstance.get<FuelType>(
+      FUEL_TYPES_ENDPOINTS.getById,
+      {
+        params: { id },
+      }
+    );
     return data;
   },
 
@@ -68,4 +75,3 @@ export const fuelTypesApi = {
 };
 
 export default fuelTypesApi;
-

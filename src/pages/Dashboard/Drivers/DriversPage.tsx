@@ -88,7 +88,6 @@ export default function DriversPage() {
   } = useRoleLogic();
 
   const idCompany = user?.empresaId ?? companyIdFilter ?? 0;
-  const isSuperAdmin = (user?.role || "").toLowerCase() === "superadmin";
 
   // Estados locales
   const [searchTerm, setSearchTerm] = useState("");
@@ -115,8 +114,8 @@ export default function DriversPage() {
   const filteredDrivers = useMemo(() => {
     let filtered = Array.isArray(driversAll) ? driversAll : [];
 
-    // 1. Filtrar por empresa (si no es superadmin)
-    if (!isSuperAdmin && companyIdFilter && companyIdFilter > 0) {
+    // 1. Filtrar por empresa del usuario
+    if (companyIdFilter && companyIdFilter > 0) {
       filtered = filtered.filter((d) => d.idCompany === companyIdFilter);
     }
 
@@ -137,7 +136,7 @@ export default function DriversPage() {
     }
 
     return filtered;
-  }, [driversAll, searchTerm, companyIdFilter, isSuperAdmin]);
+  }, [driversAll, searchTerm, companyIdFilter]);
 
   // Handlers
   const handleNew = () => {
@@ -186,71 +185,22 @@ export default function DriversPage() {
       formData.idCompany || idCompany || companies[0]?.id || 0;
     if (!finalIdCompany || finalIdCompany === 0) {
       newErrors.idCompany = "Debe seleccionar una empresa";
-      if (import.meta.env.DEV) {
-        console.error("❌ [DriversPage] idCompany inválido:", {
-          formDataIdCompany: formData.idCompany,
-          userIdCompany: idCompany,
-          companies: companies.map((c) => ({ id: c.id, name: c.name })),
-          user: user
-            ? { id: user.id, empresaId: user.empresaId, role: user.role }
-            : null,
-        });
-      }
     }
 
     setErrors(newErrors);
-    const isValid = Object.keys(newErrors).length === 0;
-
-    if (import.meta.env.DEV && !isValid) {
-      console.warn("⚠️ [DriversPage] Validación falló:", newErrors);
-      console.warn("⚠️ [DriversPage] formData actual:", formData);
-    }
-
-    return isValid;
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async () => {
-    // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
-    const finalIdCompany =
-      user?.role === "superadmin"
-        ? formData.idCompany || idCompany || companies[0]?.id || 0
-        : idCompany || user?.idCompany || user?.empresaId || 0;
-
-    if (finalIdCompany && finalIdCompany !== formData.idCompany) {
-      setFormData((prev) => ({ ...prev, idCompany: finalIdCompany }));
-    }
-
-    console.log(
-      "🏢 [DriversPage] Multi-tenant: idCompany del usuario autenticado:",
-      finalIdCompany
-    );
-
     if (!validate()) {
       toast.error("Completa los campos obligatorios");
-      if (import.meta.env.DEV) {
-        console.error("❌ [DriversPage] POST bloqueado por validación");
-      }
       return;
     }
 
-    if (import.meta.env.DEV) {
-      console.log("✅ [DriversPage] Validación OK, ejecutando POST:", {
-        editing: !!editingDriver,
-        formData: { ...formData, idCompany: finalIdCompany },
-      });
-    }
-
     try {
-      // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado (excepto superadmin)
       const finalIdCompany =
-        user?.role === "superadmin"
-          ? formData.idCompany || idCompany || companies[0]?.id || 0
-          : idCompany || user?.idCompany || user?.empresaId || 0;
-
-      const dataToSend = {
-        ...formData,
-        idCompany: finalIdCompany, // ✅ Usar idCompany del usuario autenticado
-      };
+        idCompany || user?.idCompany || user?.empresaId || 0;
+      const dataToSend = { ...formData, idCompany: finalIdCompany };
 
       if (editingDriver) {
         const updateData: UpdateDriverRequest = {
@@ -265,11 +215,8 @@ export default function DriversPage() {
         await createMutation.mutateAsync(dataToSend);
       }
       setOpenDialog(false);
-    } catch (error) {
+    } catch {
       // Error manejado por el mutation
-      if (import.meta.env.DEV) {
-        console.error("❌ [DriversPage] Error en handleSave:", error);
-      }
     }
   };
 
@@ -619,7 +566,7 @@ export default function DriversPage() {
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
             {/* Empresa */}
-            {isSuperAdmin ? (
+            {companies.length > 1 ? (
               <TextField
                 select
                 label="Empresa *"

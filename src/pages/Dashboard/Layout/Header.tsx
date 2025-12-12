@@ -75,7 +75,6 @@ export default function Header() {
     rol: UserRole | undefined
   ): { bg: string; color: string } => {
     const colors: Record<UserRole, { bg: string; color: string }> = {
-      superadmin: { bg: "#8b5cf615", color: "#8b5cf6" },
       admin: { bg: "#3b82f615", color: "#3b82f6" },
       supervisor: { bg: "#10b98115", color: "#10b981" },
       operador: { bg: "#f59e0b15", color: "#f59e0b" },
@@ -86,7 +85,6 @@ export default function Header() {
 
   const getRolLabel = (rol: UserRole | undefined): string => {
     const labels: Record<UserRole, string> = {
-      superadmin: "SuperAdmin",
       admin: "Administrador",
       supervisor: "Supervisor",
       operador: "Operador",
@@ -245,7 +243,9 @@ export default function Header() {
 
                   {unidades.map((unidad) => (
                     <MenuItem key={unidad.id} value={unidad.id}>
-                      <StoreIcon sx={{ fontSize: 18, mr: 1, color: "#64748b" }} />
+                      <StoreIcon
+                        sx={{ fontSize: 18, mr: 1, color: "#64748b" }}
+                      />
                       <Box>
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                           {unidad.nombre}
@@ -484,9 +484,17 @@ export default function Header() {
                   handleClose();
                   navigate("/dashboard/settings");
                 }}
-                sx={{ fontWeight: 600, fontSize: 14, py: 1.2, color: "#334155" }}
+                sx={{
+                  fontWeight: 600,
+                  fontSize: 14,
+                  py: 1.2,
+                  color: "#334155",
+                }}
               >
-                <SettingsIcon fontSize="small" sx={{ mr: 2, color: "#64748b" }} />
+                <SettingsIcon
+                  fontSize="small"
+                  sx={{ mr: 2, color: "#64748b" }}
+                />
                 Configuración
               </MenuItem>
             )}

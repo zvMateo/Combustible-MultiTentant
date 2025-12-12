@@ -5,8 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { driversApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
+import { useIdCompany } from "@/stores/auth.store";
 import type {
-  Driver,
   CreateDriverRequest,
   UpdateDriverRequest,
 } from "@/types/api.types";
@@ -25,10 +25,14 @@ export const driversKeys = {
  * Obtener todos los choferes
  * Siempre usa GetAll, el filtrado por idCompany se hace en el frontend
  */
-export function useDrivers() {
+export function useDrivers(idCompany?: number) {
+  const storeCompanyId = useIdCompany();
+  const companyId = idCompany ?? storeCompanyId ?? 0;
+
   return useQuery({
-    queryKey: driversKeys.lists(),
-    queryFn: () => driversApi.getAll(),
+    queryKey: driversKeys.byCompany(companyId),
+    queryFn: () => driversApi.getByCompany(companyId),
+    enabled: !!companyId,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
@@ -68,11 +72,12 @@ export function useCreateDriver() {
     onSuccess: (_, variables) => {
       toast.success("Chofer creado correctamente");
       // Invalidar todas las queries relacionadas
-      queryClient.invalidateQueries({ queryKey: driversKeys.lists() });
       queryClient.invalidateQueries({ queryKey: driversKeys.all });
       // Invalidar también la query por empresa si existe
       if (variables.idCompany) {
-        queryClient.invalidateQueries({ queryKey: driversKeys.byCompany(variables.idCompany) });
+        queryClient.invalidateQueries({
+          queryKey: driversKeys.byCompany(variables.idCompany),
+        });
       }
     },
     onError: (error) => {
@@ -92,14 +97,15 @@ export function useUpdateDriver() {
     onSuccess: (_, variables) => {
       toast.success("Chofer actualizado correctamente");
       // Invalidar todas las queries relacionadas
-      queryClient.invalidateQueries({ queryKey: driversKeys.lists() });
       queryClient.invalidateQueries({ queryKey: driversKeys.all });
       queryClient.invalidateQueries({
         queryKey: driversKeys.detail(variables.id),
       });
       // Invalidar también la query por empresa si existe
       if (variables.idCompany) {
-        queryClient.invalidateQueries({ queryKey: driversKeys.byCompany(variables.idCompany) });
+        queryClient.invalidateQueries({
+          queryKey: driversKeys.byCompany(variables.idCompany),
+        });
       }
     },
     onError: (error) => {
@@ -119,7 +125,6 @@ export function useDeactivateDriver() {
     onSuccess: () => {
       toast.success("Chofer desactivado");
       // Invalidar todas las queries relacionadas
-      queryClient.invalidateQueries({ queryKey: driversKeys.lists() });
       queryClient.invalidateQueries({ queryKey: driversKeys.all });
     },
     onError: (error) => {
