@@ -1,6 +1,5 @@
-import { Card, CardContent, Box, Typography } from "@mui/material";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import TrendingDownIcon from "@mui/icons-material/TrendingDown";
+import { Card, CardContent } from "@/components/ui/card";
+import { TrendingDown, TrendingUp } from "lucide-react";
 
 interface KPICardProps {
   title: string;
@@ -20,69 +19,43 @@ export default function KPICard({
   color = "#667eea",
 }: KPICardProps) {
   return (
-    <Card
-      elevation={2}
-      sx={{
-        height: "100%",
-        borderRadius: 3,
-        transition: "transform 0.2s",
-        "&:hover": { transform: "translateY(-4px)" },
-      }}
-    >
-      <CardContent>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            mb: 2,
-          }}
-        >
-          <Typography variant="body2" color="text.secondary" fontWeight={500}>
-            {title}
-          </Typography>
-          <Box
-            sx={{
-              bgcolor: `${color}20`,
-              p: 1,
-              borderRadius: 2,
-              display: "flex",
-              alignItems: "center",
-            }}
+    <Card className="h-full rounded-xl shadow-md transition-transform duration-200 hover:-translate-y-1">
+      <CardContent className="p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="text-sm font-medium text-muted-foreground">{title}</div>
+          <div
+            className="flex items-center rounded-md p-2"
+            style={{ backgroundColor: `${color}20` }}
           >
             {icon}
-          </Box>
-        </Box>
+          </div>
+        </div>
 
-        <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
-          {value}
-        </Typography>
+        <div className="mb-2 text-3xl font-bold">{value}</div>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <div className="flex items-center gap-2">
           {trend !== undefined && trend !== null && (
             <>
               {trend > 0 ? (
-                <TrendingUpIcon sx={{ color: "success.main", fontSize: 18 }} />
+                <TrendingUp className="h-[18px] w-[18px] text-emerald-600" />
               ) : (
-                <TrendingDownIcon sx={{ color: "error.main", fontSize: 18 }} />
+                <TrendingDown className="h-[18px] w-[18px] text-red-600" />
               )}
-              <Typography
-                variant="caption"
-                color={trend > 0 ? "success.main" : "error.main"}
-                fontWeight={600}
+              <span
+                className={
+                  "text-xs font-semibold " +
+                  (trend > 0 ? "text-emerald-600" : "text-red-600")
+                }
               >
                 {Math.abs(trend)}%
-              </Typography>
+              </span>
             </>
           )}
           {subtitle && (
-            <Typography variant="caption" color="text.secondary">
-              {subtitle}
-            </Typography>
+            <span className="text-xs text-muted-foreground">{subtitle}</span>
           )}
-        </Box>
+        </div>
       </CardContent>
     </Card>
   );
 }
-

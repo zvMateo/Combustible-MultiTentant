@@ -1,37 +1,21 @@
 // src/pages/Dashboard/Vehicles/VehiclesPage.tsx
 import { useState, useMemo, useEffect } from "react";
-import {
-  Box,
-  Button,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
-  InputAdornment,
-  Card,
-  CardContent,
-  Chip,
-  IconButton,
-  LinearProgress,
-  Alert,
-  Skeleton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Grid,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
+import {
+  Plus,
+  Search,
+  Car,
+  Edit,
+  Trash2,
+  Download,
+  Fuel,
+  Building,
+  Users,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
@@ -50,6 +34,36 @@ import type {
   UpdateResourceRequest,
 } from "@/types/api.types";
 import { RESOURCE_TYPES } from "@/types/api.types";
+
+// shadcn components
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 
 interface FormErrors {
   [key: string]: string;
@@ -81,7 +95,7 @@ export default function VehiclesPage() {
   const [editingVehicle, setEditingVehicle] = useState<Resource | null>(null);
   const [deleteVehicle, setDeleteVehicle] = useState<Resource | null>(null);
   const [formData, setFormData] = useState<CreateResourceRequest>({
-    idType: RESOURCE_TYPES.VEHICLE, // Se actualizará cuando vehicleTypeId esté disponible
+    idType: RESOURCE_TYPES.VEHICLE,
     idCompany: 2,
     idBusinessUnit: undefined,
     nativeLiters: undefined,
@@ -106,17 +120,15 @@ export default function VehiclesPage() {
         rt.name.toLowerCase().includes("vehiculo") ||
         rt.name.toLowerCase().includes("vehicle")
     );
-    return vehicleType?.id || RESOURCE_TYPES.VEHICLE; // Fallback a 1 si no se encuentra
+    return vehicleType?.id || RESOURCE_TYPES.VEHICLE;
   }, [resourceTypes]);
 
-  // Actualizar formData.idType cuando vehicleTypeId esté disponible (solo si el modal no está abierto)
+  // Actualizar formData.idType cuando vehicleTypeId esté disponible
   useEffect(() => {
     if (vehicleTypeId && !editingVehicle && !openDialog) {
-      // Solo actualizar si el modal no está abierto para evitar resetear otros campos
       setFormData((prev) => ({
         ...prev,
         idType: vehicleTypeId,
-        // Asegurar que idCompany sea siempre 2
         idCompany: 2,
       }));
     }
@@ -126,7 +138,7 @@ export default function VehiclesPage() {
   const filteredVehicles = useMemo(() => {
     let filtered = vehicles;
 
-    // 1. Filtrar recursos inactivos (active: false)
+    // 1. Filtrar recursos inactivos
     filtered = filtered.filter(
       (v) => v.active !== false && v.isActive !== false
     );
@@ -143,11 +155,9 @@ export default function VehiclesPage() {
       unidadIdsFilter.length > 0
     ) {
       filtered = filtered.filter((v) => {
-        // Si el vehículo tiene unidad asignada, verificar que esté en las unidades del usuario
         if (v.idBusinessUnit) {
           return unidadIdsFilter.includes(v.idBusinessUnit);
         }
-        // Si no tiene unidad asignada, no mostrarlo para supervisor/auditor
         return false;
       });
     }
@@ -174,13 +184,10 @@ export default function VehiclesPage() {
 
   // Handlers
   const handleNew = () => {
-    // Usar idCompany fijo = 2
-    const initialIdCompany = 2;
-
     setEditingVehicle(null);
     const newFormData = {
-      idType: vehicleTypeId, // Usar el id dinámico del tipo "Vehiculo"
-      idCompany: initialIdCompany,
+      idType: vehicleTypeId,
+      idCompany: 2,
       idBusinessUnit: undefined,
       nativeLiters: undefined,
       name: "",
@@ -195,7 +202,7 @@ export default function VehiclesPage() {
     setEditingVehicle(vehicle);
     setFormData({
       idType: vehicle.idType,
-      idCompany: 2, // Forzar idCompany a 2
+      idCompany: 2,
       idBusinessUnit: vehicle.idBusinessUnit,
       nativeLiters: vehicle.nativeLiters,
       name: vehicle.name,
@@ -210,33 +217,31 @@ export default function VehiclesPage() {
     setOpenDeleteDialog(true);
   };
 
-  const handleSave = async () => {
-    const finalFormData = { ...formData };
-    if (finalFormData.idCompany !== 2) {
-      finalFormData.idCompany = 2;
-      setFormData(finalFormData);
-    }
-
+  const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
-    if (!finalFormData.name.trim()) {
+
+    if (!formData.name.trim()) {
       newErrors.name = "El nombre es obligatorio";
     }
-    if (!finalFormData.identifier.trim()) {
+    if (!formData.identifier.trim()) {
       newErrors.identifier = "El identificador es obligatorio";
     }
-    if (finalFormData.idCompany !== 2) {
+    if (formData.idCompany !== 2) {
       newErrors.idCompany = "La empresa debe ser 2";
     }
-    if (!finalFormData.idType || finalFormData.idType === 0) {
+    if (!formData.idType || formData.idType === 0) {
       newErrors.idType = "Debe seleccionar un tipo de recurso";
     }
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
+      toast.error("Completa los campos obligatorios");
       return;
     }
-
-    setErrors({});
 
     try {
       if (editingVehicle) {
@@ -250,20 +255,22 @@ export default function VehiclesPage() {
           identifier: formData.identifier,
         };
         await updateMutation.mutateAsync(updateData);
+        toast.success("Vehículo actualizado correctamente");
       } else {
         const createPayload: CreateResourceRequest = {
-          idType: finalFormData.idType,
-          idCompany: finalFormData.idCompany,
-          idBusinessUnit: finalFormData.idBusinessUnit ?? 0,
-          nativeLiters: finalFormData.nativeLiters ?? 0,
-          name: finalFormData.name.trim(),
-          identifier: finalFormData.identifier.trim(),
+          idType: formData.idType,
+          idCompany: formData.idCompany,
+          idBusinessUnit: formData.idBusinessUnit ?? 0,
+          nativeLiters: formData.nativeLiters ?? 0,
+          name: formData.name.trim(),
+          identifier: formData.identifier.trim(),
         };
         await createMutation.mutateAsync(createPayload);
+        toast.success("Vehículo creado correctamente");
       }
       setOpenDialog(false);
-    } catch {
-      // Error manejado por el mutation
+    } catch (error) {
+      toast.error("Error al guardar el vehículo");
     }
   };
 
@@ -272,10 +279,11 @@ export default function VehiclesPage() {
 
     try {
       await deactivateMutation.mutateAsync(deleteVehicle.id);
+      toast.success("Vehículo desactivado correctamente");
       setOpenDeleteDialog(false);
       setDeleteVehicle(null);
-    } catch {
-      // Error manejado por el mutation
+    } catch (error) {
+      toast.error("Error al desactivar el vehículo");
     }
   };
 
@@ -308,445 +316,465 @@ export default function VehiclesPage() {
   // Loading state
   if (isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
-        <LinearProgress sx={{ mb: 2 }} />
-        <Grid container spacing={3}>
-          {[1, 2, 3, 4].map((i) => (
-            // @ts-expect-error - MUI v7 Grid type incompatibility
-            <Grid xs={12} sm={6} md={4} lg={3} key={i}>
-              <Skeleton variant="rounded" height={200} />
-            </Grid>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-60" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-40" />
+          </div>
+        </div>
+        
+        <Progress value={33} className="w-full" />
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-3/4 mb-2" />
+                <Skeleton className="h-8 w-20" />
+              </CardContent>
+            </Card>
           ))}
-        </Grid>
-      </Box>
+        </div>
+      </div>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          Error al cargar vehículos:{" "}
-          {error instanceof Error ? error.message : "Error desconocido"}
+      <div className="p-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Error al cargar vehículos:{" "}
+            {error instanceof Error ? error.message : "Error desconocido"}
+          </AlertDescription>
         </Alert>
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <div className="space-y-6 p-6">
       {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 1.5,
-          mt: -3,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 700, lineHeight: 1.1, mb: 0.5 }}
-          >
-            Vehiculos
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            Vehículos
+          </h1>
+          <p className="text-gray-600">
             {filteredVehicles.length}{" "}
-            {filteredVehicles.length === 1 ? "vehicle" : "vehicles"} registrados
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
+            {filteredVehicles.length === 1 ? "vehículo" : "vehículos"} registrados
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           {showExportButtons && (
             <Button
-              variant="outlined"
-              startIcon={<FileDownloadIcon />}
+              variant="outline"
               onClick={handleExport}
               disabled={filteredVehicles.length === 0}
-              sx={{
-                borderColor: "#10b981",
-                color: "#10b981",
-                fontWeight: 600,
-                textTransform: "none",
-                "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
-              }}
+              className="gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50"
             >
+              <Download className="h-4 w-4" />
               Exportar
             </Button>
           )}
           {showCreateButtons && canManageVehicles && (
             <Button
-              variant="contained"
-              startIcon={<AddIcon />}
               onClick={handleNew}
               disabled={createMutation.isPending || isReadOnly}
-              sx={{
-                bgcolor: "#1E2C56",
-                fontWeight: 600,
-                textTransform: "none",
-                "&:hover": { bgcolor: "#16213E" },
-              }}
+              className="gap-2 bg-blue-900 hover:bg-blue-800"
             >
+              <Plus className="h-4 w-4" />
               Nuevo Vehículo
             </Button>
           )}
-        </Box>
-      </Box>
+        </div>
+      </div>
 
       {/* Filtros */}
-      <Box
-        sx={{
-          mb: 3,
-          background: "white",
-          borderRadius: 2,
-          border: "1px solid #e2e8f0",
-          p: 2,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 2,
-          alignItems: "center",
-        }}
-      >
-        <TextField
-          placeholder="Buscar por nombre o identificador..."
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ flexGrow: 1, minWidth: 220 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: "#9ca3af" }} />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
+      <Card className="border border-gray-200">
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Buscar por nombre o identificador..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Grid de vehículos */}
-      <Grid container spacing={3}>
-        {filteredVehicles.map((vehicle) => {
-          const company = companies.find((c) => c.id === vehicle.idCompany);
-          const businessUnit = businessUnits.find(
-            (bu) => bu.id === vehicle.idBusinessUnit
-          );
-          return (
-            // @ts-expect-error - MUI v7 Grid type incompatibility
-            <Grid xs={12} sm={6} md={4} lg={3} key={vehicle.id}>
-              <Card
-                elevation={0}
-                sx={{
-                  background: "white",
-                  borderRadius: 3,
-                  border: "1px solid #e2e8f0",
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  transition: "all 0.25s ease",
-                  "&:hover": {
-                    boxShadow: "0 8px 18px rgba(15,23,42,0.10)",
-                    transform: "translateY(-3px)",
-                    borderColor: "#3b82f6",
-                  },
-                }}
+      {filteredVehicles.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredVehicles.map((vehicle) => {
+            const company = companies.find((c) => c.id === vehicle.idCompany);
+            const businessUnit = businessUnits.find(
+              (bu) => bu.id === vehicle.idBusinessUnit
+            );
+            const isActive = vehicle.isActive !== false;
+            
+            return (
+              <Card 
+                key={vehicle.id}
+                className="border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all duration-200"
               >
-                <CardContent
-                  sx={{
-                    p: 2.5,
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
+                <CardContent className="p-5">
                   {/* Header */}
-                  <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-                    <Box
-                      sx={{
-                        p: 1.5,
-                        borderRadius: 2,
-                        bgcolor: "#3b82f615",
-                        color: "#3b82f6",
-                      }}
-                    >
-                      <DirectionsCarIcon />
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="subtitle1" fontWeight={700}>
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <Car className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">
                         {vehicle.name}
-                      </Typography>
-                      <Chip
-                        label={vehicle.identifier}
-                        size="small"
-                        sx={{
-                          bgcolor: "#f1f5f9",
-                          color: "#475569",
-                          fontWeight: 600,
-                          fontSize: 11,
-                          mt: 0.5,
-                        }}
-                      />
-                    </Box>
-                  </Box>
+                      </h3>
+                      <Badge 
+                        variant="secondary" 
+                        className="mt-1 bg-gray-100 text-gray-700"
+                      >
+                        {vehicle.identifier}
+                      </Badge>
+                    </div>
+                  </div>
 
                   {/* Info */}
                   {vehicle.nativeLiters && (
-                    <Box sx={{ mb: 1.5 }}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 0.5,
-                        }}
-                      >
-                        <LocalGasStationIcon
-                          sx={{ fontSize: 16, color: "#10b981" }}
-                        />
-                        <Typography variant="body2">
-                          {vehicle.nativeLiters} L
-                        </Typography>
-                      </Box>
-                    </Box>
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <Fuel className="h-4 w-4 text-emerald-600" />
+                      <span className="text-sm text-gray-700">
+                        {vehicle.nativeLiters} L
+                      </span>
+                    </div>
                   )}
 
-                  {/* Empresa y Unidad */}
+                  {/* Empresa */}
                   {company && (
-                    <Box sx={{ mb: 1 }}>
-                      <Chip
-                        label={company.name}
-                        size="small"
-                        sx={{ bgcolor: "#3b82f615", color: "#3b82f6" }}
-                      />
-                    </Box>
+                    <div className="mb-3">
+                      <Badge 
+                        variant="outline" 
+                        className="bg-blue-50 text-blue-700 border-blue-200"
+                      >
+                        <Building className="h-3 w-3 mr-1" />
+                        {company.name}
+                      </Badge>
+                    </div>
                   )}
 
+                  {/* Unidad de Negocio */}
                   {businessUnit && (
-                    <Box sx={{ mb: 1.5 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        {businessUnit.name}
-                      </Typography>
-                    </Box>
+                    <div className="mb-3">
+                      <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                        <Users className="h-3.5 w-3.5" />
+                        <span>{businessUnit.name}</span>
+                      </div>
+                    </div>
                   )}
+
+                  {/* Estado */}
+                  <div className="mb-4">
+                    <Badge
+                      variant={isActive ? "default" : "secondary"}
+                      className={isActive 
+                        ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" 
+                        : "bg-amber-100 text-amber-800 hover:bg-amber-100"
+                      }
+                    >
+                      {isActive ? (
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                      ) : (
+                        <XCircle className="h-3 w-3 mr-1" />
+                      )}
+                      {isActive ? "Activo" : "Inactivo"}
+                    </Badge>
+                  </div>
 
                   {/* Acciones */}
                   {!isReadOnly && (
-                    <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}>
+                    <div className="flex gap-2 pt-3 border-t">
                       {showEditButtons && canManageVehicles && (
-                        <IconButton
-                          size="small"
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleEdit(vehicle)}
                           disabled={updateMutation.isPending || !canEdit}
-                          sx={{
-                            bgcolor: "#f3f4f6",
-                            "&:hover": { bgcolor: "#e5e7eb" },
-                          }}
+                          className="h-8 px-3 flex-1"
                         >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
+                          <Edit className="h-3.5 w-3.5 mr-1" />
+                          Editar
+                        </Button>
                       )}
                       {showDeleteButtons && canManageVehicles && (
-                        <IconButton
-                          size="small"
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleDeleteClick(vehicle)}
                           disabled={deactivateMutation.isPending || !canDelete}
-                          sx={{
-                            bgcolor: "#fee2e2",
-                            color: "#dc2626",
-                            "&:hover": { bgcolor: "#fecaca" },
-                          }}
+                          className="h-8 px-3 flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                         >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                          <Trash2 className="h-3.5 w-3.5 mr-1" />
+                          Eliminar
+                        </Button>
                       )}
-                    </Box>
+                    </div>
                   )}
                 </CardContent>
               </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
-
-      {/* Empty state */}
-      {filteredVehicles.length === 0 && !isLoading && (
-        <Box sx={{ textAlign: "center", py: 8 }}>
-          <DirectionsCarIcon sx={{ fontSize: 64, color: "#ddd", mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
-            No hay vehículos registrados
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Haz clic en 'Nuevo Vehículo' para agregar uno
-          </Typography>
-        </Box>
+            );
+          })}
+        </div>
+      ) : (
+        // Empty state
+        <Card className="border border-gray-200">
+          <CardContent className="p-12 text-center">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="p-4 bg-gray-100 rounded-full">
+                <Car className="h-12 w-12 text-gray-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  No hay vehículos registrados
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Haz clic en 'Nuevo Vehículo' para agregar uno
+                </p>
+              </div>
+              {showCreateButtons && canManageVehicles && (
+                <Button
+                  onClick={handleNew}
+                  className="mt-4"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Vehículo
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Diálogo de crear/editar */}
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {editingVehicle ? "Editar Vehículo" : "Nuevo Vehículo"}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
-            {/* Empresa (solo si hay múltiples empresas) */}
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingVehicle ? "Editar Vehículo" : "Nuevo Vehículo"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingVehicle 
+                ? "Modifica los datos del vehículo"
+                : "Completa los datos para crear un nuevo vehículo"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Empresa */}
             {companies.length > 1 && (
-              <FormControl fullWidth error={!!errors.idCompany}>
-                <InputLabel>Empresa *</InputLabel>
+              <div className="space-y-2">
+                <Label htmlFor="company">Empresa *</Label>
                 <Select
-                  value={formData.idCompany}
-                  label="Empresa *"
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      idCompany: Number(e.target.value),
-                    })
+                  value={formData.idCompany.toString()}
+                  onValueChange={(value) => 
+                    setFormData({ ...formData, idCompany: Number(value) })
                   }
                 >
-                  {companies.map((c) => (
-                    <MenuItem key={c.id} value={c.id}>
-                      {c.name}
-                    </MenuItem>
-                  ))}
+                  <SelectTrigger className={errors.idCompany ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Selecciona una empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map((c) => (
+                      <SelectItem key={c.id} value={c.id.toString()}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
                 {errors.idCompany && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                    {errors.idCompany}
-                  </Typography>
+                  <p className="text-sm text-red-500">{errors.idCompany}</p>
                 )}
-              </FormControl>
+              </div>
             )}
 
             {/* Unidad de Negocio */}
-            <FormControl fullWidth>
-              <InputLabel>Unidad de Negocio (opcional)</InputLabel>
+            <div className="space-y-2">
+              <Label htmlFor="businessUnit">Unidad de Negocio (opcional)</Label>
               <Select
-                value={formData.idBusinessUnit || ""}
-                label="Unidad de Negocio (opcional)"
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    idBusinessUnit: e.target.value
-                      ? Number(e.target.value)
-                      : undefined,
+                value={formData.idBusinessUnit?.toString() || ""}
+                onValueChange={(value) => 
+                  setFormData({ 
+                    ...formData, 
+                    idBusinessUnit: value ? Number(value) : undefined 
                   })
                 }
               >
-                <MenuItem value="">Sin asignar</MenuItem>
-                {(() => {
-                  // Filtrar unidades de negocio por la empresa seleccionada
-                  // Si no hay empresa seleccionada o es 0, mostrar todas (o las de la empresa del usuario)
-                  const companyIdToFilter =
-                    formData.idCompany && formData.idCompany !== 0
-                      ? formData.idCompany
-                      : idCompany || undefined;
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sin asignar</SelectItem>
+                  {(() => {
+                    const companyIdToFilter = formData.idCompany || idCompany;
+                    const filteredUnits = companyIdToFilter
+                      ? businessUnits.filter(
+                          (bu) => bu.idCompany === companyIdToFilter
+                        )
+                      : businessUnits;
 
-                  const filteredUnits = companyIdToFilter
-                    ? businessUnits.filter(
-                        (bu) => bu.idCompany === companyIdToFilter
-                      )
-                    : businessUnits;
-
-                  return filteredUnits.map((bu) => (
-                    <MenuItem key={bu.id} value={bu.id}>
-                      {bu.name}
-                    </MenuItem>
-                  ));
-                })()}
+                    return filteredUnits.map((bu) => (
+                      <SelectItem key={bu.id} value={bu.id.toString()}>
+                        {bu.name}
+                      </SelectItem>
+                    ));
+                  })()}
+                </SelectContent>
               </Select>
-            </FormControl>
+            </div>
 
-            <TextField
-              label="Nombre del Vehículo"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              error={!!errors.name}
-              helperText={errors.name}
-              required
-              fullWidth
-            />
+            {/* Nombre */}
+            <div className="space-y-2">
+              <Label htmlFor="name">Nombre del Vehículo *</Label>
+              <Input
+                id="name"
+                placeholder="Ej: Camión Volvo FH16"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className={errors.name ? "border-red-500" : ""}
+              />
+              {errors.name && (
+                <p className="text-sm text-red-500">{errors.name}</p>
+              )}
+            </div>
 
-            <TextField
-              label="Identificador"
-              value={formData.identifier}
-              onChange={(e) =>
-                setFormData({ ...formData, identifier: e.target.value })
-              }
-              error={!!errors.identifier}
-              helperText={errors.identifier}
-              required
-              fullWidth
-            />
+            {/* Identificador */}
+            <div className="space-y-2">
+              <Label htmlFor="identifier">Identificador *</Label>
+              <Input
+                id="identifier"
+                placeholder="Ej: VOL-001"
+                value={formData.identifier}
+                onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
+                className={errors.identifier ? "border-red-500" : ""}
+              />
+              {errors.identifier && (
+                <p className="text-sm text-red-500">{errors.identifier}</p>
+              )}
+            </div>
 
-            <TextField
-              label="Capacidad (Litros)"
-              type="number"
-              value={formData.nativeLiters || ""}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  nativeLiters: e.target.value
-                    ? Number(e.target.value)
-                    : undefined,
-                })
+            {/* Capacidad */}
+            <div className="space-y-2">
+              <Label htmlFor="capacity">Capacidad (Litros)</Label>
+              <div className="relative">
+                <Input
+                  id="capacity"
+                  type="number"
+                  placeholder="0"
+                  value={formData.nativeLiters || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      nativeLiters: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
+                  className="pr-12"
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                  L
+                </div>
+              </div>
+              <p className="text-sm text-gray-500">Capacidad del tanque en litros</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpenDialog(false)}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={
+                createMutation.isPending ||
+                updateMutation.isPending
               }
-              fullWidth
-              InputProps={{
-                endAdornment: <InputAdornment position="end">L</InputAdornment>,
-              }}
-            />
-          </Box>
+              className="bg-blue-900 hover:bg-blue-800"
+            >
+              {createMutation.isPending || updateMutation.isPending ? (
+                <span className="flex items-center gap-2">
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Guardando...
+                </span>
+              ) : editingVehicle ? (
+                "Guardar Cambios"
+              ) : (
+                "Crear Vehículo"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={createMutation.isPending || updateMutation.isPending}
-            sx={{ bgcolor: "#1E2C56", "&:hover": { bgcolor: "#16213E" } }}
-          >
-            {createMutation.isPending || updateMutation.isPending
-              ? "Guardando..."
-              : editingVehicle
-              ? "Guardar Cambios"
-              : "Crear Vehículo"}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Confirmación de eliminación */}
-      <Dialog
-        open={openDeleteDialog}
-        onClose={() => setOpenDeleteDialog(false)}
-      >
-        <DialogTitle>Confirmar Desactivación</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¿Estás seguro de desactivar el vehículo{" "}
-            <strong>{deleteVehicle?.name}</strong>?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Esta acción no se puede deshacer.
-          </Typography>
+      <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Confirmar Desactivación</DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <p className="text-gray-700">
+              ¿Estás seguro de desactivar el vehículo{" "}
+              <span className="font-semibold">{deleteVehicle?.name}</span>?
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpenDeleteDialog(false)}
+              disabled={deactivateMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deactivateMutation.isPending}
+            >
+              {deactivateMutation.isPending ? (
+                <span className="flex items-center gap-2">
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Desactivando...
+                </span>
+              ) : (
+                "Desactivar"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleDelete}
-            disabled={deactivateMutation.isPending}
-          >
-            {deactivateMutation.isPending ? "Desactivando..." : "Desactivar"}
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }

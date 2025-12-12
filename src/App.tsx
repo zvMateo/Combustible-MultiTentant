@@ -9,7 +9,7 @@ import { AppRoutes } from "./routes";
 import { useEffect } from "react";
 import { useAuthStore } from "./stores/auth.store";
 import { queryClient } from "./lib/query-client";
-import { Box, CircularProgress } from "@mui/material";
+import { Spinner } from "./components/ui/spinner";
 import { setUnauthorizedHandler } from "./lib/axios";
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
@@ -28,17 +28,9 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-          bgcolor: "#F8FAFB",
-        }}
-      >
-        <CircularProgress sx={{ color: "#284057" }} />
-      </Box>
+      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFB]">
+        <Spinner className="size-7 text-[#284057]" />
+      </div>
     );
   }
 

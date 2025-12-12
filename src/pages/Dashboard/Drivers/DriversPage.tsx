@@ -1,35 +1,22 @@
 // src/pages/Dashboard/Drivers/DriversPage.tsx
 import { useState, useMemo, useEffect } from "react";
-import {
-  Box,
-  Button,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
-  InputAdornment,
-  Card,
-  CardContent,
-  Chip,
-  IconButton,
-  LinearProgress,
-  MenuItem,
-  Alert,
-  Skeleton,
-  Grid,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import PersonIcon from "@mui/icons-material/Person";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import PhoneAndroidIcon from "@mui/icons-material/PhoneAndroid";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import BadgeIcon from "@mui/icons-material/Badge";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
+import {
+  Plus,
+  Search,
+  User,
+  Edit,
+  Trash2,
+  Phone,
+  Download,
+  IdCard,
+  Building,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  ChevronDown,
+} from "lucide-react";
 
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
@@ -46,6 +33,36 @@ import type {
   CreateDriverRequest,
   UpdateDriverRequest,
 } from "@/types/api.types";
+
+// shadcn components
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface FormErrors {
   [key: string]: string;
@@ -119,12 +136,7 @@ export default function DriversPage() {
       filtered = filtered.filter((d) => d.idCompany === companyIdFilter);
     }
 
-    // 2. Filtrar por unidad de negocio (Supervisor y Auditor solo ven su(s) unidad(es))
-    // Nota: Los choferes no tienen idBusinessUnit directo, pero se pueden filtrar
-    // por la empresa y luego por otras relaciones si es necesario
-    // Por ahora, supervisor y auditor ven todos los choferes de su empresa
-
-    // 3. Filtrar por búsqueda
+    // 2. Filtrar por búsqueda
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -211,12 +223,14 @@ export default function DriversPage() {
           phoneNumber: dataToSend.phoneNumber,
         };
         await updateMutation.mutateAsync(updateData);
+        toast.success("Chofer actualizado correctamente");
       } else {
         await createMutation.mutateAsync(dataToSend);
+        toast.success("Chofer creado correctamente");
       }
       setOpenDialog(false);
-    } catch {
-      // Error manejado por el mutation
+    } catch (error) {
+      toast.error("Error al guardar el chofer");
     }
   };
 
@@ -239,10 +253,11 @@ export default function DriversPage() {
 
     try {
       await deactivateMutation.mutateAsync(deleteDriver.id);
+      toast.success("Chofer desactivado correctamente");
       setOpenDeleteDialog(false);
       setDeleteDriver(null);
-    } catch {
-      // Error manejado por el mutation
+    } catch (error) {
+      toast.error("Error al desactivar el chofer");
     }
   };
 
@@ -271,423 +286,422 @@ export default function DriversPage() {
   // Loading state
   if (isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
-        <LinearProgress sx={{ mb: 2 }} />
-        <Grid container spacing={3}>
-          {[1, 2, 3, 4].map((i) => (
-            // @ts-expect-error - MUI v7 Grid type incompatibility
-            <Grid xs={12} sm={6} md={4} lg={3} key={i}>
-              <Skeleton variant="rounded" height={200} />
-            </Grid>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-60" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-40" />
+          </div>
+        </div>
+        
+        <Progress value={33} className="w-full" />
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-3/4 mb-2" />
+                <Skeleton className="h-8 w-20" />
+              </CardContent>
+            </Card>
           ))}
-        </Grid>
-      </Box>
+        </div>
+      </div>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          Error al cargar choferes:{" "}
-          {error instanceof Error ? error.message : "Error desconocido"}
+      <div className="p-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Error al cargar choferes:{" "}
+            {error instanceof Error ? error.message : "Error desconocido"}
+          </AlertDescription>
         </Alert>
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <div className="space-y-6 p-6">
       {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 1.5,
-          mt: -3,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 700, lineHeight: 1.1, mb: 0.5 }}
-          >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
             Choferes
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
+          </h1>
+          <p className="text-gray-600">
             {filteredDrivers.length}{" "}
             {filteredDrivers.length === 1 ? "chofer" : "choferes"} registrados
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           {showExportButtons && (
             <Button
-              variant="outlined"
-              startIcon={<FileDownloadIcon />}
+              variant="outline"
               onClick={handleExport}
               disabled={filteredDrivers.length === 0}
-              sx={{
-                borderColor: "#10b981",
-                color: "#10b981",
-                fontWeight: 600,
-                textTransform: "none",
-                "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
-              }}
+              className="gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50"
             >
+              <Download className="h-4 w-4" />
               Exportar
             </Button>
           )}
           {showCreateButtons && canManageDrivers && (
             <Button
-              variant="contained"
-              startIcon={<AddIcon />}
               onClick={handleNew}
               disabled={createMutation.isPending || isReadOnly}
-              sx={{
-                bgcolor: "#1E2C56",
-                fontWeight: 600,
-                textTransform: "none",
-                "&:hover": { bgcolor: "#16213E" },
-              }}
+              className="gap-2 bg-blue-900 hover:bg-blue-800"
             >
+              <Plus className="h-4 w-4" />
               Nuevo Chofer
             </Button>
           )}
-        </Box>
-      </Box>
+        </div>
+      </div>
 
       {/* Filtros */}
-      <Box
-        sx={{
-          mb: 3,
-          background: "white",
-          borderRadius: 2,
-          border: "1px solid #e2e8f0",
-          p: 2,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 2,
-          alignItems: "center",
-        }}
-      >
-        <TextField
-          placeholder="Buscar por nombre, DNI o teléfono..."
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ flexGrow: 1, minWidth: 220 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: "#9ca3af" }} />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
+      <Card className="border border-gray-200">
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Buscar por nombre, DNI o teléfono..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Grid de choferes */}
-      <Grid container spacing={3}>
-        {filteredDrivers.map((driver) => {
-          const company = companies.find((c) => c.id === driver.idCompany);
-          return (
-            // @ts-expect-error - MUI v7 Grid type incompatibility
-            <Grid xs={12} sm={6} md={4} lg={3} key={driver.id}>
-              <Card
-                elevation={0}
-                sx={{
-                  background: "white",
-                  borderRadius: 3,
-                  border: "1px solid #e2e8f0",
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  transition: "all 0.25s ease",
-                  opacity: driver.isActive !== false ? 1 : 0.7,
-                  "&:hover": {
-                    boxShadow: "0 8px 18px rgba(15,23,42,0.10)",
-                    transform: "translateY(-3px)",
-                    borderColor: "#10b981",
-                  },
-                }}
+      {filteredDrivers.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredDrivers.map((driver) => {
+            const company = companies.find((c) => c.id === driver.idCompany);
+            const isActive = driver.isActive !== false;
+            const avatarColor = getAvatarColor(driver.name);
+            
+            return (
+              <Card 
+                key={driver.id}
+                className={`border border-gray-200 hover:border-emerald-500 hover:shadow-md transition-all duration-200 ${
+                  !isActive ? "opacity-70" : ""
+                }`}
               >
-                <CardContent
-                  sx={{
-                    p: 2.5,
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
+                <CardContent className="p-5">
                   {/* Header con avatar */}
-                  <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-                    <Box
-                      sx={{
-                        width: 50,
-                        height: 50,
-                        borderRadius: "50%",
-                        bgcolor: getAvatarColor(driver.name),
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "white",
-                        fontWeight: 700,
-                        fontSize: "1.1rem",
-                      }}
+                  <div className="flex items-start gap-3 mb-4">
+                    <div 
+                      className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                      style={{ backgroundColor: avatarColor }}
                     >
                       {getInitials(driver.name)}
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="subtitle1" fontWeight={700}>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">
                         {driver.name}
-                      </Typography>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-                      >
-                        <BadgeIcon sx={{ fontSize: 14, color: "#6b7280" }} />
-                        <Typography variant="body2" color="text.secondary">
-                          {driver.dni}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Box>
+                      </h3>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <IdCard className="h-3.5 w-3.5 text-gray-500" />
+                        <span className="text-sm text-gray-600">{driver.dni}</span>
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Info de contacto */}
                   {driver.phoneNumber && (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 0.5,
-                        mb: 1,
-                      }}
-                    >
-                      <PhoneAndroidIcon
-                        sx={{ fontSize: 16, color: "#10b981" }}
-                      />
-                      <Typography variant="body2">
-                        {driver.phoneNumber}
-                      </Typography>
-                    </Box>
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <Phone className="h-4 w-4 text-emerald-600" />
+                      <span className="text-sm text-gray-700">{driver.phoneNumber}</span>
+                    </div>
                   )}
 
                   {/* Empresa */}
                   {company && (
-                    <Box sx={{ mb: 1.5 }}>
-                      <Chip
-                        label={company.name}
-                        size="small"
-                        sx={{ bgcolor: "#3b82f615", color: "#3b82f6" }}
-                      />
-                    </Box>
+                    <div className="mb-3">
+                      <Badge 
+                        variant="outline" 
+                        className="bg-blue-50 text-blue-700 border-blue-200"
+                      >
+                        <Building className="h-3 w-3 mr-1" />
+                        {company.name}
+                      </Badge>
+                    </div>
                   )}
 
                   {/* Estado */}
-                  <Box
-                    sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}
-                  >
-                    <Chip
-                      label={driver.isActive !== false ? "Activo" : "Inactivo"}
-                      size="small"
-                      sx={{
-                        bgcolor:
-                          driver.isActive !== false ? "#10b98115" : "#f59e0b15",
-                        color:
-                          driver.isActive !== false ? "#10b981" : "#f59e0b",
-                        fontWeight: 600,
-                      }}
-                    />
-                  </Box>
+                  <div className="mb-4">
+                    <Badge
+                      variant={isActive ? "default" : "secondary"}
+                      className={isActive 
+                        ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" 
+                        : "bg-amber-100 text-amber-800 hover:bg-amber-100"
+                      }
+                    >
+                      {isActive ? (
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                      ) : (
+                        <XCircle className="h-3 w-3 mr-1" />
+                      )}
+                      {isActive ? "Activo" : "Inactivo"}
+                    </Badge>
+                  </div>
 
                   {/* Acciones */}
                   {!isReadOnly && (
-                    <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}>
+                    <div className="flex gap-2 pt-3 border-t">
                       {showEditButtons && canManageDrivers && (
-                        <IconButton
-                          size="small"
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleEdit(driver)}
                           disabled={updateMutation.isPending || !canEdit}
-                          sx={{
-                            bgcolor: "#f3f4f6",
-                            "&:hover": { bgcolor: "#e5e7eb" },
-                          }}
+                          className="h-8 px-3 flex-1"
                         >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
+                          <Edit className="h-3.5 w-3.5 mr-1" />
+                          Editar
+                        </Button>
                       )}
                       {showDeleteButtons && canManageDrivers && (
-                        <IconButton
-                          size="small"
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleDeleteClick(driver)}
                           disabled={deactivateMutation.isPending || !canDelete}
-                          sx={{
-                            bgcolor: "#fee2e2",
-                            color: "#dc2626",
-                            "&:hover": { bgcolor: "#fecaca" },
-                          }}
+                          className="h-8 px-3 flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                         >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                          <Trash2 className="h-3.5 w-3.5 mr-1" />
+                          Eliminar
+                        </Button>
                       )}
-                    </Box>
+                    </div>
                   )}
                 </CardContent>
               </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
-
-      {/* Empty state */}
-      {filteredDrivers.length === 0 && !isLoading && (
-        <Box sx={{ textAlign: "center", py: 8 }}>
-          <PersonIcon sx={{ fontSize: 64, color: "#ddd", mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
-            No hay choferes registrados
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Haz clic en 'Nuevo Chofer' para agregar uno
-          </Typography>
-        </Box>
+            );
+          })}
+        </div>
+      ) : (
+        // Empty state
+        <Card className="border border-gray-200">
+          <CardContent className="p-12 text-center">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="p-4 bg-gray-100 rounded-full">
+                <User className="h-12 w-12 text-gray-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  No hay choferes registrados
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Haz clic en 'Nuevo Chofer' para agregar uno
+                </p>
+              </div>
+              {showCreateButtons && canManageDrivers && (
+                <Button
+                  onClick={handleNew}
+                  className="mt-4"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Chofer
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Diálogo de crear/editar */}
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {editingDriver ? "Editar Chofer" : "Nuevo Chofer"}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingDriver ? "Editar Chofer" : "Nuevo Chofer"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingDriver 
+                ? "Modifica los datos del chofer"
+                : "Completa los datos para crear un nuevo chofer"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
             {/* Empresa */}
-            {companies.length > 1 ? (
-              <TextField
-                select
-                label="Empresa *"
-                value={formData.idCompany}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    idCompany: Number(e.target.value),
-                  })
-                }
-                error={!!errors.idCompany}
-                helperText={errors.idCompany}
-                fullWidth
-                SelectProps={{
-                  native: false,
-                }}
-              >
-                {companies.map((c) => (
-                  <MenuItem key={c.id} value={c.id}>
-                    {c.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            ) : (
-              <TextField
-                label="Empresa"
-                value={
-                  companies.find((c) => c.id === idCompany)?.name ||
-                  "Empresa actual"
-                }
-                fullWidth
-                disabled
-                helperText="Se usará tu empresa actual para crear el chofer"
+            <div className="space-y-2">
+              <Label htmlFor="company">Empresa *</Label>
+              {companies.length > 1 ? (
+                <Select
+                  value={formData.idCompany.toString()}
+                  onValueChange={(value) => 
+                    setFormData({ ...formData, idCompany: Number(value) })
+                  }
+                >
+                  <SelectTrigger className={errors.idCompany ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Selecciona una empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map((c) => (
+                      <SelectItem key={c.id} value={c.id.toString()}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={
+                    companies.find((c) => c.id === idCompany)?.name ||
+                    "Empresa actual"
+                  }
+                  disabled
+                  className="bg-gray-50"
+                />
+              )}
+              {errors.idCompany && (
+                <p className="text-sm text-red-500">{errors.idCompany}</p>
+              )}
+            </div>
+
+            {/* Nombre */}
+            <div className="space-y-2">
+              <Label htmlFor="name">Nombre Completo *</Label>
+              <Input
+                id="name"
+                placeholder="Nombre completo del chofer"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className={errors.name ? "border-red-500" : ""}
               />
-            )}
+              {errors.name && (
+                <p className="text-sm text-red-500">{errors.name}</p>
+              )}
+            </div>
 
-            <TextField
-              label="Nombre Completo"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              error={!!errors.name}
-              helperText={errors.name}
-              required
-              fullWidth
-            />
+            {/* DNI */}
+            <div className="space-y-2">
+              <Label htmlFor="dni">DNI *</Label>
+              <Input
+                id="dni"
+                placeholder="12345678"
+                value={formData.dni}
+                onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
+                className={errors.dni ? "border-red-500" : ""}
+              />
+              {errors.dni ? (
+                <p className="text-sm text-red-500">{errors.dni}</p>
+              ) : (
+                <p className="text-sm text-gray-500">7-8 dígitos</p>
+              )}
+            </div>
 
-            <TextField
-              label="DNI"
-              value={formData.dni}
-              onChange={(e) =>
-                setFormData({ ...formData, dni: e.target.value })
-              }
-              error={!!errors.dni}
-              helperText={errors.dni || "7-8 dígitos"}
-              required
-              fullWidth
-            />
+            {/* Teléfono */}
+            <div className="space-y-2">
+              <Label htmlFor="phone">Teléfono (opcional)</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="phone"
+                  placeholder="Ingresa el número de teléfono"
+                  value={formData.phoneNumber || ""}
+                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
 
-            <TextField
-              label="Teléfono (opcional)"
-              value={formData.phoneNumber || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, phoneNumber: e.target.value })
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpenDialog(false)}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={
+                createMutation.isPending ||
+                updateMutation.isPending ||
+                (!idCompany && companies.length === 0)
               }
-              fullWidth
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <PhoneAndroidIcon sx={{ color: "#9ca3af" }} />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Box>
+              className="bg-blue-900 hover:bg-blue-800"
+            >
+              {createMutation.isPending || updateMutation.isPending ? (
+                <span className="flex items-center gap-2">
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Guardando...
+                </span>
+              ) : editingDriver ? (
+                "Guardar Cambios"
+              ) : (
+                "Crear Chofer"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={createMutation.isPending || updateMutation.isPending}
-            sx={{ bgcolor: "#1E2C56", "&:hover": { bgcolor: "#16213E" } }}
-          >
-            {createMutation.isPending || updateMutation.isPending
-              ? "Guardando..."
-              : editingDriver
-              ? "Guardar Cambios"
-              : "Crear Chofer"}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Confirmación de eliminación */}
-      <Dialog
-        open={openDeleteDialog}
-        onClose={() => setOpenDeleteDialog(false)}
-      >
-        <DialogTitle>Confirmar Desactivación</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¿Estás seguro de desactivar al chofer{" "}
-            <strong>{deleteDriver?.name}</strong>?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Esta acción no se puede deshacer.
-          </Typography>
+      <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Confirmar Desactivación</DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <p className="text-gray-700">
+              ¿Estás seguro de desactivar al chofer{" "}
+              <span className="font-semibold">{deleteDriver?.name}</span>?
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpenDeleteDialog(false)}
+              disabled={deactivateMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deactivateMutation.isPending}
+            >
+              {deactivateMutation.isPending ? (
+                <span className="flex items-center gap-2">
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Desactivando...
+                </span>
+              ) : (
+                "Desactivar"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleDelete}
-            disabled={deactivateMutation.isPending}
-          >
-            {deactivateMutation.isPending ? "Desactivando..." : "Desactivar"}
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }

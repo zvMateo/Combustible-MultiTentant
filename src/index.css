@@ -1,21 +1,38 @@
-/* index.css */
-:root {
-  /* Variables dinámicas por tenant (se actualizan desde JS) */
-  --primary-color: #1e2c56;
-  --secondary-color: #3b82f6;
-  --sidebar-bg: #1e2c56;
-  --sidebar-text: #ffffff;
-  --accent-color: #10b981;
+/* index.css - Tailwind CSS v4 */
+@import "tailwindcss";
 
-  /* Variables fijas del sistema */
-  --border-radius: 8px;
-  --border-radius-lg: 12px;
-  --transition: all 0.3s ease;
+@theme {
+  /* Variables del sistema que Tailwind usará */
+  --color-primary: #1e2c56;
+  --color-secondary: #3b82f6;
+  --color-accent: #10b981;
+  --color-sidebar-bg: #1e2c56;
+  --color-sidebar-text: #ffffff;
+  
+  /* Border radius */
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  
+  /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  
+  /* Transitions */
+  --transition-default: all 0.3s ease;
 }
 
+/* Variables CSS para componentes no-Tailwind (Material UI, etc.) */
+:root {
+  --primary-color: var(--color-primary, #1e2c56);
+  --secondary-color: var(--color-secondary, #3b82f6);
+  --sidebar-bg: var(--color-sidebar-bg, #1e2c56);
+  --sidebar-text: var(--color-sidebar-text, #ffffff);
+  --content-bg: #F4F8FA;
+  --header-bg: #FFFFFF;
+}
+
+/* Reset básico */
 * {
   margin: 0;
   padding: 0;
@@ -42,6 +59,7 @@ body {
 
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -54,50 +72,13 @@ body {
   opacity: 1;
 }
 
-/* Clases utilitarias con variables */
-.bg-primary {
-  background-color: var(--primary-color) !important;
-}
-
-.text-primary {
-  color: var(--primary-color) !important;
-}
-
-.bg-accent {
-  background-color: var(--accent-color) !important;
-}
-
-.border-primary {
-  border-color: var(--primary-color) !important;
-}
-
-/* Sidebar con tema dinámico */
+/* Utilidades personalizadas */
 .tenant-sidebar {
   background-color: var(--sidebar-bg) !important;
   color: var(--sidebar-text) !important;
 }
 
-.tenant-sidebar .MuiListItemButton-root {
-  color: var(--sidebar-text) !important;
-}
-
-.tenant-sidebar .MuiListItemButton-root:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-.tenant-sidebar .MuiListItemButton-root.Mui-selected {
-  background-color: rgba(255, 255, 255, 0.15) !important;
-}
-
-.tenant-sidebar .MuiListItemIcon-root {
-  color: var(--sidebar-text) !important;
-}
-
-.tenant-sidebar .MuiDivider-root {
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Botones con tema dinámico */
+/* Material UI overrides */
 .MuiButton-containedPrimary {
   background-color: var(--primary-color) !important;
 }
@@ -112,21 +93,10 @@ body {
   color: var(--primary-color) !important;
 }
 
-/* Chips y badges */
 .MuiChip-colorPrimary {
   background-color: var(--primary-color) !important;
 }
 
-/* Links */
-a {
-  color: var(--primary-color);
-  text-decoration: none;
-  transition: var(--transition);
-}
-
-a:hover {
-  opacity: 0.8;
-}
 .MuiLinearProgress-bar1Determinate,
 .MuiLinearProgress-bar2Determinate,
 .MuiLinearProgress-barColorPrimary {
@@ -137,3 +107,30 @@ a:hover {
   background-color: rgba(255, 255, 255, 0.3) !important;
 }
 
+/* Clases para usar en componentes */
+.bg-sidebar {
+  background-color: var(--sidebar-bg);
+}
+
+.text-sidebar {
+  color: var(--sidebar-text);
+}
+
+.bg-content {
+  background-color: var(--content-bg);
+}
+
+.bg-header {
+  background-color: var(--header-bg);
+}
+
+/* Links */
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: var(--transition-default);
+}
+
+a:hover {
+  opacity: 0.8;
+}

@@ -2,22 +2,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
-import {
-  Box,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Typography,
-  Container,
-  Alert,
-  CircularProgress,
-  Link,
-} from "@mui/material";
-import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Fuel, Lock, User } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -58,290 +48,167 @@ export default function LoginPage() {
   const displayError = localError || error;
 
   return (
-    <Box
-      sx={{
-        position: "relative",
-        minHeight: "100vh",
-        width: "100vw",
-        display: "flex",
-        flexDirection: "column",
-        backgroundImage: "url('/images/LoginFondo.png')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        overflow: "auto",
-        // Overlay oscuro para mejorar legibilidad del contenido
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.4)",
-          zIndex: 0,
-        },
-      }}
+    <div
+      className="relative min-h-screen flex flex-col items-center justify-center gap-6 bg-cover bg-center bg-no-repeat p-4"
+      style={{ backgroundImage: "url('/images/LoginFondo.png')" }}
     >
-      {/* Back Button */}
-      <Box sx={{ p: 2, position: "relative", zIndex: 1 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate("/")}
-          sx={{
-            color: "rgba(255,255,255,0.9)",
-            textTransform: "none",
-            "&:hover": { bgcolor: "rgba(255,255,255,0.15)" },
-          }}
-        >
-          Volver al inicio
-        </Button>
-      </Box>
-
-      <Container
-        maxWidth="xs"
-        sx={{
-          flexGrow: 1,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          py: 4,
-          position: "relative",
-          zIndex: 1,
-        }}
+      {/* Botón de volver */}
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={() => navigate("/")}
+        className="absolute left-4 top-4 z-20 text-white/90"
       >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Volver al inicio
+      </Button>
+
+      {/* Card de Login */}
+      <div className="relative z-10 w-full max-w-md">
         <Card
-          elevation={24}
-          sx={{
-            borderRadius: 3,
-            overflow: "hidden",
-            bgcolor: "rgba(255, 255, 255, 0.98)",
+          className="overflow-hidden border-0 shadow-2xl"
+          style={{
+            borderRadius: "16px",
+            backgroundColor: "rgba(255, 255, 255, 0.98)",
             backdropFilter: "blur(20px)",
-            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.4)",
-            width: "100%",
           }}
         >
-          {/* Header */}
-          <Box
-            sx={{
-              bgcolor: primaryColor,
-              py: 3,
-              px: 3,
-              textAlign: "center",
-              color: "#fff",
-            }}
+          {/* Header con color primario */}
+          <div
+            className="px-8 py-8 text-center text-white"
+            style={{ backgroundColor: primaryColor }}
           >
-            <Box
-              sx={{
-                width: 64,
-                height: 64,
-                margin: "0 auto 16px",
-                borderRadius: "50%",
+            <div
+              className="mx-auto mb-5 flex h-17 w-17 items-center justify-center rounded-full"
+              style={{
                 background: `linear-gradient(145deg, ${secondaryColor}, ${secondaryColor}CC)`,
+                boxShadow: `0 0 20px ${secondaryColor}55, 0 4px 12px rgba(0,0,0,0.25)`,
+                border: "3px solid rgba(255, 255, 255, 0.2)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: `0 0 20px ${secondaryColor}55, 0 4px 12px rgba(0,0,0,0.25)`,
-                border: "3px solid rgba(255, 255, 255, 0.2)",
+                margin: "5px auto 1.25rem auto",
               }}
             >
-              <LocalGasStationIcon sx={{ fontSize: 34, color: "#fff" }} />
-            </Box>
-            <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
+              <Fuel className="h-10 w-10 text-white mx-auto my-auto" />
+            </div>
+
+            <h1 className="mb-2 text-2xl font-bold tracking-tight">
               Iniciar Sesión
-            </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.8 }}>
+            </h1>
+            <p className="text-sm opacity-90">
               Sistema de Gestión de Combustibles
-            </Typography>
-          </Box>
-          {/* Form */}
-          <CardContent sx={{ p: 3.5 }}>
-            <form onSubmit={handleSubmit}>
-              <Typography
-                variant="caption"
-                sx={{
-                  display: "block",
-                  mb: 0.5,
-                  fontWeight: 600,
-                  color: "#333",
-                  fontSize: "0.85rem",
-                }}
-              >
-                Usuario
-              </Typography>
-              <TextField
-                fullWidth
-                placeholder="usuario"
-                type="text"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                size="small"
-                required
-                disabled={isLoading}
-                InputProps={{
-                  startAdornment: (
-                    <PersonOutlineIcon
-                      sx={{ mr: 1, color: secondaryColor, fontSize: 20 }}
-                    />
-                  ),
-                }}
-                sx={{
-                  mb: 2,
-                  "& .MuiOutlinedInput-root": {
-                    bgcolor: "#f8fafc",
-                    borderRadius: 2,
-                    "& input": { py: 1.4, fontSize: "0.95rem" },
-                    "& fieldset": { borderColor: "#e2e8f0" },
-                    "&:hover fieldset": { borderColor: secondaryColor },
-                    "&.Mui-focused fieldset": {
-                      borderColor: primaryColor,
-                      borderWidth: 2,
-                    },
-                  },
-                }}
-              />
+            </p>
+          </div>
 
-              <Typography
-                variant="caption"
-                sx={{
-                  display: "block",
-                  mb: 0.5,
-                  fontWeight: 600,
-                  color: "#333",
-                  fontSize: "0.85rem",
-                }}
-              >
-                Contraseña
-              </Typography>
-              <TextField
-                fullWidth
-                placeholder="••••••••"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                size="small"
-                required
-                disabled={isLoading}
-                InputProps={{
-                  startAdornment: (
-                    <LockOutlinedIcon
-                      sx={{ mr: 1, color: secondaryColor, fontSize: 20 }}
-                    />
-                  ),
-                }}
-                sx={{
-                  mb: 2,
-                  "& .MuiOutlinedInput-root": {
-                    bgcolor: "#f8fafc",
-                    borderRadius: 2,
-                    "& input": { py: 1.4, fontSize: "0.95rem" },
-                    "& fieldset": { borderColor: "#e2e8f0" },
-                    "&:hover fieldset": { borderColor: secondaryColor },
-                    "&.Mui-focused fieldset": {
-                      borderColor: primaryColor,
-                      borderWidth: 2,
-                    },
-                  },
-                }}
-              />
-
-              {displayError && (
-                <Alert
-                  severity="error"
-                  sx={{
-                    mb: 2,
-                    py: 0.5,
-                    fontSize: "0.85rem",
-                    borderRadius: 2,
-                  }}
+          {/* Contenido del formulario */}
+          <CardContent className="px-6 py-8">
+            <div className="space-y-12">
+              <div className="flex justify-center">
+                <form
+                  onSubmit={handleSubmit}
+                  className="w-full max-w-xs space-y-6"
                 >
-                  {displayError}
-                </Alert>
-              )}
+                  {/* Campo Usuario */}
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="username"
+                      className="block text-sm font-semibold text-gray-700"
+                    >
+                      Usuario
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
+                      <Input
+                        id="username"
+                        type="text"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        required
+                        disabled={isLoading}
+                        className="h-12 w-full rounded-lg border-gray-300 bg-gray-50 pl-11 pr-3 text-base focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
 
-              <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
-                <Link
-                  href="#"
-                  sx={{
-                    color: secondaryColor,
-                    fontSize: "0.85rem",
-                    fontWeight: 500,
-                    textDecoration: "none",
-                    "&:hover": { textDecoration: "underline" },
-                  }}
-                >
-                  ¿Olvidaste tu contraseña?
-                </Link>
-              </Box>
+                  {/* Campo Contraseña */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="password"
+                        className="block text-sm font-semibold text-gray-700"
+                      >
+                        Contraseña
+                      </label>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
+                      <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={isLoading}
+                        className="h-12 w-full rounded-lg border-gray-300 bg-gray-50 pl-11 pr-3 text-base focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
 
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={isLoading}
-                sx={{
-                  py: 1.5,
-                  bgcolor: primaryColor,
-                  fontWeight: 700,
-                  textTransform: "none",
-                  fontSize: "1rem",
-                  borderRadius: 2,
-                  boxShadow: `0 4px 14px ${primaryColor}4D`,
-                  "&:hover": {
-                    bgcolor: secondaryColor,
-                    boxShadow: `0 6px 20px ${secondaryColor}66`,
-                  },
-                  "&:disabled": {
-                    bgcolor: "#ccc",
-                  },
-                  transition: "all 0.3s ease",
-                }}
-              >
-                {isLoading ? (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <CircularProgress size={20} color="inherit" />
-                    <span>Ingresando...</span>
-                  </Box>
-                ) : (
-                  "Iniciar Sesión"
-                )}
-              </Button>
-            </form>
+                  {/* Mensaje de error */}
+                  {displayError && (
+                    <Alert variant="destructive" className="rounded-lg">
+                      <AlertDescription className="text-sm font-medium">
+                        {displayError}
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
-            <Box sx={{ mt: 3, textAlign: "center" }}>
-              <Typography variant="body2" color="text.secondary">
-                ¿No tienes cuenta?{" "}
-                <Link
-                  component={RouterLink}
-                  to="/registro"
-                  sx={{
-                    color: secondaryColor,
-                    fontWeight: 600,
-                    textDecoration: "none",
-                    "&:hover": { textDecoration: "underline" },
-                  }}
-                >
-                  Registra tu empresa
-                </Link>
-              </Typography>
-            </Box>
+                  {/* Botón de login */}
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="h-12 w-full rounded-lg text-base font-bold transition-all duration-200"
+                    style={{
+                      marginTop: "1rem",
+                      color: "white",
+                      backgroundColor: primaryColor,
+                    }}
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Spinner className="h-5 w-5 text-white" />
+                        <span>Ingresando...</span>
+                      </span>
+                    ) : (
+                      "Iniciar Sesión"
+                    )}
+                  </Button>
+                </form>
+              </div>
+
+              {/* Enlace de registro */}
+              <div className="border-gray-200 pt-8 text-center">
+                <p className="text-sm text-gray-600">
+                  ¿No tienes cuenta?{" "}
+                  <RouterLink
+                    to="/registro"
+                    className="font-semibold hover:underline"
+                    style={{ color: secondaryColor }}
+                  >
+                    Registra tu empresa
+                  </RouterLink>
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Typography
-          variant="caption"
-          sx={{
-            display: "block",
-            textAlign: "center",
-            mt: 3,
-            fontSize: "0.75rem",
-            color: "rgba(255,255,255,0.7)",
-          }}
-        >
+        {/* Footer */}
+        <p className="mt-6 text-center text-sm text-white/80">
           © 2025 GoodApps - Gestión de Combustibles
-        </Typography>
-      </Container>
-    </Box>
+        </p>
+      </div>
+    </div>
   );
 }

@@ -2,18 +2,13 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Paper,
-  IconButton,
-  Chip,
-  Box,
-  Typography,
-} from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import VisibilityIcon from "@mui/icons-material/Visibility";
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 
 interface DataTableColumn<T> {
   field: keyof T | string;
@@ -49,6 +44,32 @@ export default function DataTable<T extends { id: number | string }>({
   onView,
   emptyMessage = "No hay datos para mostrar",
 }: DataTableProps<T>) {
+  const badgeClassByColor = (color:
+    | "default"
+    | "primary"
+    | "secondary"
+    | "error"
+    | "info"
+    | "success"
+    | "warning") => {
+    switch (color) {
+      case "success":
+        return "bg-emerald-100 text-emerald-700";
+      case "error":
+        return "bg-red-100 text-red-700";
+      case "warning":
+        return "bg-amber-100 text-amber-700";
+      case "info":
+        return "bg-sky-100 text-sky-700";
+      case "primary":
+        return "bg-blue-100 text-blue-700";
+      case "secondary":
+        return "bg-slate-100 text-slate-700";
+      default:
+        return "bg-slate-100 text-slate-700";
+    }
+  };
+
   const renderCellContent = (row: T, column: DataTableColumn<T>) => {
     const value = row[column.field as keyof T];
 
@@ -58,17 +79,31 @@ export default function DataTable<T extends { id: number | string }>({
 
     if (column.type === "badge") {
       const color = column.getColor ? column.getColor(value) : "default";
-      return <Chip label={String(value)} color={color} size="small" />;
+      return (
+        <Badge
+          className={
+            "h-6 rounded-md px-2 text-[11px] font-semibold " +
+            badgeClassByColor(color)
+          }
+        >
+          {String(value)}
+        </Badge>
+      );
     }
 
     if (column.type === "boolean") {
       const boolValue = Boolean(value);
       return (
-        <Chip
-          label={boolValue ? "Sí" : "No"}
-          color={boolValue ? "success" : "default"}
-          size="small"
-        />
+        <Badge
+          className={
+            "h-6 rounded-md px-2 text-[11px] font-semibold " +
+            (boolValue
+              ? badgeClassByColor("success")
+              : badgeClassByColor("default"))
+          }
+        >
+          {boolValue ? "Sí" : "No"}
+        </Badge>
       );
     }
 
@@ -76,32 +111,35 @@ export default function DataTable<T extends { id: number | string }>({
   };
 
   return (
-    <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2 }}>
+    <div className="overflow-hidden rounded-lg bg-white shadow-md">
       <Table>
-        <TableHead sx={{ bgcolor: "#f5f5f5" }}>
+        <TableHeader className="bg-[#f5f5f5]">
           <TableRow>
             {columns.map((column) => (
-              <TableCell key={String(column.field)} sx={{ fontWeight: "bold" }}>
+              <TableHead
+                key={String(column.field)}
+                className="font-bold text-slate-900"
+              >
                 {column.headerName}
-              </TableCell>
+              </TableHead>
             ))}
             {(onEdit || onDelete || onView) && (
-              <TableCell sx={{ fontWeight: "bold" }}>Acciones</TableCell>
+              <TableHead className="font-bold text-slate-900">Acciones</TableHead>
             )}
           </TableRow>
-        </TableHead>
+        </TableHeader>
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={columns.length + 1} align="center">
-                <Box sx={{ py: 4 }}>
-                  <Typography color="text.secondary">{emptyMessage}</Typography>
-                </Box>
+              <TableCell colSpan={columns.length + 1} className="text-center">
+                <div className="py-10 text-sm text-muted-foreground">
+                  {emptyMessage}
+                </div>
               </TableCell>
             </TableRow>
           ) : (
             data.map((row) => (
-              <TableRow key={row.id} hover>
+              <TableRow key={row.id} className="hover:bg-slate-50">
                 {columns.map((column) => (
                   <TableCell key={String(column.field)}>
                     {renderCellContent(row, column)}
@@ -109,35 +147,41 @@ export default function DataTable<T extends { id: number | string }>({
                 ))}
                 {(onEdit || onDelete || onView) && (
                   <TableCell>
-                    <Box sx={{ display: "flex", gap: 0.5 }}>
+                    <div className="flex gap-1">
                       {onView && (
-                        <IconButton
-                          size="small"
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-sky-700"
                           onClick={() => onView(row)}
-                          color="info"
                         >
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
+                          <Eye className="h-4 w-4" />
+                        </Button>
                       )}
                       {onEdit && (
-                        <IconButton
-                          size="small"
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-blue-700"
                           onClick={() => onEdit(row)}
-                          color="primary"
                         >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       )}
                       {onDelete && (
-                        <IconButton
-                          size="small"
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-700"
                           onClick={() => onDelete(row)}
-                          color="error"
                         >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       )}
-                    </Box>
+                    </div>
                   </TableCell>
                 )}
               </TableRow>
@@ -145,7 +189,7 @@ export default function DataTable<T extends { id: number | string }>({
           )}
         </TableBody>
       </Table>
-    </TableContainer>
+    </div>
   );
 }
 

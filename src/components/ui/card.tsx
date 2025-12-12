@@ -2,7 +2,15 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+function Card({
+  className,
+  sx,
+  style,
+  ...props
+}: React.ComponentProps<"div"> & {
+  sx?: Record<string, unknown>
+  elevation?: number
+}) {
   return (
     <div
       data-slot="card"
@@ -10,6 +18,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
         "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
         className
       )}
+      style={{ ...(style || {}), ...(sx || {}) } as React.CSSProperties}
       {...props}
     />
   )
@@ -61,11 +70,17 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function CardContent({ className, ...props }: React.ComponentProps<"div">) {
+function CardContent({
+  className,
+  sx,
+  style,
+  ...props
+}: React.ComponentProps<"div"> & { sx?: Record<string, unknown> }) {
   return (
     <div
       data-slot="card-content"
       className={cn("px-6", className)}
+      style={{ ...(style || {}), ...(sx || {}) } as React.CSSProperties}
       {...props}
     />
   )

@@ -1,20 +1,21 @@
-// src/components/pages/_S/Dashboard/Dashboard.tsx
 import { useState, useMemo } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  MenuItem,
   Select,
-  FormControl,
-  Chip,
-  Skeleton,
-  Alert,
-  IconButton,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Tooltip,
-} from "@mui/material";
-import type { SelectChangeEvent } from "@mui/material";
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   LineChart,
   Line,
@@ -30,27 +31,29 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import TrendingDownIcon from "@mui/icons-material/TrendingDown";
-import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
-import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
-import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
-import PersonIcon from "@mui/icons-material/Person";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import PropaneTankIcon from "@mui/icons-material/PropaneTank";
-import TrendingFlatIcon from "@mui/icons-material/TrendingFlat";
-import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
-import LocationOnIcon from "@mui/icons-material/LocationOn";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-import { Fuel, Droplet, Calendar } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 import {
-  APIProvider,
-  Map,
-  Marker,
-  InfoWindow,
-} from "@vis.gl/react-google-maps";
+  AlertTriangle,
+  //Calendar,
+  //Camera,
+  Car,
+  CheckCircle2,
+  Droplet,
+  DollarSign,
+  Fuel,
+  //MapPin,
+  Minus,
+  RefreshCw,
+  TrendingDown,
+  TrendingUp,
+  User,
+} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+// import {
+//   APIProvider,
+//   Map,
+//   Marker,
+//   InfoWindow,
+// } from "@vis.gl/react-google-maps";
 
 // Hooks
 import {
@@ -97,23 +100,11 @@ const COLORS = [
 function KPICard({ kpi }: { kpi: KPIData }) {
   if (kpi.loading) {
     return (
-      <Card
-        elevation={0}
-        sx={{
-          background: "white",
-          border: "1px solid #f1f5f9",
-          borderRadius: 2,
-        }}
-      >
-        <CardContent sx={{ p: 2.5 }}>
-          <Skeleton
-            variant="rectangular"
-            width={40}
-            height={40}
-            sx={{ borderRadius: 2, mb: 1.5 }}
-          />
-          <Skeleton variant="text" width={80} height={16} />
-          <Skeleton variant="text" width={100} height={32} />
+      <Card className="rounded-lg border border-slate-100 bg-white">
+        <CardContent className="p-6">
+          <Skeleton className="mb-4 h-10 w-10 rounded-lg" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="mt-2 h-8 w-28" />
         </CardContent>
       </Card>
     );
@@ -121,55 +112,35 @@ function KPICard({ kpi }: { kpi: KPIData }) {
 
   return (
     <Card
-      elevation={0}
-      sx={{
-        background: "white",
-        border: "1px solid #f1f5f9",
-        borderRadius: 2,
-        transition: "all 0.3s ease",
-        "&:hover": {
-          boxShadow: "0 4px 12px rgba(30,44,86,0.1)",
-          transform: "translateY(-2px)",
-          borderColor: kpi.color + "40",
-        },
+      className="rounded-lg border border-slate-100 bg-white transition-all duration-300 hover:-translate-y-0.5"
+      style={{
+        boxShadow: "none",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLDivElement).style.boxShadow =
+          "0 4px 12px rgba(30,44,86,0.1)";
+        (
+          e.currentTarget as HTMLDivElement
+        ).style.borderColor = `${kpi.color}40`;
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
+        (e.currentTarget as HTMLDivElement).style.borderColor = "#f1f5f9";
       }}
     >
-      <CardContent sx={{ p: 2.5 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            mb: 1.5,
-          }}
-        >
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 2,
-              bgcolor: kpi.bgColor,
-              color: kpi.color,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+      <CardContent className="p-6">
+        <div className="mb-4 flex items-start justify-between">
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-lg"
+            style={{ backgroundColor: kpi.bgColor, color: kpi.color }}
           >
             {kpi.icon}
-          </Box>
-          <Chip
-            icon={
-              kpi.trend === "up" ? (
-                <TrendingUpIcon sx={{ fontSize: 16 }} />
-              ) : kpi.trend === "down" ? (
-                <TrendingDownIcon sx={{ fontSize: 16 }} />
-              ) : undefined
-            }
-            label={kpi.change}
-            size="small"
-            sx={{
-              height: 24,
-              bgcolor:
+          </div>
+
+          <Badge
+            className="h-6 gap-1 rounded-md px-2 text-[11px] font-bold"
+            style={{
+              backgroundColor:
                 kpi.trend === "up"
                   ? "#10b98118"
                   : kpi.trend === "down"
@@ -181,39 +152,24 @@ function KPICard({ kpi }: { kpi: KPIData }) {
                   : kpi.trend === "down"
                   ? "#ef4444"
                   : "#64748b",
-              fontWeight: 700,
-              fontSize: "0.75rem",
-              "& .MuiChip-icon": {
-                color: "inherit",
-                fontSize: 16,
-              },
+              borderColor: "transparent",
             }}
-          />
-        </Box>
-        <Typography
-          variant="caption"
-          sx={{
-            display: "block",
-            mb: 0.5,
-            color: "#64748b",
-            fontWeight: 600,
-            fontSize: "0.75rem",
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-          }}
-        >
+          >
+            {kpi.trend === "up" ? (
+              <TrendingUp className="h-4 w-4" />
+            ) : kpi.trend === "down" ? (
+              <TrendingDown className="h-4 w-4" />
+            ) : null}
+            {kpi.change}
+          </Badge>
+        </div>
+
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.5px] text-slate-500">
           {kpi.label}
-        </Typography>
-        <Typography
-          variant="h5"
-          sx={{
-            fontWeight: 700,
-            color: "#1e293b",
-            letterSpacing: "-0.5px",
-          }}
-        >
+        </div>
+        <div className="text-2xl font-bold tracking-[-0.5px] text-slate-800">
           {kpi.value}
-        </Typography>
+        </div>
       </CardContent>
     </Card>
   );
@@ -221,14 +177,14 @@ function KPICard({ kpi }: { kpi: KPIData }) {
 
 export default function Dashboard() {
   const [periodo, setPeriodo] = useState<PeriodoType>("mes");
-  const [selectedCarga, setSelectedCarga] = useState<number | null>(null);
+  // const [selectedCarga, setSelectedCarga] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const unidadNombre = useUnidadActivaNombre();
   const unidadActiva = useUnidadActiva();
   const { user } = useAuthStore();
 
   // API Key de Google Maps (puede venir de variables de entorno)
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  // const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
   // React Query hooks
   const { data: loadsData = [], isLoading: loadingLoads } = useLoadLiters();
@@ -404,36 +360,35 @@ export default function Dashboard() {
     }));
   }, [loads]);
 
-  // Mockear ubicaciones de cargas (coordenadas en Argentina)
-  // En producción, esto debería venir del backend
-  const cargasConUbicacion = useMemo(() => {
-    // Coordenadas base en Argentina (Buenos Aires)
-    const baseLat = -34.6037;
-    const baseLng = -58.3816;
+  // const cargasConUbicacion = useMemo(() => {
+  //   // Coordenadas base en Argentina (Buenos Aires)
+  //   const baseLat = -34.6037;
+  //   const baseLng = -58.3816;
 
-    return loads.map((load) => {
-      // Generar coordenadas aleatorias cerca de Buenos Aires
-      const lat = baseLat + (Math.random() - 0.5) * 0.5; // ±0.25 grados (~27km)
-      const lng = baseLng + (Math.random() - 0.5) * 0.5;
+  //   return loads.map((load) => {
+  //     // Generar coordenadas aleatorias cerca de Buenos Aires
+  //     const lat = baseLat + (Math.random() - 0.5) * 0.5; // ±0.25 grados (~27km)
+  //     const lng = baseLng + (Math.random() - 0.5) * 0.5;
 
-      return {
-        id: load.id,
-        lat,
-        lng,
-        nombre: (load as { nameResource?: string }).nameResource || "Carga",
-        litros: (load as { totalLiters?: number }).totalLiters || 0,
-        fecha: (load as { loadDate: string }).loadDate,
-        recurso:
-          (load as { resource?: { name?: string; identifier?: string } })
-            .resource?.name ||
-          (load as { resource?: { name?: string; identifier?: string } })
-            .resource?.identifier ||
-          "N/A",
-      };
-    });
-  }, [loads]);
+  //     return {
+  //       id: load.id,
+  //       lat,
+  //       lng,
+  //       nombre: (load as { nameResource?: string }).nameResource || "Carga",
+  //       litros: (load as { totalLiters?: number }).totalLiters || 0,
+  //       fecha: (load as { loadDate: string }).loadDate,
+  //       recurso:
+  //         (load as { resource?: { name?: string; identifier?: string } })
+  //           .resource?.name ||
+  //         (load as { resource?: { name?: string; identifier?: string } })
+  //           .resource?.identifier ||
+  //         "N/A",
+  //     };
+  //   });
+  // }, [loads]);
 
   // Calcular consumo por tipo de vehículo
+
   const consumoPorTipo = useMemo((): ConsumoPorTipoData[] => {
     const porTipo: Record<string, number> = {};
 
@@ -507,7 +462,7 @@ export default function Dashboard() {
           : "0 L",
         change: resumen?.tendencia ? `+${resumen.tendencia}%` : "0%",
         trend: (resumen?.tendencia ?? 0) > 0 ? "up" : "neutral",
-        icon: <LocalGasStationIcon sx={{ fontSize: 24 }} />,
+        icon: <Fuel className="h-6 w-6" />,
         color: "#1E2C56",
         bgColor: "#1E2C5615",
         loading: loadingLoads,
@@ -521,7 +476,7 @@ export default function Dashboard() {
           ? `+${Math.round(resumen.tendencia * 0.8)}%`
           : "0%",
         trend: (resumen?.tendencia ?? 0) > 0 ? "up" : "neutral",
-        icon: <AttachMoneyIcon sx={{ fontSize: 24 }} />,
+        icon: <DollarSign className="h-6 w-6" />,
         color: "#10b981",
         bgColor: "#10b98115",
         loading: loadingLoads,
@@ -533,7 +488,7 @@ export default function Dashboard() {
           : "0 L",
         change: `${loads.length} cargas`,
         trend: "neutral",
-        icon: <TrendingFlatIcon sx={{ fontSize: 24 }} />,
+        icon: <Minus className="h-6 w-6" />,
         color: "#3b82f6",
         bgColor: "#3b82f615",
         loading: loadingLoads,
@@ -550,7 +505,7 @@ export default function Dashboard() {
         trend: stockPorTanque.some((t) => t.nivel === "critico")
           ? "up"
           : "neutral",
-        icon: <PropaneTankIcon sx={{ fontSize: 24 }} />,
+        icon: <Droplet className="h-6 w-6" />,
         color: "#8b5cf6",
         bgColor: "#8b5cf615",
         loading: loadingResources,
@@ -563,7 +518,7 @@ export default function Dashboard() {
         }`,
         trend:
           resumen && resumen.porcentajeValidados >= 95 ? "down" : "neutral",
-        icon: <CheckCircleIcon sx={{ fontSize: 24 }} />,
+        icon: <CheckCircle2 className="h-6 w-6" />,
         color: "#10b981",
         bgColor: "#10b98115",
         loading: loadingLoads,
@@ -573,7 +528,7 @@ export default function Dashboard() {
         value: outliers.length.toString(),
         change: outliers.length > 0 ? "Requieren atención" : "Sin alertas",
         trend: outliers.length > 0 ? "up" : "down",
-        icon: <ErrorOutlineIcon sx={{ fontSize: 24 }} />,
+        icon: <AlertTriangle className="h-6 w-6" />,
         color: "#ef4444",
         bgColor: "#ef444415",
         loading: loadingLoads,
@@ -599,7 +554,7 @@ export default function Dashboard() {
           .length.toString(),
         change: `${drivers.length} registrados`,
         trend: "neutral",
-        icon: <PersonIcon sx={{ fontSize: 24 }} />,
+        icon: <User className="h-6 w-6" />,
         color: "#8b5cf6",
         bgColor: "#8b5cf615",
         loading: loadingChoferes,
@@ -609,7 +564,7 @@ export default function Dashboard() {
         value: resumen?.eventosValidados?.toString() || "0",
         change: `${resumen?.eventosTotales || 0} total`,
         trend: "neutral",
-        icon: <CheckCircleIcon sx={{ fontSize: 24 }} />,
+        icon: <CheckCircle2 className="h-6 w-6" />,
         color: "#10b981",
         bgColor: "#10b98115",
         loading: loadingLoads,
@@ -617,10 +572,6 @@ export default function Dashboard() {
     ],
     [drivers, resumen, loadingChoferes, loadingLoads]
   );
-
-  const handlePeriodo = (event: SelectChangeEvent<PeriodoType>) => {
-    setPeriodo(event.target.value as PeriodoType);
-  };
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: loadLitersKeys.all });
@@ -631,173 +582,97 @@ export default function Dashboard() {
   const isLoading = loadingLoads || loadingChoferes || loadingResources;
 
   return (
-    <Box sx={{ p: 3 }}>
+    <div className="p-6">
       {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mt: -4,
-          mb: 2,
-        }}
-      >
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: "#1e293b" }}>
-            Dashboard
-          </Typography>
+      <div className="-mt-8 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-2xl font-bold text-slate-900">Dashboard</div>
           {unidadActiva && (
-            <Chip
-              label={`📍 ${unidadNombre}`}
-              size="small"
-              sx={{
-                mt: 0.5,
-                bgcolor: "#1E2C5615",
-                color: "#1E2C56",
-                fontWeight: 600,
-              }}
-            />
+            <Badge
+              className="mt-2 h-6 rounded-md border-0 px-2 text-[12px] font-semibold"
+              style={{ backgroundColor: "#1E2C5615", color: "#1E2C56" }}
+            >
+              📍 {unidadNombre}
+            </Badge>
           )}
           {!unidadActiva && user?.role === "admin" && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            <div className="mt-2 text-sm text-slate-500">
               Mostrando datos de todas las unidades
-            </Typography>
+            </div>
           )}
-        </Box>
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-          <Tooltip title="Actualizar datos">
-            <span>
-              <IconButton
-                size="small"
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
                 onClick={handleRefresh}
                 disabled={isLoading}
-                sx={{
-                  bgcolor: "white",
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
-                  "&:hover": { bgcolor: "#f8fafc" },
-                }}
+                className="h-9 w-9 bg-white shadow-[0_2px_6px_rgba(0,0,0,0.08)]"
               >
-                <RefreshIcon sx={{ fontSize: 20 }} />
-              </IconButton>
-            </span>
+                <RefreshCw className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent sideOffset={6}>Actualizar datos</TooltipContent>
           </Tooltip>
-          <FormControl
-            size="small"
-            sx={{
-              minWidth: 160,
-              bgcolor: "white",
-              borderRadius: 2,
-              boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
-              "& .MuiOutlinedInput-root": {
-                height: 38,
-                borderRadius: 2,
-                "& fieldset": { borderColor: "#e2e8f0" },
-                "&:hover fieldset": { borderColor: "#1E2C56" },
-                "&.Mui-focused fieldset": {
-                  borderColor: "#1E2C56",
-                  borderWidth: 2,
-                },
-              },
-            }}
-          >
+
+          <div className="min-w-[160px] rounded-lg bg-white shadow-[0_2px_6px_rgba(0,0,0,0.08)]">
             <Select
               value={periodo}
-              onChange={handlePeriodo}
-              displayEmpty
-              sx={{ fontSize: "0.875rem", fontWeight: 600, color: "#1e293b" }}
+              onValueChange={(v) => setPeriodo(v as PeriodoType)}
             >
-              <MenuItem value="semana">Esta semana</MenuItem>
-              <MenuItem value="mes">Este mes</MenuItem>
-              <MenuItem value="trimestre">Trimestre</MenuItem>
-              <MenuItem value="anio">Año</MenuItem>
+              <SelectTrigger className="h-9 w-full border-slate-200">
+                <SelectValue placeholder="Este mes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="semana">Esta semana</SelectItem>
+                <SelectItem value="mes">Este mes</SelectItem>
+                <SelectItem value="trimestre">Trimestre</SelectItem>
+                <SelectItem value="anio">Año</SelectItem>
+              </SelectContent>
             </Select>
-          </FormControl>
-        </Box>
-      </Box>
+          </div>
+        </div>
+      </div>
 
       {/* Alerta si no hay datos */}
       {!isLoading && eventos.length === 0 && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          No hay eventos registrados{" "}
-          {unidadActiva ? `para ${unidadNombre}` : ""}. Los datos del dashboard
-          se actualizarán cuando se registren cargas de combustible.
+        <Alert className="mb-4 border-slate-200 bg-white">
+          <AlertDescription>
+            No hay eventos registrados{" "}
+            {unidadActiva ? `para ${unidadNombre}` : ""}. Los datos del
+            dashboard se actualizarán cuando se registren cargas de combustible.
+          </AlertDescription>
         </Alert>
       )}
 
       {/* KPIs Principales - 6 KPIs en grid responsive */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "repeat(2, 1fr)",
-            md: "repeat(3, 1fr)",
-            lg: "repeat(3, 1fr)",
-            xl: "repeat(6, 1fr)",
-          },
-          gap: 2,
-          mb: 2,
-        }}
-      >
+      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
         {kpis.map((kpi) => (
           <KPICard key={kpi.label} kpi={kpi} />
         ))}
-      </Box>
+      </div>
 
       {/* KPIs Secundarios */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "repeat(2, 1fr)",
-            lg: "repeat(4, 1fr)",
-          },
-          gap: 2,
-          mb: 3,
-        }}
-      >
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpisSecundarios.map((kpi, index) => (
           <KPICard key={index} kpi={kpi} />
         ))}
-      </Box>
+      </div>
 
       {/* Gráficos */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", lg: "7fr 5fr" },
-          gap: 2.5,
-          mb: 2.5,
-        }}
-      >
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Consumo Mensual */}
-        <Card
-          elevation={0}
-          sx={{
-            background: "white",
-            border: "1px solid #f1f5f9",
-            borderRadius: 2,
-          }}
-        >
-          <CardContent sx={{ p: 3 }}>
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 3,
-                fontWeight: 700,
-                color: "#1e293b",
-                fontSize: "1.125rem",
-              }}
-            >
+        <Card className="rounded-lg border border-slate-100 bg-white lg:col-span-7">
+          <CardContent className="p-6">
+            <div className="mb-6 text-lg font-bold text-slate-900">
               Consumo y Costo Mensual
-            </Typography>
+            </div>
             {loadingLoads ? (
-              <Skeleton
-                variant="rectangular"
-                height={350}
-                sx={{ borderRadius: 2 }}
-              />
+              <Skeleton className="h-[350px] w-full rounded-lg" />
             ) : (
               <ResponsiveContainer width="100%" height={350}>
                 <LineChart data={consumoMensual}>
@@ -876,39 +751,18 @@ export default function Dashboard() {
         </Card>
 
         {/* Consumo por Tipo */}
-        <Card
-          elevation={0}
-          sx={{
-            background: "white",
-            border: "1px solid #f1f5f9",
-            borderRadius: 2,
-          }}
-        >
-          <CardContent sx={{ p: 3 }}>
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 3,
-                fontWeight: 700,
-                color: "#1e293b",
-                fontSize: "1.125rem",
-              }}
-            >
+        <Card className="rounded-lg border border-slate-100 bg-white lg:col-span-5">
+          <CardContent className="p-6">
+            <div className="mb-6 text-lg font-bold text-slate-900">
               Consumo por Tipo de Vehículo
-            </Typography>
+            </div>
             {loadingLoads ? (
-              <Skeleton
-                variant="rectangular"
-                height={240}
-                sx={{ borderRadius: 2 }}
-              />
+              <Skeleton className="h-[240px] w-full rounded-lg" />
             ) : consumoPorTipo.length === 0 ? (
-              <Box sx={{ textAlign: "center", py: 4, color: "#9ca3af" }}>
-                <LocalGasStationIcon
-                  sx={{ fontSize: 48, mb: 1, opacity: 0.5 }}
-                />
-                <Typography>Sin datos de consumo</Typography>
-              </Box>
+              <div className="py-10 text-center text-slate-400">
+                <Fuel className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                <div className="text-sm font-medium">Sin datos de consumo</div>
+              </div>
             ) : (
               <>
                 <ResponsiveContainer width="100%" height={200}>
@@ -944,89 +798,48 @@ export default function Dashboard() {
                   </PieChart>
                 </ResponsiveContainer>
 
-                <Box sx={{ mt: 2 }}>
+                <div className="mt-4">
                   {consumoPorTipo.map((item, index) => (
-                    <Box
+                    <div
                       key={index}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        mb: 1,
-                        p: 1,
-                        borderRadius: 1.5,
-                        transition: "all 0.2s",
-                        "&:hover": { bgcolor: "#f8fafc" },
-                      }}
+                      className="mb-2 flex items-center justify-between rounded-md p-2 transition-colors hover:bg-slate-50"
                     >
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
-                      >
-                        <Box
-                          sx={{
-                            width: 12,
-                            height: 12,
-                            borderRadius: "50%",
-                            bgcolor: COLORS[index % COLORS.length],
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="h-3 w-3 rounded-full"
+                          style={{
+                            backgroundColor: COLORS[index % COLORS.length],
                           }}
                         />
-                        <Typography
-                          variant="body2"
-                          fontWeight={600}
-                          fontSize="0.875rem"
-                        >
+                        <div className="text-sm font-semibold text-slate-700">
                           {item.tipo}
-                        </Typography>
-                      </Box>
-                      <Typography
-                        variant="body2"
-                        fontWeight={700}
-                        fontSize="0.875rem"
-                        sx={{ color: "#1e293b" }}
-                      >
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-slate-900">
                         {item.litros.toLocaleString()} L
-                      </Typography>
-                    </Box>
+                      </div>
+                    </div>
                   ))}
-                </Box>
+                </div>
               </>
             )}
           </CardContent>
         </Card>
-      </Box>
+      </div>
 
       {/* Consumo por Vehículo */}
-      <Card
-        elevation={0}
-        sx={{
-          background: "white",
-          border: "1px solid #f1f5f9",
-          borderRadius: 2,
-        }}
-      >
-        <CardContent sx={{ p: 3 }}>
-          <Typography
-            variant="h6"
-            sx={{
-              mb: 3,
-              fontWeight: 700,
-              color: "#1e293b",
-              fontSize: "1.125rem",
-            }}
-          >
+      <Card className="rounded-lg border border-slate-100 bg-white">
+        <CardContent className="p-6">
+          <div className="mb-6 text-lg font-bold text-slate-900">
             Top 5 Vehículos por Consumo
-          </Typography>
+          </div>
           {loadingLoads ? (
-            <Skeleton
-              variant="rectangular"
-              height={320}
-              sx={{ borderRadius: 2 }}
-            />
+            <Skeleton className="h-[320px] w-full rounded-lg" />
           ) : consumoPorVehiculo.length === 0 ? (
-            <Box sx={{ textAlign: "center", py: 6, color: "#9ca3af" }}>
-              <DirectionsCarIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
-              <Typography>Sin datos de vehículos</Typography>
-            </Box>
+            <div className="py-12 text-center text-slate-400">
+              <Car className="mx-auto mb-2 h-12 w-12 opacity-50" />
+              <div className="text-sm font-medium">Sin datos de vehículos</div>
+            </div>
           ) : (
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={consumoPorVehiculo}>
@@ -1080,95 +893,37 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Mapa de Cargas y Outliers */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
-          gap: 2.5,
-          mb: 2.5,
-        }}
-      >
-        {/* Mapa de Cargas */}
-        <Card
-          elevation={0}
-          sx={{
-            background: "white",
-            border: "1px solid #f1f5f9",
-            borderRadius: 2,
-          }}
-        >
-          <CardContent sx={{ p: 3 }}>
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 3,
-                fontWeight: 700,
-                color: "#1e293b",
-                fontSize: "1.125rem",
-              }}
-            >
-              Mapa de Cargas
-            </Typography>
+      {/* Mapa de Cargas y Outliers
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card className="rounded-lg border border-slate-100 bg-white">
+          <CardContent className="p-6">
+            <div className="mb-6 text-lg font-bold text-slate-900">Mapa de Cargas</div>
+
             {loadingLoads ? (
-              <Skeleton
-                variant="rectangular"
-                height={400}
-                sx={{ borderRadius: 2 }}
-              />
+              <Skeleton className="h-[400px] w-full rounded-lg" />
             ) : cargasConUbicacion.length === 0 ? (
-              <Box sx={{ textAlign: "center", py: 6, color: "#9ca3af" }}>
-                <LocationOnIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
-                <Typography>No hay cargas con ubicación registrada</Typography>
-              </Box>
+              <div className="py-12 text-center text-slate-400">
+                <MapPin className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                <div className="text-sm font-medium">No hay cargas con ubicación registrada</div>
+              </div>
             ) : !googleMapsApiKey ? (
-              <Box
-                sx={{
-                  height: 400,
-                  bgcolor: "#f8fafc",
-                  borderRadius: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "2px dashed #e2e8f0",
-                }}
-              >
-                <Box sx={{ textAlign: "center", p: 3 }}>
-                  <LocationOnIcon
-                    sx={{ fontSize: 64, color: "#94a3b8", mb: 2 }}
-                  />
-                  <Typography
-                    variant="body1"
-                    fontWeight={600}
-                    color="text.secondary"
-                    sx={{ mb: 1 }}
-                  >
+              <div className="flex h-[400px] items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-slate-50">
+                <div className="p-6 text-center">
+                  <MapPin className="mx-auto mb-3 h-16 w-16 text-slate-400" />
+                  <div className="mb-1 text-base font-semibold text-slate-600">
                     Configuración Requerida
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mb: 2 }}
-                  >
-                    Para mostrar el mapa, configura VITE_GOOGLE_MAPS_API_KEY en
-                    tu archivo .env
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  </div>
+                  <div className="mb-3 text-sm text-slate-500">
+                    Para mostrar el mapa, configura VITE_GOOGLE_MAPS_API_KEY en tu archivo .env
+                  </div>
+                  <div className="text-xs text-slate-400">
                     {cargasConUbicacion.length} carga
-                    {cargasConUbicacion.length !== 1 ? "s" : ""} con ubicación
-                    mockeada
-                  </Typography>
-                </Box>
-              </Box>
+                    {cargasConUbicacion.length !== 1 ? "s" : ""} con ubicación mockeada
+                  </div>
+                </div>
+              </div>
             ) : (
-              <Box
-                sx={{
-                  height: 400,
-                  borderRadius: 2,
-                  overflow: "hidden",
-                  border: "1px solid #e2e8f0",
-                }}
-              >
+              <div className="h-[400px] overflow-hidden rounded-lg border border-slate-200">
                 <APIProvider apiKey={googleMapsApiKey}>
                   <Map
                     defaultCenter={{
@@ -1188,9 +943,7 @@ export default function Dashboard() {
                     ))}
                     {selectedCarga &&
                       (() => {
-                        const carga = cargasConUbicacion.find(
-                          (c) => c.id === selectedCarga
-                        );
+                        const carga = cargasConUbicacion.find((c) => c.id === selectedCarga);
                         if (!carga) return null;
                         return (
                           <InfoWindow
@@ -1204,7 +957,6 @@ export default function Dashboard() {
                                 fontFamily: "Inter, system-ui, sans-serif",
                               }}
                             >
-                              {/* Header con ícono */}
                               <div
                                 style={{
                                   display: "flex",
@@ -1257,7 +1009,6 @@ export default function Dashboard() {
                                 </div>
                               </div>
 
-                              {/* Info de litros */}
                               <div
                                 style={{
                                   display: "flex",
@@ -1308,7 +1059,6 @@ export default function Dashboard() {
                                 </div>
                               </div>
 
-                              {/* Fecha y hora */}
                               <div
                                 style={{
                                   display: "flex",
@@ -1358,7 +1108,6 @@ export default function Dashboard() {
                                 </div>
                               </div>
 
-                              {/* Footer con ID */}
                               <div
                                 style={{
                                   marginTop: "12px",
@@ -1378,170 +1127,102 @@ export default function Dashboard() {
                       })()}
                   </Map>
                 </APIProvider>
-              </Box>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Outliers/Anomalías */}
-        <Card
-          elevation={0}
-          sx={{
-            background: "white",
-            border: "1px solid #f1f5f9",
-            borderRadius: 2,
-          }}
-        >
-          <CardContent sx={{ p: 3 }}>
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 3,
-                fontWeight: 700,
-                color: "#1e293b",
-                fontSize: "1.125rem",
-              }}
-            >
-              Anomalías Detectadas
-            </Typography>
+        <Card className="rounded-lg border border-slate-100 bg-white">
+          <CardContent className="p-6">
+            <div className="mb-6 text-lg font-bold text-slate-900">Anomalías Detectadas</div>
+
             {loadingLoads ? (
-              <Skeleton
-                variant="rectangular"
-                height={400}
-                sx={{ borderRadius: 2 }}
-              />
+              <Skeleton className="h-[400px] w-full rounded-lg" />
             ) : outliers.length === 0 ? (
-              <Box sx={{ textAlign: "center", py: 6, color: "#9ca3af" }}>
-                <CheckCircleIcon
-                  sx={{ fontSize: 48, mb: 1, opacity: 0.5, color: "#10b981" }}
-                />
-                <Typography>No se detectaron anomalías</Typography>
-                <Typography variant="caption" sx={{ mt: 1, display: "block" }}>
+              <div className="py-12 text-center text-slate-400">
+                <CheckCircle2 className="mx-auto mb-2 h-12 w-12 text-emerald-500/60" />
+                <div className="text-sm font-medium">No se detectaron anomalías</div>
+                <div className="mt-2 text-xs text-slate-400">
                   Todas las cargas están dentro de los rangos normales
-                </Typography>
-              </Box>
+                </div>
+              </div>
             ) : (
-              <Box sx={{ maxHeight: 400, overflowY: "auto" }}>
-                {outliers.map((outlier) => (
-                  <Card
-                    key={outlier.id}
-                    elevation={0}
-                    sx={{
-                      mb: 2,
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 2,
-                      bgcolor:
-                        outlier.severidad === "alta"
-                          ? "#fee2e215"
-                          : outlier.severidad === "media"
-                          ? "#fef3c715"
-                          : "#f0fdf415",
-                    }}
-                  >
-                    <CardContent sx={{ p: 2 }}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          mb: 1,
-                        }}
-                      >
-                        <Box>
-                          <Typography variant="subtitle2" fontWeight={700}>
-                            {outlier.tipo}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {new Date(outlier.fecha).toLocaleDateString()}
-                          </Typography>
-                        </Box>
-                        <Chip
-                          label={outlier.severidad}
-                          size="small"
-                          sx={{
-                            bgcolor:
-                              outlier.severidad === "alta"
-                                ? "#ef444415"
-                                : outlier.severidad === "media"
-                                ? "#f59e0b15"
-                                : "#10b98115",
-                            color:
-                              outlier.severidad === "alta"
-                                ? "#ef4444"
-                                : outlier.severidad === "media"
-                                ? "#f59e0b"
-                                : "#10b981",
-                            fontWeight: 600,
-                            textTransform: "capitalize",
-                          }}
-                        />
-                      </Box>
-                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                        <strong>Recurso:</strong> {outlier.recurso}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>Litros:</strong>{" "}
-                        {outlier.litros.toLocaleString()} L
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Box>
+              <div className="max-h-[400px] overflow-y-auto pr-1">
+                {outliers.map((outlier) => {
+                  const sevStyles =
+                    outlier.severidad === "alta"
+                      ? { bg: "#fee2e215", badgeBg: "#ef444415", badgeText: "#ef4444" }
+                      : outlier.severidad === "media"
+                        ? { bg: "#fef3c715", badgeBg: "#f59e0b15", badgeText: "#f59e0b" }
+                        : { bg: "#f0fdf415", badgeBg: "#10b98115", badgeText: "#10b981" };
+
+                  return (
+                    <Card
+                      key={outlier.id}
+                      className="mb-4 rounded-lg border border-slate-200"
+                      style={{ backgroundColor: sevStyles.bg }}
+                    >
+                      <CardContent className="p-4">
+                        <div className="mb-2 flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-bold text-slate-900">
+                              {outlier.tipo}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {new Date(outlier.fecha).toLocaleDateString()}
+                            </div>
+                          </div>
+
+                          <Badge
+                            className="h-6 rounded-md border-0 px-2 text-xs font-semibold capitalize"
+                            style={{
+                              backgroundColor: sevStyles.badgeBg,
+                              color: sevStyles.badgeText,
+                            }}
+                          >
+                            {outlier.severidad}
+                          </Badge>
+                        </div>
+
+                        <div className="text-sm text-slate-700">
+                          <strong>Recurso:</strong> {outlier.recurso}
+                        </div>
+                        <div className="text-sm text-slate-700">
+                          <strong>Litros:</strong> {outlier.litros.toLocaleString()} L
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
             )}
           </CardContent>
         </Card>
-      </Box>
+      </div> */}
 
-      {/* Trazabilidad de Fotos */}
-      <Card
-        elevation={0}
-        sx={{
-          background: "white",
-          border: "1px solid #f1f5f9",
-          borderRadius: 2,
-        }}
-      >
-        <CardContent sx={{ p: 3 }}>
-          <Typography
-            variant="h6"
-            sx={{
-              mb: 3,
-              fontWeight: 700,
-              color: "#1e293b",
-              fontSize: "1.125rem",
-            }}
-          >
+      {/* Trazabilidad de Fotos
+      <Card className="rounded-lg border border-slate-100 bg-white">
+        <CardContent className="p-6">
+          <div className="mb-6 text-lg font-bold text-slate-900">
             Trazabilidad de Evidencias
-          </Typography>
+          </div>
           {loadingLoads ? (
-            <Skeleton
-              variant="rectangular"
-              height={300}
-              sx={{ borderRadius: 2 }}
-            />
+            <Skeleton className="h-[300px] w-full rounded-lg" />
           ) : loads.length === 0 ? (
-            <Box sx={{ textAlign: "center", py: 6, color: "#9ca3af" }}>
-              <PhotoCameraIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
-              <Typography>No hay evidencias registradas</Typography>
-            </Box>
+            <div className="py-12 text-center text-slate-400">
+              <Camera className="mx-auto mb-2 h-12 w-12 opacity-50" />
+              <div className="text-sm font-medium">
+                No hay evidencias registradas
+              </div>
+            </div>
           ) : (
-            <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            <div>
+              <div className="mb-4 text-sm text-slate-500">
                 {loads.length} carga{loads.length !== 1 ? "s" : ""} con
                 evidencias disponibles
-              </Typography>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    sm: "repeat(2, 1fr)",
-                    md: "repeat(3, 1fr)",
-                    lg: "repeat(4, 1fr)",
-                  },
-                  gap: 2,
-                }}
-              >
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {loads.slice(0, 8).map((load) => {
                   const loadData = load as {
                     id: number;
@@ -1549,81 +1230,48 @@ export default function Dashboard() {
                     loadDate: string;
                     totalLiters?: number;
                   };
+
                   return (
                     <Card
                       key={loadData.id}
-                      elevation={0}
-                      sx={{
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 2,
-                        overflow: "hidden",
-                        transition: "all 0.2s",
-                        "&:hover": {
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                          transform: "translateY(-2px)",
-                        },
-                      }}
+                      className="overflow-hidden rounded-lg border border-slate-200 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
                     >
-                      <Box
-                        sx={{
-                          height: 120,
-                          bgcolor: "#f8fafc",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          position: "relative",
-                        }}
-                      >
-                        <PhotoCameraIcon
-                          sx={{ fontSize: 48, color: "#cbd5e1" }}
-                        />
-                        <Chip
-                          label={loadData.nameResource || "N/A"}
-                          size="small"
-                          sx={{
-                            position: "absolute",
-                            top: 8,
-                            right: 8,
-                            bgcolor: "rgba(255,255,255,0.9)",
-                            fontWeight: 600,
-                            fontSize: 10,
+                      <div className="relative flex h-[120px] items-center justify-center bg-slate-50">
+                        <Camera className="h-12 w-12 text-slate-300" />
+                        <Badge
+                          className="absolute right-2 top-2 rounded-md border-0 px-2 text-[10px] font-semibold"
+                          style={{
+                            backgroundColor: "rgba(255,255,255,0.9)",
+                            color: "#334155",
                           }}
-                        />
-                      </Box>
-                      <CardContent sx={{ p: 1.5 }}>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ display: "block", mb: 0.5 }}
                         >
+                          {loadData.nameResource || "N/A"}
+                        </Badge>
+                      </div>
+
+                      <CardContent className="p-4">
+                        <div className="mb-1 text-xs text-slate-500">
                           {new Date(loadData.loadDate).toLocaleDateString()}
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          fontWeight={600}
-                          sx={{ fontSize: "0.75rem" }}
-                        >
+                        </div>
+                        <div className="text-sm font-semibold text-slate-700">
                           {loadData.totalLiters || 0} L
-                        </Typography>
+                        </div>
                       </CardContent>
                     </Card>
                   );
                 })}
-              </Box>
+              </div>
+
               {loads.length > 8 && (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 2, textAlign: "center" }}
-                >
+                <div className="mt-4 text-center text-sm text-slate-500">
                   Y {loads.length - 8} carga{loads.length - 8 !== 1 ? "s" : ""}{" "}
                   más...
-                </Typography>
+                </div>
               )}
-            </Box>
+            </div>
           )}
         </CardContent>
-      </Card>
-    </Box>
+      </Card> */}
+    </div>
   );
 }

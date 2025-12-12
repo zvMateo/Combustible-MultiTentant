@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { usePermissions } from "../../hooks/usePermissions";
-import { Box, Typography, Button } from "@mui/material";
-import LockIcon from "@mui/icons-material/Lock";
+import { Button } from "@/components/ui/button";
+import { Lock } from "lucide-react";
 import type { Permission } from "@/types/auth";
 
 interface ProtectedRouteProps {
@@ -58,37 +58,20 @@ export default function ProtectedRoute({
 
     // Mostrar mensaje de acceso denegado
     return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "60vh",
-          textAlign: "center",
-          p: 4,
-        }}
-      >
-        <LockIcon sx={{ fontSize: 80, color: "#dc2626", mb: 2 }} />
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
-          Acceso Denegado
-        </Typography>
-        <Typography
-          variant="body1"
-          color="text.secondary"
-          sx={{ mb: 3, maxWidth: 500 }}
-        >
+      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
+        <Lock className="mb-4 h-20 w-20 text-red-600" />
+        <div className="mb-2 text-3xl font-bold">Acceso Denegado</div>
+        <div className="mb-6 max-w-[500px] text-sm text-muted-foreground">
           No tienes los permisos necesarios para acceder a esta sección.
           Contacta a un administrador si crees que deberías tener acceso.
-        </Typography>
+        </div>
         <Button
-          variant="contained"
           onClick={() => window.history.back()}
-          sx={{ bgcolor: "#1E2C56", "&:hover": { bgcolor: "#16213E" } }}
+          className="bg-[#1E2C56] font-semibold hover:bg-[#16213E]"
         >
           Volver
         </Button>
-      </Box>
+      </div>
     );
   }
 

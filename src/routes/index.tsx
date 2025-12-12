@@ -13,10 +13,8 @@ import RegisterPage from "@/pages/Auth/RegisterPage";
 // Dashboard Layout & Pages
 import DashboardLayout from "@/pages/Dashboard/Layout/DashboardLayout";
 import Dashboard from "@/pages/Dashboard/Dashboard/Dashboard";
-import CompaniesPage from "@/pages/Dashboard/Companies/CompaniesPage";
 import BusinessUnitsPage from "@/pages/Dashboard/BusinessUnits/BusinessUnitsPage";
 import UsersPage from "@/pages/Dashboard/Users/UsersPage";
-import CostCentersPage from "@/pages/Dashboard/CostCenters/CostCentersPage";
 import SettingsPage from "@/pages/Dashboard/Settings/SettingsPage";
 import VehiclesPage from "@/pages/Dashboard/Vehicles/VehiclesPage";
 import DriversPage from "@/pages/Dashboard/Drivers/DriversPage";
@@ -91,14 +89,6 @@ export function AppRoutes() {
       children: [
         { index: true, element: <Dashboard /> },
         {
-          path: "companies",
-          element: (
-            <RbacGuard roles={["admin"]} permission="empresas:gestionar">
-              <CompaniesPage />
-            </RbacGuard>
-          ),
-        },
-        {
           path: "business-units",
           element: (
             <RbacGuard roles={["admin"]} permission="unidades:gestionar">
@@ -114,17 +104,6 @@ export function AppRoutes() {
               permission="usuarios:gestionar"
             >
               <UsersPage />
-            </RbacGuard>
-          ),
-        },
-        {
-          path: "cost-centers",
-          element: (
-            <RbacGuard
-              roles={["admin", "supervisor"]}
-              permission="centros-costo:gestionar"
-            >
-              <CostCentersPage />
             </RbacGuard>
           ),
         },

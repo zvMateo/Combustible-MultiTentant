@@ -6,31 +6,23 @@ import { toast } from "sonner";
 import { companiesApi } from "@/services/api/companies.api";
 import { usersApi } from "@/services/api/users.api";
 import { getErrorMessage } from "@/lib/axios";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
 import {
-  Box,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Typography,
-  Container,
-  Alert,
-  CircularProgress,
-  Divider,
-  Stepper,
-  Step,
-  StepLabel,
-  Grid,
-} from "@mui/material";
-import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
-import BusinessIcon from "@mui/icons-material/Business";
-import PersonIcon from "@mui/icons-material/Person";
-import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
+  ArrowLeft,
+  Building2,
+  CheckCircle2,
+  Fuel,
+  Mail,
+  Phone,
+  User,
+  UserCircle,
+  Lock,
+} from "lucide-react";
 
 interface FormData {
   // Paso 1 - Datos empresa
@@ -206,386 +198,330 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+      <div
+        className="flex min-h-screen items-center justify-center p-4"
+        style={{
           background:
             "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%)",
-          p: 2,
         }}
       >
-        <Card
-          sx={{
-            maxWidth: 450,
-            width: "100%",
-            textAlign: "center",
-            borderRadius: 3,
-            p: 4,
-          }}
-        >
-          <CheckCircleIcon sx={{ fontSize: 80, color: "#10b981", mb: 2 }} />
-          <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
-            ¡Registro Exitoso!
-          </Typography>
-          <Typography color="text.secondary" sx={{ mb: 3 }}>
-            Tu empresa <strong>{formData.empresaNombre}</strong> ha sido
-            registrada.
+        <Card className="w-full max-w-[450px] rounded-xl p-8 text-center">
+          <CheckCircle2 className="mx-auto mb-4 h-20 w-20 text-emerald-500" />
+          <div className="mb-2 text-2xl font-bold">¡Registro Exitoso!</div>
+          <div className="mb-6 text-sm text-muted-foreground">
+            Tu empresa <strong>{formData.empresaNombre}</strong> ha sido registrada.
             <br />
             Serás redirigido al login en unos segundos...
-          </Typography>
-          <CircularProgress size={24} sx={{ color: secondaryColor }} />
+          </div>
+          <Spinner className="mx-auto size-6" style={{ color: secondaryColor }} />
         </Card>
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
+    <div
+      className="flex min-h-screen flex-col overflow-auto"
+      style={{
         background:
           "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%)",
-        overflow: "auto",
       }}
     >
-      {/* Back Button */}
-      <Box sx={{ p: 2 }}>
+      <div className="p-2">
         <Button
-          startIcon={<ArrowBackIcon />}
+          type="button"
+          variant="ghost"
           onClick={() => navigate("/")}
-          sx={{
-            color: "rgba(255,255,255,0.8)",
-            textTransform: "none",
-            "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
-          }}
+          className="text-white/80 hover:bg-white/10"
         >
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Volver al inicio
         </Button>
-      </Box>
+      </div>
 
-      <Container
-        maxWidth="sm"
-        sx={{
-          flexGrow: 1,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          py: 4,
-        }}
-      >
-        <Card
-          elevation={24}
-          sx={{
-            borderRadius: 3,
-            overflow: "hidden",
-            bgcolor: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(20px)",
-            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.4)",
-            width: "100%",
-          }}
-        >
-          {/* Header */}
-          <Box
-            sx={{
-              bgcolor: primaryColor,
-              py: 3,
-              px: 3,
-              textAlign: "center",
-              color: "#fff",
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-10">
+        <div className="w-full max-w-2xl">
+          <Card
+            className="overflow-hidden gap-0 p-0"
+            style={{
+              borderRadius: 12,
+              backgroundColor: "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(20px)",
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.4)",
             }}
           >
-            <Box
-              sx={{
-                width: 64,
-                height: 64,
-                margin: "0 auto 16px",
-                borderRadius: "50%",
-                background: `linear-gradient(145deg, ${secondaryColor}, ${secondaryColor}CC)`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: `0 0 20px ${secondaryColor}55`,
-                border: "3px solid rgba(255, 255, 255, 0.2)",
-              }}
-            >
-              <LocalGasStationIcon sx={{ fontSize: 34, color: "#fff" }} />
-            </Box>
-            <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
-              Registrar Empresa
-            </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.8 }}>
-              Crea tu cuenta empresarial en minutos
-            </Typography>
-          </Box>
-
-          {/* Stepper */}
-          <Box sx={{ px: 3, pt: 3 }}>
-            <Stepper activeStep={activeStep} alternativeLabel>
-              {steps.map((label) => (
-                <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-          </Box>
-
-          {/* Form */}
-          <CardContent sx={{ p: 3.5 }}>
-            {activeStep === 0 ? (
-              // Paso 1: Datos de la Empresa
-              <Box>
-                <Box
-                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}
-                >
-                  <BusinessIcon sx={{ color: secondaryColor }} />
-                  <Typography variant="h6" fontWeight={600}>
-                    Datos de la Empresa
-                  </Typography>
-                </Box>
-
-                <Grid container spacing={2}>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Nombre de la Empresa"
-                      value={formData.empresaNombre}
-                      onChange={handleChange("empresaNombre")}
-                      error={!!errors.empresaNombre}
-                      helperText={errors.empresaNombre}
-                      placeholder="Mi Empresa S.A."
-                      size="small"
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Razón Social (opcional)"
-                      value={formData.empresaRazonSocial}
-                      onChange={handleChange("empresaRazonSocial")}
-                      placeholder="Razón Social S.A."
-                      size="small"
-                    />
-                  </Grid>
-                </Grid>
-              </Box>
-            ) : (
-              // Paso 2: Datos del Administrador
-              <Box>
-                <Box
-                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}
-                >
-                  <PersonIcon sx={{ color: secondaryColor }} />
-                  <Typography variant="h6" fontWeight={600}>
-                    Datos del Administrador
-                  </Typography>
-                </Box>
-
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Nombre"
-                      value={formData.adminNombre}
-                      onChange={handleChange("adminNombre")}
-                      error={!!errors.adminNombre}
-                      helperText={errors.adminNombre}
-                      size="small"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Apellido"
-                      value={formData.adminApellido}
-                      onChange={handleChange("adminApellido")}
-                      error={!!errors.adminApellido}
-                      helperText={errors.adminApellido}
-                      size="small"
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Nombre de Usuario"
-                      value={formData.adminUserName}
-                      onChange={handleChange("adminUserName")}
-                      error={!!errors.adminUserName}
-                      helperText={errors.adminUserName}
-                      placeholder="admin.usuario"
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <AccountCircleOutlinedIcon
-                            sx={{ mr: 1, color: "#9ca3af", fontSize: 18 }}
-                          />
-                        ),
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Email"
-                      type="email"
-                      value={formData.adminEmail}
-                      onChange={handleChange("adminEmail")}
-                      error={!!errors.adminEmail}
-                      helperText={errors.adminEmail}
-                      placeholder="admin@miempresa.com"
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <EmailOutlinedIcon
-                            sx={{ mr: 1, color: "#9ca3af", fontSize: 18 }}
-                          />
-                        ),
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Teléfono"
-                      type="tel"
-                      value={formData.adminPhoneNumber}
-                      onChange={handleChange("adminPhoneNumber")}
-                      placeholder="+54 9 11 1234-5678"
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <PhoneOutlinedIcon
-                            sx={{ mr: 1, color: "#9ca3af", fontSize: 18 }}
-                          />
-                        ),
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Contraseña"
-                      type="password"
-                      value={formData.adminPassword}
-                      onChange={handleChange("adminPassword")}
-                      error={!!errors.adminPassword}
-                      helperText={errors.adminPassword || "Mínimo 8 caracteres"}
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <LockOutlinedIcon
-                            sx={{ mr: 1, color: "#9ca3af", fontSize: 18 }}
-                          />
-                        ),
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Confirmar Contraseña"
-                      type="password"
-                      value={formData.adminPasswordConfirm}
-                      onChange={handleChange("adminPasswordConfirm")}
-                      error={!!errors.adminPasswordConfirm}
-                      helperText={errors.adminPasswordConfirm}
-                      size="small"
-                    />
-                  </Grid>
-                </Grid>
-
-                <Alert severity="info" sx={{ mt: 2, fontSize: "0.85rem" }}>
-                  Este usuario será el administrador principal de la empresa y
-                  podrá crear otros usuarios.
-                </Alert>
-              </Box>
-            )}
-
-            {/* Navigation buttons */}
-            <Box sx={{ display: "flex", gap: 2, mt: 4 }}>
-              {activeStep > 0 && (
-                <Button
-                  variant="outlined"
-                  onClick={handleBack}
-                  sx={{
-                    flex: 1,
-                    py: 1.3,
-                    textTransform: "none",
-                    fontWeight: 600,
-                    borderRadius: 2,
-                  }}
-                >
-                  Atrás
-                </Button>
-              )}
-              <Button
-                variant="contained"
-                onClick={handleNext}
-                disabled={isLoading}
-                sx={{
-                  flex: 1,
-                  py: 1.3,
-                  bgcolor: primaryColor,
-                  fontWeight: 700,
-                  textTransform: "none",
-                  borderRadius: 2,
-                  "&:hover": { bgcolor: secondaryColor },
+            <div className="px-6 py-6 text-center text-white" style={{ backgroundColor: primaryColor }}>
+              <div
+                className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
+                style={{
+                  background: `linear-gradient(145deg, ${secondaryColor}, ${secondaryColor}CC)`,
+                  boxShadow: `0 0 20px ${secondaryColor}55`,
+                  border: "3px solid rgba(255, 255, 255, 0.2)",
                 }}
               >
-                {isLoading ? (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <CircularProgress size={20} color="inherit" />
-                    <span>Registrando...</span>
-                  </Box>
-                ) : activeStep === steps.length - 1 ? (
-                  "Crear Empresa"
-                ) : (
-                  "Siguiente"
+                <Fuel className="h-8 w-8 text-white" />
+              </div>
+              <div className="mb-1 text-2xl font-bold">Registrar Empresa</div>
+              <div className="text-sm opacity-80">Crea tu cuenta empresarial en minutos</div>
+            </div>
+
+            <div className="px-6 pt-6">
+              <div className="grid grid-cols-2 gap-4">
+                {steps.map((label, idx) => {
+                  const isCompleted = idx < activeStep;
+                  const isCurrent = idx === activeStep;
+                  return (
+                    <div key={label} className="flex flex-col items-center gap-2">
+                      <div
+                        className="flex h-9 w-9 items-center justify-center rounded-full border text-sm font-bold"
+                        style={{
+                          backgroundColor: isCompleted || isCurrent ? primaryColor : "transparent",
+                          borderColor: isCompleted || isCurrent ? primaryColor : "#e2e8f0",
+                          color: isCompleted || isCurrent ? "#fff" : "#64748b",
+                        }}
+                      >
+                        {idx + 1}
+                      </div>
+                      <div
+                        className="text-center text-xs font-semibold"
+                        style={{ color: isCurrent ? primaryColor : "#64748b" }}
+                      >
+                        {label}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <CardContent className="p-0">
+              <div className="p-7">
+              {activeStep === 0 ? (
+                <div>
+                  <div className="mb-4 flex items-center gap-2">
+                    <Building2 className="h-5 w-5" style={{ color: secondaryColor }} />
+                    <div className="text-lg font-semibold">Datos de la Empresa</div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <Label>Nombre de la Empresa</Label>
+                      <Input
+                        placeholder="Mi Empresa S.A."
+                        value={formData.empresaNombre}
+                        onChange={handleChange("empresaNombre")}
+                        className="mt-2"
+                      />
+                      {errors.empresaNombre && (
+                        <div className="mt-1 text-xs text-red-600">
+                          {errors.empresaNombre}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label>Razón Social (opcional)</Label>
+                      <Input
+                        placeholder="Razón Social S.A."
+                        value={formData.empresaRazonSocial}
+                        onChange={handleChange("empresaRazonSocial")}
+                        className="mt-2"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="mb-4 flex items-center gap-2">
+                    <User className="h-5 w-5" style={{ color: secondaryColor }} />
+                    <div className="text-lg font-semibold">Datos del Administrador</div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <Label>Nombre</Label>
+                      <Input
+                        value={formData.adminNombre}
+                        onChange={handleChange("adminNombre")}
+                        className="mt-2"
+                      />
+                      {errors.adminNombre && (
+                        <div className="mt-1 text-xs text-red-600">
+                          {errors.adminNombre}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label>Apellido</Label>
+                      <Input
+                        value={formData.adminApellido}
+                        onChange={handleChange("adminApellido")}
+                        className="mt-2"
+                      />
+                      {errors.adminApellido && (
+                        <div className="mt-1 text-xs text-red-600">
+                          {errors.adminApellido}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <Label>Nombre de Usuario</Label>
+                      <div className="relative mt-2">
+                        <UserCircle className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="admin.usuario"
+                          value={formData.adminUserName}
+                          onChange={handleChange("adminUserName")}
+                          className="pl-10"
+                        />
+                      </div>
+                      {errors.adminUserName && (
+                        <div className="mt-1 text-xs text-red-600">
+                          {errors.adminUserName}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <Label>Email</Label>
+                      <div className="relative mt-2">
+                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
+                        <Input
+                          type="email"
+                          placeholder="admin@miempresa.com"
+                          value={formData.adminEmail}
+                          onChange={handleChange("adminEmail")}
+                          className="pl-10"
+                        />
+                      </div>
+                      {errors.adminEmail && (
+                        <div className="mt-1 text-xs text-red-600">
+                          {errors.adminEmail}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <Label>Teléfono</Label>
+                      <div className="relative mt-2">
+                        <Phone className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
+                        <Input
+                          type="tel"
+                          placeholder="+54 9 11 1234-5678"
+                          value={formData.adminPhoneNumber}
+                          onChange={handleChange("adminPhoneNumber")}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Contraseña</Label>
+                      <div className="relative mt-2">
+                        <Lock className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
+                        <Input
+                          type="password"
+                          value={formData.adminPassword}
+                          onChange={handleChange("adminPassword")}
+                          className="pl-10"
+                        />
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {errors.adminPassword || "Mínimo 8 caracteres"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Confirmar Contraseña</Label>
+                      <Input
+                        type="password"
+                        value={formData.adminPasswordConfirm}
+                        onChange={handleChange("adminPasswordConfirm")}
+                        className="mt-2"
+                      />
+                      {errors.adminPasswordConfirm && (
+                        <div className="mt-1 text-xs text-red-600">
+                          {errors.adminPasswordConfirm}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <Alert className="mt-4">
+                    <AlertDescription className="text-[0.85rem]">
+                      Este usuario será el administrador principal de la empresa y podrá crear otros usuarios.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+
+              <div className="mt-8 flex gap-3">
+                {activeStep > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleBack}
+                    className="h-11 flex-1 rounded-md font-semibold"
+                  >
+                    Atrás
+                  </Button>
                 )}
+
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={isLoading}
+                  className="h-11 flex-1 rounded-md font-bold text-white"
+                  style={{ backgroundColor: primaryColor }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                      secondaryColor;
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                      primaryColor;
+                  }}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Spinner className="size-5 text-white" />
+                      <span>Registrando...</span>
+                    </span>
+                  ) : activeStep === steps.length - 1 ? (
+                    "Crear Empresa"
+                  ) : (
+                    "Siguiente"
+                  )}
+                </Button>
+              </div>
+
+              <div className="relative my-8">
+                <div className="h-px bg-slate-200" />
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-sm text-slate-400">
+                  ¿Ya tienes cuenta?
+                </div>
+              </div>
+
+              <Button
+                asChild
+                type="button"
+                variant="outline"
+                className="h-11 w-full rounded-md font-semibold"
+                style={{ borderColor: secondaryColor, color: secondaryColor }}
+              >
+                <RouterLink to="/login">Iniciar Sesión</RouterLink>
               </Button>
-            </Box>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Divider sx={{ my: 3, color: "#94a3b8", fontSize: "0.85rem" }}>
-              ¿Ya tienes cuenta?
-            </Divider>
-
-            <Button
-              fullWidth
-              variant="outlined"
-              component={RouterLink}
-              to="/login"
-              sx={{
-                py: 1.3,
-                borderColor: secondaryColor,
-                color: secondaryColor,
-                fontWeight: 600,
-                textTransform: "none",
-                borderRadius: 2,
-              }}
-            >
-              Iniciar Sesión
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Typography
-          variant="caption"
-          sx={{
-            display: "block",
-            textAlign: "center",
-            mt: 3,
-            fontSize: "0.75rem",
-            color: "rgba(255,255,255,0.7)",
-          }}
-        >
-          © 2025 GoodApps - Gestión de Combustibles
-        </Typography>
-      </Container>
-    </Box>
+          <div className="mt-6 text-center text-xs text-white/70">
+            © 2025 GoodApps - Gestión de Combustibles
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,32 +1,6 @@
 // src/pages/Dashboard/BusinessUnits/BusinessUnitsPage.tsx
 import { useState, useMemo, useEffect } from "react";
 import {
-  Box,
-  Button,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
-  InputAdornment,
-  Card,
-  CardContent,
-  Chip,
-  IconButton,
-  Skeleton,
-  Fade,
-  LinearProgress,
-  Alert,
-  Grid,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import SearchIcon from "@mui/icons-material/Search";
-import StoreIcon from "@mui/icons-material/Store";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import {
   useBusinessUnits,
   useCreateBusinessUnit,
   useUpdateBusinessUnit,
@@ -42,6 +16,42 @@ import type {
 } from "@/types/api.types";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  Store,
+  Download,
+  Building,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Info,
+} from "lucide-react";
+
+// shadcn components
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 const initialFormData: CreateBusinessUnitRequest = {
   idCompany: 0,
@@ -75,8 +85,6 @@ export default function BusinessUnitsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // React Query hooks
-  // SIEMPRE usar GetAll para mostrar todas las unidades
-  // Luego filtrar por idCompany si es necesario
   const {
     data: businessUnitsAll = [],
     isLoading: loadingAll,
@@ -110,8 +118,7 @@ export default function BusinessUnitsPage() {
         }));
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openDialog, idCompany, companies]);
+  }, [openDialog, idCompany, companies, formData.idCompany]);
 
   const filteredUnits = useMemo(() => {
     let filtered = businessUnits;
@@ -178,8 +185,6 @@ export default function BusinessUnitsPage() {
       newErrors.name = "El nombre es requerido";
     }
 
-    // Asegurar que idCompany tenga un valor válido
-    // Prioridad: formData.idCompany > idCompany (del usuario) > companies[0]?.id
     const finalIdCompany =
       formData.idCompany || idCompany || companies[0]?.id || 0;
 
@@ -214,12 +219,14 @@ export default function BusinessUnitsPage() {
           detail: dataToSend.detail,
         };
         await updateMutation.mutateAsync(updateData);
+        toast.success("Unidad de negocio actualizada correctamente");
       } else {
         await createMutation.mutateAsync(dataToSend);
+        toast.success("Unidad de negocio creada correctamente");
       }
       setOpenDialog(false);
-    } catch {
-      // Error manejado por el mutation
+    } catch (error) {
+      toast.error("Error al guardar la unidad de negocio");
     }
   };
 
@@ -227,10 +234,11 @@ export default function BusinessUnitsPage() {
     if (deleteUnit) {
       try {
         await deactivateMutation.mutateAsync(deleteUnit.id);
+        toast.success("Unidad de negocio desactivada correctamente");
         setOpenDeleteDialog(false);
         setDeleteUnit(null);
-      } catch {
-        // Error manejado por el mutation
+      } catch (error) {
+        toast.error("Error al desactivar la unidad de negocio");
       }
     }
   };
@@ -264,490 +272,379 @@ export default function BusinessUnitsPage() {
   // Loading state
   if (isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
-        <LinearProgress sx={{ mb: 2 }} />
-        <Grid container spacing={3}>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        
+        <Progress value={33} className="w-full" />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <Grid item xs={12} sm={6} md={4} key={i}>
-              <Skeleton variant="rounded" height={200} />
-            </Grid>
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-6 w-16" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
-        </Grid>
-      </Box>
+        </div>
+      </div>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          Error al cargar unidades de negocio:{" "}
-          {error instanceof Error ? error.message : "Error desconocido"}
+      <div className="p-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Error al cargar unidades de negocio:{" "}
+            {error instanceof Error ? error.message : "Error desconocido"}
+          </AlertDescription>
         </Alert>
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box>
+    <div className="space-y-6 p-6">
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography
-          variant="h4"
-          fontWeight={700}
-          sx={{ color: "#1e293b", mb: 1 }}
-        >
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
           Unidades de Negocio
-        </Typography>
-        <Typography variant="body1" sx={{ color: "#64748b" }}>
+        </h1>
+        <p className="text-gray-600">
           Gestiona las sucursales, campos y divisiones de tu empresa
-        </Typography>
-      </Box>
+        </p>
+      </div>
 
       {/* Stats Cards */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 2,
-          mb: 4,
-        }}
-      >
-        <Card
-          sx={{
-            borderRadius: 3,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-            border: "1px solid rgba(0,0,0,0.06)",
-          }}
-        >
-          <CardContent sx={{ p: 2.5 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  bgcolor: "#3b82f615",
-                  color: "#3b82f6",
-                }}
-              >
-                <StoreIcon />
-              </Box>
-              <Box>
-                <Typography
-                  variant="h5"
-                  fontWeight={700}
-                  sx={{ color: "#1e293b" }}
-                >
-                  {stats.total}
-                </Typography>
-                <Typography variant="caption" sx={{ color: "#64748b" }}>
-                  Total Unidades
-                </Typography>
-              </Box>
-            </Box>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card className="border border-gray-200 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <Building className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Unidades</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card
-          sx={{
-            borderRadius: 3,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-            border: "1px solid rgba(0,0,0,0.06)",
-          }}
-        >
-          <CardContent sx={{ p: 2.5 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  bgcolor: "#10b98115",
-                  color: "#10b981",
-                }}
-              >
-                <StoreIcon />
-              </Box>
-              <Box>
-                <Typography
-                  variant="h5"
-                  fontWeight={700}
-                  sx={{ color: "#1e293b" }}
-                >
-                  {stats.activas}
-                </Typography>
-                <Typography variant="caption" sx={{ color: "#64748b" }}>
-                  Activas
-                </Typography>
-              </Box>
-            </Box>
+        <Card className="border border-gray-200 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-emerald-50 rounded-lg">
+                <Store className="h-6 w-6 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Activas</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.activas}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
-      </Box>
+      </div>
 
       {/* Toolbar */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-          gap: 2,
-          flexWrap: "wrap",
-        }}
-      >
-        <TextField
-          placeholder="Buscar unidades..."
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ minWidth: 300 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: "#94a3b8" }} />
-              </InputAdornment>
-            ),
-          }}
-        />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="relative w-full sm:w-auto sm:min-w-[300px]">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Buscar unidades..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
 
-        <Box sx={{ display: "flex", gap: 1.5 }}>
+        <div className="flex items-center gap-2">
           {showExportButtons && (
             <Button
-              variant="outlined"
-              startIcon={<FileDownloadIcon />}
+              variant="outline"
               onClick={handleExport}
               disabled={filteredUnits.length === 0}
-              sx={{ borderRadius: 2 }}
+              className="gap-2"
             >
+              <Download className="h-4 w-4" />
               Exportar
             </Button>
           )}
           {showCreateButtons && canManageBusinessUnits && (
             <Button
-              variant="contained"
-              startIcon={<AddIcon />}
               onClick={handleNew}
               disabled={
                 createMutation.isPending ||
                 isReadOnly ||
                 (!idCompany && companies.length === 0 && !loadingCompanies)
               }
-              sx={{
-                borderRadius: 2,
-                bgcolor: "#3b82f6",
-                "&:hover": { bgcolor: "#2563eb" },
-              }}
+              className="gap-2 bg-blue-600 hover:bg-blue-700"
             >
+              <Plus className="h-4 w-4" />
               Nueva Unidad
             </Button>
           )}
-        </Box>
-      </Box>
+        </div>
+      </div>
 
       {/* Grid de Unidades */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
-          gap: 3,
-        }}
-      >
-        {filteredUnits.map((unit, index) => {
-          const company = companies.find((c) => c.id === unit.idCompany);
-          return (
-            <Fade in timeout={300 + index * 100} key={unit.id}>
-              <Card
-                sx={{
-                  borderRadius: 3,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                  border: "1px solid rgba(0,0,0,0.06)",
-                  transition: "all 0.2s",
-                  opacity:
-                    unit.active !== false && unit.isActive !== false ? 1 : 0.7,
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                  },
-                }}
+      {filteredUnits.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredUnits.map((unit) => {
+            const company = companies.find((c) => c.id === unit.idCompany);
+            const isActive = unit.active !== false && unit.isActive !== false;
+            
+            return (
+              <Card 
+                key={unit.id} 
+                className={`border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200 ${
+                  !isActive ? "opacity-70" : ""
+                }`}
               >
-                <CardContent sx={{ p: 3 }}>
-                  {/* Header de la card */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      mb: 2,
-                    }}
-                  >
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                      <Box
-                        sx={{
-                          p: 1.5,
-                          borderRadius: 2,
-                          bgcolor: "#3b82f615",
-                        }}
-                      >
-                        <StoreIcon sx={{ fontSize: 28, color: "#3b82f6" }} />
-                      </Box>
-                      <Box>
-                        <Typography
-                          variant="h6"
-                          fontWeight={700}
-                          sx={{ color: "#1e293b", mb: 0.5 }}
-                        >
-                          {unit.name}
-                        </Typography>
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-50 rounded-lg">
+                        <Store className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{unit.name}</h3>
                         {company && (
-                          <Chip
-                            label={company.name}
-                            size="small"
-                            sx={{
-                              fontSize: 11,
-                              fontWeight: 600,
-                              bgcolor: "#f1f5f9",
-                              color: "#475569",
-                            }}
-                          />
+                          <Badge variant="outline" className="mt-1 text-xs">
+                            {company.name}
+                          </Badge>
                         )}
-                      </Box>
-                    </Box>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={isActive ? "default" : "secondary"}
+                      className={isActive ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" : "bg-amber-100 text-amber-800 hover:bg-amber-100"}
+                    >
+                      {isActive ? (
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                      ) : (
+                        <XCircle className="h-3 w-3 mr-1" />
+                      )}
+                      {isActive ? "Activa" : "Inactiva"}
+                    </Badge>
+                  </div>
 
-                    <Chip
-                      label={
-                        unit.active !== false && unit.isActive !== false
-                          ? "Activa"
-                          : "Inactiva"
-                      }
-                      size="small"
-                      sx={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        bgcolor:
-                          unit.active !== false && unit.isActive !== false
-                            ? "#10b98115"
-                            : "#f59e0b15",
-                        color:
-                          unit.active !== false && unit.isActive !== false
-                            ? "#10b981"
-                            : "#f59e0b",
-                      }}
-                    />
-                  </Box>
-
-                  {/* Detalle */}
                   {unit.detail && (
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="body2" sx={{ color: "#64748b" }}>
-                        {unit.detail}
-                      </Typography>
-                    </Box>
+                    <p className="text-sm text-gray-600 mb-4">{unit.detail}</p>
                   )}
 
-                  {/* Acciones */}
                   {!isReadOnly && (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "flex-end",
-                        gap: 1,
-                        pt: 1,
-                      }}
-                    >
+                    <div className="flex justify-end space-x-2 pt-4 border-t">
                       {showEditButtons && canManageBusinessUnits && (
-                        <IconButton
-                          size="small"
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleEdit(unit)}
                           disabled={updateMutation.isPending || !canEdit}
-                          sx={{
-                            bgcolor: "#f1f5f9",
-                            "&:hover": { bgcolor: "#e2e8f0" },
-                          }}
+                          className="h-8 px-2"
                         >
-                          <EditIcon sx={{ fontSize: 18, color: "#3b82f6" }} />
-                        </IconButton>
+                          <Edit className="h-4 w-4" />
+                        </Button>
                       )}
                       {showDeleteButtons && canManageBusinessUnits && (
-                        <IconButton
-                          size="small"
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleDelete(unit)}
                           disabled={deactivateMutation.isPending || !canDelete}
-                          sx={{
-                            bgcolor: "#fef2f2",
-                            "&:hover": { bgcolor: "#fee2e2" },
-                          }}
+                          className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
-                          <DeleteIcon sx={{ fontSize: 18, color: "#ef4444" }} />
-                        </IconButton>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       )}
-                    </Box>
+                    </div>
                   )}
                 </CardContent>
               </Card>
-            </Fade>
-          );
-        })}
-      </Box>
-
-      {/* Empty State */}
-      {!isLoading && filteredUnits.length === 0 && (
-        <Box
-          sx={{
-            textAlign: "center",
-            py: 8,
-            bgcolor: "#f8fafc",
-            borderRadius: 3,
-          }}
-        >
-          <StoreIcon sx={{ fontSize: 64, color: "#cbd5e1", mb: 2 }} />
-          <Typography variant="h6" sx={{ color: "#64748b", mb: 1 }}>
-            No hay unidades de negocio
-          </Typography>
-          <Typography variant="body2" sx={{ color: "#94a3b8", mb: 3 }}>
-            Crea tu primera unidad para comenzar a organizar tu empresa
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleNew}
-            disabled={!idCompany && companies.length === 0}
-            sx={{ borderRadius: 2 }}
-          >
-            Crear Primera Unidad
-          </Button>
-        </Box>
+            );
+          })}
+        </div>
+      ) : (
+        // Empty State
+        <Card className="border border-gray-200 shadow-sm">
+          <CardContent className="p-12 text-center">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="p-4 bg-gray-100 rounded-full">
+                <Store className="h-12 w-12 text-gray-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  No hay unidades de negocio
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Crea tu primera unidad para comenzar a organizar tu empresa
+                </p>
+              </div>
+              <Button
+                onClick={handleNew}
+                disabled={!idCompany && companies.length === 0}
+                className="mt-4"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Crear Primera Unidad
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Dialog Crear/Editar */}
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: 3 },
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
-          {editingUnit ? "Editar Unidad de Negocio" : "Nueva Unidad de Negocio"}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <Grid container spacing={3}>
-              {/* Empresa: No se muestra porque siempre usamos la del usuario autenticado */}
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingUnit ? "Editar Unidad de Negocio" : "Nueva Unidad de Negocio"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingUnit 
+                ? "Modifica los datos de la unidad de negocio"
+                : "Completa los datos para crear una nueva unidad de negocio"}
+            </DialogDescription>
+          </DialogHeader>
 
-              {/* Mensaje informativo para usuarios */}
-              {idCompany > 0 && (
-                <Grid item xs={12}>
-                  <Alert severity="info" sx={{ mb: 1 }}>
-                    Se usará tu empresa actual para crear la unidad de negocio
-                  </Alert>
-                </Grid>
+          <div className="space-y-4 py-4">
+            {idCompany > 0 && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Información</AlertTitle>
+                <AlertDescription>
+                  Se usará tu empresa actual para crear la unidad de negocio
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!idCompany && companies.length === 0 && !loadingCompanies && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>
+                  No hay empresas disponibles. Por favor, contacta al administrador o verifica tu sesión.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="name">Nombre *</Label>
+              <Input
+                id="name"
+                placeholder="Nombre de la unidad de negocio"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className={errors.name ? "border-red-500" : ""}
+              />
+              {errors.name && (
+                <p className="text-sm text-red-500">{errors.name}</p>
               )}
+            </div>
 
-              {/* Alerta si no hay empresa disponible */}
-              {!idCompany && companies.length === 0 && !loadingCompanies && (
-                <Grid item xs={12}>
-                  <Alert severity="error">
-                    No hay empresas disponibles. Por favor, contacta al
-                    administrador o verifica tu sesión.
-                  </Alert>
-                </Grid>
+            <div className="space-y-2">
+              <Label htmlFor="detail">Detalle (opcional)</Label>
+              <Textarea
+                id="detail"
+                placeholder="Información adicional sobre la unidad de negocio"
+                value={formData.detail || ""}
+                onChange={(e) => setFormData({ ...formData, detail: e.target.value })}
+                rows={3}
+              />
+              <p className="text-sm text-gray-500">
+                Información adicional sobre la unidad de negocio
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpenDialog(false)}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={
+                createMutation.isPending ||
+                updateMutation.isPending ||
+                (!idCompany && companies.length === 0 && !loadingCompanies)
+              }
+            >
+              {createMutation.isPending || updateMutation.isPending ? (
+                <span className="flex items-center gap-2">
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Guardando...
+                </span>
+              ) : editingUnit ? (
+                "Guardar Cambios"
+              ) : (
+                "Crear Unidad"
               )}
-
-              {/* Nombre */}
-              <Grid item xs={12}>
-                <TextField
-                  label="Nombre"
-                  fullWidth
-                  required
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  error={!!errors.name}
-                  helperText={errors.name}
-                />
-              </Grid>
-
-              {/* Detalle */}
-              <Grid item xs={12}>
-                <TextField
-                  label="Detalle (opcional)"
-                  fullWidth
-                  multiline
-                  rows={3}
-                  value={formData.detail || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, detail: e.target.value })
-                  }
-                  helperText="Información adicional sobre la unidad de negocio"
-                />
-              </Grid>
-            </Grid>
-          </Box>
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button onClick={() => setOpenDialog(false)} sx={{ borderRadius: 2 }}>
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={
-              createMutation.isPending ||
-              updateMutation.isPending ||
-              (!idCompany && companies.length === 0 && !loadingCompanies)
-            }
-            sx={{ borderRadius: 2 }}
-          >
-            {createMutation.isPending || updateMutation.isPending
-              ? "Guardando..."
-              : editingUnit
-              ? "Guardar Cambios"
-              : "Crear Unidad"}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Dialog Eliminar */}
-      <Dialog
-        open={openDeleteDialog}
-        onClose={() => setOpenDeleteDialog(false)}
-        PaperProps={{
-          sx: { borderRadius: 3 },
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Desactivar Unidad</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¿Estás seguro de desactivar la unidad{" "}
-            <strong>{deleteUnit?.name}</strong>?
-          </Typography>
-          <Typography variant="body2" sx={{ color: "#ef4444", mt: 1 }}>
-            Esta acción no se puede deshacer.
-          </Typography>
+      <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Desactivar Unidad</DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <p className="text-gray-700">
+              ¿Estás seguro de desactivar la unidad{" "}
+              <span className="font-semibold">{deleteUnit?.name}</span>?
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpenDeleteDialog(false)}
+              disabled={deactivateMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deactivateMutation.isPending}
+            >
+              {deactivateMutation.isPending ? (
+                <span className="flex items-center gap-2">
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Desactivando...
+                </span>
+              ) : (
+                "Desactivar"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button
-            onClick={() => setOpenDeleteDialog(false)}
-            sx={{ borderRadius: 2 }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleConfirmDelete}
-            disabled={deactivateMutation.isPending}
-            sx={{ borderRadius: 2 }}
-          >
-            {deactivateMutation.isPending ? "Desactivando..." : "Desactivar"}
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }

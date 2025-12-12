@@ -1,5 +1,5 @@
 import React from "react";
-import { Skeleton, Box } from "@mui/material";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SkeletonLoadingProps {
   variant?: "text" | "rectangular" | "rounded" | "circular";
@@ -14,18 +14,20 @@ const SkeletonLoading: React.FC<SkeletonLoadingProps> = ({
   width = "100%",
   count = 1,
 }) => (
-  <Box>
+  <div>
     {Array.from({ length: count }).map((_, i) => (
       <Skeleton
         key={i}
-        variant={variant}
-        height={height}
-        width={width}
-        animation="wave"
-        sx={{ mb: 2, borderRadius: 2 }}
+        className="mb-4"
+        style={{
+          height,
+          width,
+          borderRadius:
+            variant === "circular" ? "9999px" : variant === "rounded" ? 8 : 0,
+        }}
       />
     ))}
-  </Box>
+  </div>
 );
 
 export default SkeletonLoading;

@@ -1,36 +1,36 @@
 import { useState, useMemo, useEffect } from "react";
 import {
-  Box,
-  Button,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
-  InputAdornment,
-  Card,
-  CardContent,
-  Avatar,
-  Chip,
-  IconButton,
-  LinearProgress,
-  Alert,
-  Skeleton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Grid,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import PersonIcon from "@mui/icons-material/Person";
-import PhoneAndroidIcon from "@mui/icons-material/PhoneAndroid";
-import EditIcon from "@mui/icons-material/Edit";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import StoreIcon from "@mui/icons-material/Store";
+  Download,
+  Pencil,
+  Phone,
+  Plus,
+  Search,
+  Store,
+  User,
+} from "lucide-react";
 import * as XLSX from "xlsx";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUsers, useCreateUser, useUpdateUser } from "@/hooks/queries";
 import { useRoles, useUserRoles, useAddUserRole } from "@/hooks/queries";
 import { useCompanies, useBusinessUnits } from "@/hooks/queries";
@@ -73,31 +73,20 @@ function UserRoleChips({ userId }: { userId: string }) {
   if (userRoles.length === 0) return null;
 
   return (
-    <Box>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ display: "block", mb: 0.5 }}
-      >
-        Roles
-      </Typography>
-      <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+    <div>
+      <div className="mb-1 text-[11px] font-semibold text-slate-500">Roles</div>
+      <div className="flex flex-wrap gap-1">
         {userRoles.map((role) => (
-          <Chip
+          <Badge
             key={role.id}
-            label={role.name}
-            size="small"
-            sx={{
-              bgcolor: "#8b5cf615",
-              color: "#8b5cf6",
-              fontWeight: 600,
-              height: 20,
-              fontSize: 11,
-            }}
-          />
+            className="h-5 rounded-md border-0 px-2 text-[11px] font-semibold"
+            style={{ backgroundColor: "#8b5cf615", color: "#8b5cf6" }}
+          >
+            {role.name}
+          </Badge>
         ))}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
 
@@ -401,547 +390,413 @@ export default function UsersPage() {
   // Loading state
   if (isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
-        <LinearProgress sx={{ mb: 2 }} />
-        <Grid container spacing={3}>
+      <div className="p-6">
+        <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full w-2/3 bg-slate-300" />
+        </div>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            // @ts-expect-error - MUI v7 Grid type incompatibility
-            <Grid xs={12} sm={6} md={4} key={i}>
-              <Skeleton variant="rounded" height={200} />
-            </Grid>
+            <Card key={i} className="rounded-xl border border-slate-200 bg-white">
+              <CardContent className="p-6">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <Skeleton className="mt-4 h-4 w-40" />
+                <Skeleton className="mt-2 h-3 w-52" />
+                <Skeleton className="mt-6 h-10 w-full rounded-lg" />
+              </CardContent>
+            </Card>
           ))}
-        </Grid>
-      </Box>
+        </div>
+      </div>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          Error al cargar usuarios:{" "}
-          {error instanceof Error ? error.message : "Error desconocido"}
+      <div className="p-6">
+        <Alert className="border-red-200 bg-white">
+          <AlertDescription>
+            Error al cargar usuarios: {error instanceof Error ? error.message : "Error desconocido"}
+          </AlertDescription>
         </Alert>
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <div className="p-6">
       {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          mt: -3,
-          mb: 1.5,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h5"
-            sx={{
-              fontWeight: 700,
-              lineHeight: 1.1,
-              letterSpacing: "-0.5px",
-              mb: 0.5,
-            }}
-          >
-            Usuarios
-          </Typography>
-          <Typography variant="body2" sx={{ color: "#64748b" }}>
-            {filteredUsers.length}{" "}
-            {filteredUsers.length === 1 ? "usuario" : "usuarios"}
-          </Typography>
-        </Box>
+      <div className="-mt-6 mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="text-2xl font-bold tracking-tight text-slate-900">Usuarios</div>
+          <div className="mt-1 text-sm text-slate-500">
+            {filteredUsers.length} {filteredUsers.length === 1 ? "usuario" : "usuarios"}
+          </div>
+        </div>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <div className="flex items-center gap-2">
           {showExportButtons && (
             <Button
-              variant="outlined"
-              startIcon={<FileDownloadIcon />}
+              type="button"
+              variant="outline"
               onClick={handleExport}
               disabled={filteredUsers.length === 0}
-              sx={{
-                borderColor: "#10b981",
-                color: "#10b981",
-                fontWeight: 600,
-                textTransform: "none",
-                "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
-              }}
+              className="h-10 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
             >
+              <Download className="mr-2 h-4 w-4" />
               Exportar
             </Button>
           )}
           {showCreateButtons && canManageUsers && (
             <Button
-              variant="contained"
-              startIcon={<AddIcon />}
+              type="button"
               onClick={handleNew}
               disabled={createMutation.isPending || isReadOnly}
-              sx={{
-                bgcolor: "#3b82f6",
-                fontWeight: 600,
-                textTransform: "none",
-                "&:hover": { bgcolor: "#2563eb" },
-              }}
+              className="h-10 bg-blue-600 font-semibold text-white hover:bg-blue-700"
             >
+              <Plus className="mr-2 h-4 w-4" />
               Nuevo Usuario
             </Button>
           )}
-        </Box>
-      </Box>
+        </div>
+      </div>
 
       {/* Filtros */}
-      <Box
-        sx={{
-          mb: 3,
-          background: "white",
-          borderRadius: 2,
-          border: "1px solid #e2e8f0",
-          p: 2,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 2,
-          alignItems: "center",
-        }}
-      >
-        <TextField
-          placeholder="Buscar por nombre, apellido o email..."
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ flexGrow: 1, minWidth: 220 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: "#9ca3af" }} />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            placeholder="Buscar por nombre, apellido o email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-10 pl-9"
+          />
+        </div>
+      </div>
 
       {/* Grid users */}
-      <Grid container spacing={3}>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
         {filteredUsers.map((userItem) => {
           const company = companies.find((c) => c.id === userItem.idCompany);
           const businessUnit = businessUnits.find(
             (bu) => bu.id === userItem.idBusinessUnit
           );
           return (
-            // @ts-expect-error - MUI v7 Grid type incompatibility
-            <Grid xs={12} sm={6} md={4} key={userItem.id}>
-              <Card
-                elevation={0}
-                sx={{
-                  background: "white",
-                  borderRadius: 3,
-                  border: "1px solid #e2e8f0",
-                  height: "100%",
-                  transition: "all 0.25s ease",
-                  "&:hover": {
-                    boxShadow: "0 8px 18px rgba(15,23,42,0.10)",
-                    transform: "translateY(-3px)",
-                    borderColor: "#cbd5f5",
-                  },
-                }}
-              >
-                <CardContent sx={{ p: 3 }}>
-                  {/* Header user */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      mb: 2.5,
-                      gap: 1.5,
-                    }}
+            <Card
+              key={userItem.id}
+              className="h-full rounded-xl border border-slate-200 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_8px_18px_rgba(15,23,42,0.10)]"
+            >
+              <CardContent className="p-6">
+                {/* Header user */}
+                <div className="mb-5 flex items-start gap-4">
+                  <Avatar
+                    className="h-[52px] w-[52px]"
+                    style={{ backgroundColor: getAvatarColor(userItem.userName) }}
                   >
-                    <Avatar
-                      sx={{
-                        width: 52,
-                        height: 52,
-                        bgcolor: getAvatarColor(userItem.userName),
-                        fontSize: 20,
-                        fontWeight: 700,
-                      }}
-                    >
+                    <AvatarFallback className="text-[20px] font-bold text-white">
                       {getInitials(userItem.firstName, userItem.lastName)}
-                    </Avatar>
+                    </AvatarFallback>
+                  </Avatar>
 
-                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{
-                          fontWeight: 700,
-                          mb: 0.5,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {userItem.firstName} {userItem.lastName || ""}
-                      </Typography>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-base font-bold text-slate-900">
+                      {userItem.firstName} {userItem.lastName || ""}
+                    </div>
 
-                      <Box
-                        sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}
-                      >
-                        <Chip
-                          label={userItem.userName}
-                          size="small"
-                          sx={{
-                            bgcolor: "#f1f5f9",
-                            color: "#475569",
-                            fontWeight: 600,
-                            height: 22,
-                            fontSize: 11,
-                          }}
-                        />
-                      </Box>
-                    </Box>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Badge className="h-[22px] rounded-md bg-slate-100 px-2 text-[11px] font-semibold text-slate-600">
+                        {userItem.userName}
+                      </Badge>
+                    </div>
+                  </div>
 
-                    {/* Acciones */}
-                    {!isReadOnly && showEditButtons && canManageUsers && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 1,
-                          ml: 0.5,
-                        }}
-                      >
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEdit(userItem)}
-                          disabled={updateMutation.isPending || !canEdit}
-                          sx={{
-                            bgcolor: "#eef2ff",
-                            color: "#1d4ed8",
-                            "&:hover": { bgcolor: "#e0e7ff" },
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    )}
-                  </Box>
+                  {/* Acciones */}
+                  {!isReadOnly && showEditButtons && canManageUsers && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleEdit(userItem)}
+                      disabled={updateMutation.isPending || !canEdit}
+                      className="h-9 w-9 border-0 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
 
-                  {/* Detalles */}
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 1.75 }}
-                  >
-                    <Box>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: "block", mb: 0.3 }}
-                      >
-                        Email
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        fontWeight={600}
-                        sx={{ wordBreak: "break-word" }}
-                      >
-                        {userItem.email}
-                      </Typography>
-                    </Box>
+                {/* Detalles */}
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <div className="mb-1 text-[11px] font-semibold text-slate-500">Email</div>
+                    <div className="wrap-break-word text-sm font-semibold text-slate-700">
+                      {userItem.email}
+                    </div>
+                  </div>
 
-                    {userItem.phoneNumber && (
-                      <Box>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ display: "block", mb: 0.3 }}
-                        >
-                          Teléfono
-                        </Typography>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 0.75,
-                          }}
-                        >
-                          <PhoneAndroidIcon
-                            sx={{ fontSize: 18, color: "#10b981" }}
-                          />
-                          <Typography variant="body2" fontWeight={600}>
-                            {userItem.phoneNumber}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    )}
+                  {userItem.phoneNumber && (
+                    <div>
+                      <div className="mb-1 text-[11px] font-semibold text-slate-500">Teléfono</div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-[18px] w-[18px] text-emerald-500" />
+                        <div className="text-sm font-semibold text-slate-700">
+                          {userItem.phoneNumber}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                    {/* 🆕 Mostrar roles del usuario */}
-                    <UserRoleChips userId={userItem.id} />
+                  {/* 🆕 Mostrar roles del usuario */}
+                  <UserRoleChips userId={userItem.id} />
 
-                    {/* Mostrar empresa y unidad */}
-                    {company && (
-                      <Box>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ display: "block", mb: 0.3 }}
-                        >
-                          Empresa
-                        </Typography>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 0.75,
-                          }}
-                        >
-                          <StoreIcon sx={{ fontSize: 18, color: "#64748b" }} />
-                          <Typography variant="body2" fontWeight={500}>
-                            {company.name}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    )}
+                  {/* Mostrar empresa y unidad */}
+                  {company && (
+                    <div>
+                      <div className="mb-1 text-[11px] font-semibold text-slate-500">Empresa</div>
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <Store className="h-[18px] w-[18px] text-slate-500" />
+                        <div className="font-medium">{company.name}</div>
+                      </div>
+                    </div>
+                  )}
 
-                    {businessUnit && (
-                      <Box>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ display: "block", mb: 0.3 }}
-                        >
-                          Unidad de Negocio
-                        </Typography>
-                        <Typography variant="body2" fontWeight={500}>
-                          {businessUnit.name}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+                  {businessUnit && (
+                    <div>
+                      <div className="mb-1 text-[11px] font-semibold text-slate-500">
+                        Unidad de Negocio
+                      </div>
+                      <div className="text-sm font-medium text-slate-600">{businessUnit.name}</div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           );
         })}
-      </Grid>
+      </div>
 
       {filteredUsers.length === 0 && !isLoading && (
-        <Box sx={{ textAlign: "center", py: 8, width: "100%" }}>
-          <PersonIcon sx={{ fontSize: 64, color: "#e5e7eb", mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
+        <div className="py-12 text-center text-slate-400">
+          <User className="mx-auto mb-2 h-16 w-16 text-slate-200" />
+          <div className="text-base font-semibold text-slate-500">
             No hay usuarios registrados
-          </Typography>
-        </Box>
+          </div>
+        </div>
       )}
 
       {/* Dialog crear / editar */}
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-        disableEnforceFocus
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>
-          {editingUser ? "Editar Usuario" : "Nuevo Usuario"}
-        </DialogTitle>
-        <DialogContent>
-          <Box
-            sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 2 }}
-          >
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">
+              {editingUser ? "Editar Usuario" : "Nuevo Usuario"}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Formulario para {editingUser ? "editar" : "crear"} un usuario
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 pt-2">
             {/* ✅ Mostrar error general */}
-            {errors.general && <Alert severity="error">{errors.general}</Alert>}
+            {errors.general && (
+              <Alert className="border-red-200 bg-white">
+                <AlertDescription>{errors.general}</AlertDescription>
+              </Alert>
+            )}
 
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
-                fullWidth
-                label="Nombre"
-                value={formData.firstName}
-                onChange={(e) =>
-                  setFormData({ ...formData, firstName: e.target.value })
-                }
-                error={!!errors.firstName}
-                helperText={errors.firstName}
-                required
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <div className="mb-1 text-sm font-semibold text-slate-700">Nombre</div>
+                <Input
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                />
+                {errors.firstName && (
+                  <div className="mt-1 text-xs font-medium text-red-600">{errors.firstName}</div>
+                )}
+              </div>
+              <div>
+                <div className="mb-1 text-sm font-semibold text-slate-700">Apellido</div>
+                <Input
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                />
+                {errors.lastName && (
+                  <div className="mt-1 text-xs font-medium text-red-600">{errors.lastName}</div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-1 text-sm font-semibold text-slate-700">Email</div>
+              <Input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
-              <TextField
-                fullWidth
-                label="Apellido"
-                value={formData.lastName}
-                onChange={(e) =>
-                  setFormData({ ...formData, lastName: e.target.value })
-                }
-                error={!!errors.lastName}
-                helperText={errors.lastName}
-                required
+              {errors.email && (
+                <div className="mt-1 text-xs font-medium text-red-600">{errors.email}</div>
+              )}
+            </div>
+
+            <div>
+              <div className="mb-1 text-sm font-semibold text-slate-700">Nombre de Usuario</div>
+              <Input
+                value={formData.userName}
+                onChange={(e) => setFormData({ ...formData, userName: e.target.value })}
               />
-            </Box>
-
-            <TextField
-              fullWidth
-              type="email"
-              label="Email"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-              error={!!errors.email}
-              helperText={errors.email}
-              required
-            />
-
-            <TextField
-              fullWidth
-              label="Nombre de Usuario"
-              value={formData.userName}
-              onChange={(e) =>
-                setFormData({ ...formData, userName: e.target.value })
-              }
-              error={!!errors.userName}
-              helperText={errors.userName}
-              required
-            />
+              {errors.userName && (
+                <div className="mt-1 text-xs font-medium text-red-600">{errors.userName}</div>
+              )}
+            </div>
 
             {!editingUser && (
               <>
-                <TextField
-                  fullWidth
-                  type="password"
-                  label="Contraseña"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  error={!!errors.password}
-                  helperText={errors.password}
-                  required
-                />
-                <TextField
-                  fullWidth
-                  type="password"
-                  label="Confirmar Contraseña"
-                  value={formData.confirmPassword}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      confirmPassword: e.target.value,
-                    })
-                  }
-                  error={!!errors.confirmPassword}
-                  helperText={errors.confirmPassword}
-                  required
-                />
+                <div>
+                  <div className="mb-1 text-sm font-semibold text-slate-700">Contraseña</div>
+                  <Input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  />
+                  {errors.password && (
+                    <div className="mt-1 text-xs font-medium text-red-600">{errors.password}</div>
+                  )}
+                </div>
+                <div>
+                  <div className="mb-1 text-sm font-semibold text-slate-700">Confirmar Contraseña</div>
+                  <Input
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
+                  />
+                  {errors.confirmPassword && (
+                    <div className="mt-1 text-xs font-medium text-red-600">{errors.confirmPassword}</div>
+                  )}
+                </div>
               </>
             )}
 
-            <TextField
-              fullWidth
-              label="Teléfono (opcional)"
-              value={formData.phoneNumber || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, phoneNumber: e.target.value })
-              }
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <PhoneAndroidIcon sx={{ color: "#999" }} />
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <div>
+              <div className="mb-1 text-sm font-semibold text-slate-700">Teléfono (opcional)</div>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={formData.phoneNumber || ""}
+                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  className="pl-9"
+                />
+              </div>
+            </div>
 
             {companies.length > 0 && companies.length > 1 && (
-              <FormControl fullWidth error={!!errors.idCompany}>
-                <InputLabel>Empresa *</InputLabel>
+              <div>
+                <div className="mb-1 text-sm font-semibold text-slate-700">Empresa</div>
                 <Select
-                  value={formData.idCompany}
-                  label="Empresa *"
-                  onChange={(e) =>
+                  value={String(formData.idCompany)}
+                  onValueChange={(v) =>
                     setFormData({
                       ...formData,
-                      idCompany: Number(e.target.value),
+                      idCompany: Number(v),
                     })
                   }
                 >
-                  {companies.map((c) => (
-                    <MenuItem key={c.id} value={c.id}>
-                      {c.name}
-                    </MenuItem>
-                  ))}
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
                 {errors.idCompany && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                    {errors.idCompany}
-                  </Typography>
+                  <div className="mt-1 text-xs font-medium text-red-600">{errors.idCompany}</div>
                 )}
-              </FormControl>
+              </div>
             )}
 
-            <FormControl fullWidth>
-              <InputLabel>Unidad de Negocio (opcional)</InputLabel>
+            <div>
+              <div className="mb-1 text-sm font-semibold text-slate-700">
+                Unidad de Negocio (opcional)
+              </div>
               <Select
-                value={formData.idBusinessUnit || ""}
-                label="Unidad de Negocio (opcional)"
-                onChange={(e) =>
+                value={
+                  formData.idBusinessUnit !== undefined
+                    ? String(formData.idBusinessUnit)
+                    : "none"
+                }
+                onValueChange={(v) => {
                   setFormData({
                     ...formData,
-                    idBusinessUnit: e.target.value
-                      ? Number(e.target.value)
-                      : undefined,
-                  })
-                }
+                    idBusinessUnit: v === "none" ? undefined : Number(v),
+                  });
+                }}
               >
-                <MenuItem value="">Sin asignar</MenuItem>
-                {businessUnits
-                  .filter((bu) => bu.idCompany === formData.idCompany)
-                  .map((bu) => (
-                    <MenuItem key={bu.id} value={bu.id}>
-                      {bu.name}
-                    </MenuItem>
-                  ))}
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin asignar</SelectItem>
+                  {businessUnits
+                    .filter((bu) => bu.idCompany === formData.idCompany)
+                    .map((bu) => (
+                      <SelectItem key={bu.id} value={String(bu.id)}>
+                        {bu.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
               </Select>
-            </FormControl>
+            </div>
 
-            <FormControl fullWidth>
-              <InputLabel>Rol</InputLabel>
-              <Select
-                value={selectedRoleId}
-                label="Rol"
-                onChange={(e) => setSelectedRoleId(e.target.value)}
-              >
-                <MenuItem value="">Sin asignar</MenuItem>
-                {roles.map((role) => (
-                  <MenuItem key={role.id} value={role.id}>
-                    {role.name}
-                  </MenuItem>
-                ))}
+            <div>
+              <div className="mb-1 text-sm font-semibold text-slate-700">Rol</div>
+              <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin asignar</SelectItem>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
-            </FormControl>
-          </Box>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={
+                createMutation.isPending ||
+                updateMutation.isPending ||
+                addRoleMutation.isPending
+              }
+              className="bg-blue-600 text-white hover:bg-blue-700"
+            >
+              {createMutation.isPending || updateMutation.isPending
+                ? "Guardando..."
+                : editingUser
+                  ? "Guardar Cambios"
+                  : "Crear Usuario"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button onClick={() => setOpenDialog(false)} sx={{ borderRadius: 2 }}>
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={
-              createMutation.isPending ||
-              updateMutation.isPending ||
-              addRoleMutation.isPending
-            }
-            sx={{ borderRadius: 2, bgcolor: "#3b82f6" }}
-          >
-            {createMutation.isPending || updateMutation.isPending
-              ? "Guardando..."
-              : editingUser
-              ? "Guardar Cambios"
-              : "Crear Usuario"}
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }
