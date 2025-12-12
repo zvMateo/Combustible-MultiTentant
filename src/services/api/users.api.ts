@@ -10,22 +10,15 @@ import type {
 } from "@/types/api.types";
 
 const USERS_ENDPOINTS = {
-  getAll: "/Users/GetAllUsers",
+  getAll: '/Users/GetAllUsers', 
   getById: (userId: string) => `/Users/GetUserByUserId/${userId}`,
   create: "/Users/AddUser",
-  update: (userId: string) => `/Users/UpdateUser/${userId}`,
-  changePassword: (userId: string) => `/Users/${userId}/ChangePassword`,
+  createRegister: '/Users/AddUseRegister',
+  update: (userId: string) => `/Users/UpdateUser/${userId}`, 
+  changePassword: (userId: string) => `/Users/${userId}/ChangePassword`, 
 } as const;
 
 export const usersApi = {
-  /**
-   * Obtener todos los usuarios
-   *
-   * ⚠️ NOTA: El endpoint devuelve todos los usuarios sin filtrar por empresa.
-   * El backend debería devolver idCompany en cada usuario para poder filtrar.
-   * Si no lo devuelve, el filtrado se hará en el frontend pero solo funcionará
-   * para usuarios que tengan idCompany definido.
-   */
   async getAll(): Promise<ApiUser[]> {
     const { data } = await axiosInstance.get(USERS_ENDPOINTS.getAll);
 
@@ -84,10 +77,7 @@ export const usersApi = {
   },
 
   /**
-   * Crear nuevo usuario
-   *
-   * ⚠️ NOTA: El backend retorna 204 No Content, así que debemos buscar
-   * el usuario recién creado por email después de la creación
+   * Crear usuario en una empresa existente (AddUser)
    */
   async create(userData: CreateUserRequest): Promise<ApiUser> {
     console.log("🚀 [usersApi.create] Enviando datos:", userData);
@@ -127,6 +117,27 @@ export const usersApi = {
     console.log("✅ [usersApi.create] userId:", newUser.id);
 
     return newUser;
+  },
+
+
+  async createRegister(userData: CreateUserRequest): Promise<void> {
+    console.log("🚀 [usersApi.createRegister] Enviando datos:", userData);
+
+    const response = await axiosInstance.post(
+      USERS_ENDPOINTS.createRegister,
+      userData
+    );
+
+    console.log(
+      "✅ [usersApi.createRegister] Usuario admin creado, status:",
+      response.status
+    );
+    console.log(
+      "✅ [usersApi.createRegister] Response data:",
+      response.data
+    );
+
+    return;
   },
 
   /**

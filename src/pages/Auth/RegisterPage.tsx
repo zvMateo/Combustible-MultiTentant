@@ -28,7 +28,9 @@ import PersonIcon from "@mui/icons-material/Person";
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
 
 interface FormData {
   // Paso 1 - Datos empresa
@@ -37,7 +39,9 @@ interface FormData {
   // Paso 2 - Datos admin
   adminNombre: string;
   adminApellido: string;
+  adminUserName: string;
   adminEmail: string;
+  adminPhoneNumber: string;
   adminPassword: string;
   adminPasswordConfirm: string;
 }
@@ -156,16 +160,16 @@ export default function RegisterPage() {
 
       const idCompany = newCompany.id;
 
-      // 2️⃣ Crear el usuario administrador con el idCompany obtenido
       const userData = {
         firstName: formData.adminNombre,
         lastName: formData.adminApellido,
         email: formData.adminEmail,
-        userName: formData.adminEmail, // Usar el email como userName
+        userName: formData.adminUserName,
         password: formData.adminPassword,
         confirmPassword: formData.adminPasswordConfirm,
         idCompany: idCompany,
-        idBusinessUnit: undefined, // No se requiere en el registro
+        idBusinessUnit: undefined,
+        phoneNumber: formData.adminPhoneNumber || "",
       };
 
       console.log("🚀 [RegisterPage] Creando usuario administrador:", {
@@ -173,8 +177,8 @@ export default function RegisterPage() {
         password: "***",
         confirmPassword: "***",
       });
-      const newUser = await usersApi.create(userData);
-      console.log("✅ [RegisterPage] Usuario creado:", newUser);
+      await usersApi.createRegister(userData);
+      console.log("✅ [RegisterPage] Usuario creado correctamente");
 
       setIsLoading(false);
       setSuccess(true);
@@ -403,6 +407,25 @@ export default function RegisterPage() {
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
+                      label="Nombre de Usuario"
+                      value={formData.adminUserName}
+                      onChange={handleChange("adminUserName")}
+                      error={!!errors.adminUserName}
+                      helperText={errors.adminUserName}
+                      placeholder="admin.usuario"
+                      size="small"
+                      InputProps={{
+                        startAdornment: (
+                          <AccountCircleOutlinedIcon
+                            sx={{ mr: 1, color: "#9ca3af", fontSize: 18 }}
+                          />
+                        ),
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
                       label="Email"
                       type="email"
                       value={formData.adminEmail}
@@ -414,6 +437,24 @@ export default function RegisterPage() {
                       InputProps={{
                         startAdornment: (
                           <EmailOutlinedIcon
+                            sx={{ mr: 1, color: "#9ca3af", fontSize: 18 }}
+                          />
+                        ),
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Teléfono"
+                      type="tel"
+                      value={formData.adminPhoneNumber}
+                      onChange={handleChange("adminPhoneNumber")}
+                      placeholder="+54 9 11 1234-5678"
+                      size="small"
+                      InputProps={{
+                        startAdornment: (
+                          <PhoneOutlinedIcon
                             sx={{ mr: 1, color: "#9ca3af", fontSize: 18 }}
                           />
                         ),
