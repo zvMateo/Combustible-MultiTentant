@@ -55,9 +55,8 @@ export default function LoginPage() {
       {/* Botón de volver */}
       <Button
         type="button"
-        variant="ghost"
         onClick={() => navigate("/")}
-        className="absolute left-4 top-4 z-20 text-white/90"
+        className="absolute left-4 top-4 z-20 text-white/90 hover:bg-secondary bg-transparent hover:text-white/90"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Volver al inicio
@@ -168,7 +167,7 @@ export default function LoginPage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="h-12 w-full rounded-lg text-base font-bold transition-all duration-200"
+                    className="h-12 w-full rounded-lg text-base font-bold transition-all duration-200 "
                     style={{
                       marginTop: "1rem",
                       color: "white",
@@ -176,7 +175,7 @@ export default function LoginPage() {
                     }}
                   >
                     {isLoading ? (
-                      <span className="flex items-center justify-center gap-2">
+                      <span className="flex items-center justify-center gap-2 ">
                         <Spinner className="h-5 w-5 text-white" />
                         <span>Ingresando...</span>
                       </span>
