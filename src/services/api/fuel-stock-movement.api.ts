@@ -1,7 +1,7 @@
 /**
  * Servicio de Movimientos de Stock de Combustible - API Real con Axios
  */
-import axiosInstance from "@/lib/axios";
+import axiosInstance, { toArray } from "@/lib/axios";
 import type {
   FuelStockMovement,
   CreateFuelStockMovementRequest,
@@ -10,6 +10,8 @@ import type {
 
 const FUEL_STOCK_MOVEMENT_ENDPOINTS = {
   getAll: "/FuelStockMovement/GetAll",
+  getByCompany: "/FuelStockMovement/GetByIdCompany",
+  getByBusinessUnit: "/FuelStockMovement/GetByIdBusinessUnit",
   getById: "/FuelStockMovement/GetById",
   create: "/FuelStockMovement/Create",
   update: "/FuelStockMovement/Update",
@@ -24,6 +26,28 @@ export const fuelStockMovementApi = {
       FUEL_STOCK_MOVEMENT_ENDPOINTS.getAll
     );
     return data;
+  },
+
+  /**
+   * Obtener movimientos por empresa
+   */
+  async getByCompany(idCompany: number): Promise<FuelStockMovement[]> {
+    const { data } = await axiosInstance.get<FuelStockMovement[]>(
+      FUEL_STOCK_MOVEMENT_ENDPOINTS.getByCompany,
+      { params: { IdCompany: idCompany } }
+    );
+    return toArray<FuelStockMovement>(data);
+  },
+
+  /**
+   * Obtener movimientos por unidad de negocio
+   */
+  async getByBusinessUnit(idBusinessUnit: number): Promise<FuelStockMovement[]> {
+    const { data } = await axiosInstance.get<FuelStockMovement[]>(
+      FUEL_STOCK_MOVEMENT_ENDPOINTS.getByBusinessUnit,
+      { params: { IdBusinessUnit: idBusinessUnit } }
+    );
+    return toArray<FuelStockMovement>(data);
   },
 
   /**

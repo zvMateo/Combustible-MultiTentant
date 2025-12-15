@@ -23,14 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Layers,
-  Pencil,
-  Plus,
-  ToggleLeft,
-  ToggleRight,
-  TriangleAlert,
-} from "lucide-react";
+import { Layers, Pencil, Plus, TriangleAlert } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import {
   useFuelTypes,
   useCreateFuelType,
@@ -201,7 +195,7 @@ export default function FuelTypesTab() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="inline-flex items-center gap-2">
+                      <div className="inline-flex items-center gap-3">
                         <Button
                           type="button"
                           variant="outline"
@@ -212,26 +206,14 @@ export default function FuelTypesTab() {
                         >
                           <Pencil className="size-4" />
                         </Button>
-                        <Button
-                          type="button"
-                          variant={
-                            type.isActive !== false
-                              ? "destructive"
-                              : "secondary"
-                          }
-                          size="icon"
-                          onClick={() => handleToggleClick(type)}
+                        <Switch
+                          checked={type.isActive !== false}
+                          onCheckedChange={() => handleToggleClick(type)}
                           disabled={deactivateMutation.isPending}
                           aria-label={
                             type.isActive !== false ? "Desactivar" : "Activar"
                           }
-                        >
-                          {type.isActive !== false ? (
-                            <ToggleLeft className="size-4" />
-                          ) : (
-                            <ToggleRight className="size-4" />
-                          )}
-                        </Button>
+                        />
                       </div>
                     </TableCell>
                   </TableRow>

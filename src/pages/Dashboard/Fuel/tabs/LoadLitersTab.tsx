@@ -46,7 +46,10 @@ import {
   useUpdateLoadLiters,
   useResources,
   useFuelTypes,
+  useBusinessUnits,
+  useCompany,
 } from "@/hooks/queries";
+import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
 import type {
   LoadLiters,
@@ -59,15 +62,8 @@ interface FormErrors {
 }
 
 export default function LoadLitersTab() {
-  const {
-    showCreateButtons,
-    showExportButtons,
-    isReadOnly,
-    companyIdFilter,
-    unidadIdsFilter,
-    isSupervisor,
-    isAuditor,
-  } = useRoleLogic();
+  const { user } = useAuthStore();
+  const { showCreateButtons, showExportButtons, isReadOnly } = useRoleLogic();
 
   const [openDialog, setOpenDialog] = useState(false);
   const [editingLoad, setEditingLoad] = useState<LoadLiters | null>(null);
@@ -87,37 +83,37 @@ export default function LoadLitersTab() {
   const { data: loads = [], isLoading, error } = useLoadLitersScoped();
   const { data: resources = [] } = useResources();
   const { data: fuelTypes = [] } = useFuelTypes();
+  const { data: businessUnits = [] } = useBusinessUnits();
+  const { data: company } = useCompany(user?.idCompany ?? 0);
   const createMutation = useCreateLoadLiters();
+
+  // Helper para obtener nombre de ubicación (BU o Company)
+  const getLocationName = (load: LoadLiters): string => {
+    // Buscar el recurso en la lista de resources para obtener su idBusinessUnit
+    const resourceFromList = resources.find((r) => r.id === load.idResource);
+    const resourceIdBU = load.resource?.idBusinessUnit ?? resourceFromList?.idBusinessUnit;
+
+    // Si tiene unidad de negocio, buscar el nombre
+    if (resourceIdBU) {
+      const bu = businessUnits.find((b) => b.id === resourceIdBU);
+      if (bu?.name) return bu.name;
+    }
+    // Si el recurso tiene businessUnit como string/array
+    if (load.resource?.businessUnit) {
+      const buArr = load.resource.businessUnit;
+      if (Array.isArray(buArr) && buArr[0]) return String(buArr[0]);
+      if (typeof buArr === "string" && buArr) return buArr;
+    }
+    // Fallback: nombre de la empresa
+    return company?.name || user?.empresaNombre || "Sin asignar";
+  };
   const updateMutation = useUpdateLoadLiters();
 
-  // Filtrar cargas por empresa, unidad y búsqueda según el rol
+  // Filtrar cargas por búsqueda (el scoping por Company/BU ya lo hace useLoadLitersScoped)
   const filteredLoads = useMemo(() => {
     let filtered = loads;
 
-    // 1. Filtrar por empresa (a través del recurso)
-    if (companyIdFilter && companyIdFilter > 0) {
-      filtered = filtered.filter(
-        (l) => l.resource?.idCompany === companyIdFilter
-      );
-    }
-
-    // 2. Filtrar por unidad de negocio (Supervisor y Auditor solo ven cargas de su(s) unidad(es))
-    if (
-      (isSupervisor || isAuditor) &&
-      unidadIdsFilter &&
-      unidadIdsFilter.length > 0
-    ) {
-      filtered = filtered.filter((l) => {
-        // Si el recurso tiene unidad asignada, verificar que esté en las unidades del usuario
-        if (l.resource?.idBusinessUnit) {
-          return unidadIdsFilter.includes(l.resource.idBusinessUnit);
-        }
-        // Si no tiene unidad asignada, no mostrarlo para supervisor/auditor
-        return false;
-      });
-    }
-
-    // 3. Filtrar por búsqueda
+    // Filtrar por búsqueda
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -131,14 +127,7 @@ export default function LoadLitersTab() {
     }
 
     return filtered;
-  }, [
-    loads,
-    searchTerm,
-    companyIdFilter,
-    isSupervisor,
-    isAuditor,
-    unidadIdsFilter,
-  ]);
+  }, [loads, searchTerm]);
 
   const handleNew = () => {
     setEditingLoad(null);
@@ -246,6 +235,7 @@ export default function LoadLitersTab() {
       "Litros Finales": l.finalLiters,
       "Total Litros": l.totalLiters,
       "Tipo Combustible": l.nameFuelType || l.fuelType?.name || "",
+      "Unidad/Empresa": getLocationName(l),
       Detalle: l.detail || "",
     }));
 
@@ -352,6 +342,7 @@ export default function LoadLitersTab() {
                   <TableHead className="text-right">L. Finales</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Combustible</TableHead>
+                  <TableHead>Unidad/Empresa</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -376,6 +367,7 @@ export default function LoadLitersTab() {
                     <TableCell>
                       {load.nameFuelType || load.fuelType?.name || "-"}
                     </TableCell>
+                    <TableCell>{getLocationName(load)}</TableCell>
                     <TableCell className="text-right">
                       <Button
                         type="button"

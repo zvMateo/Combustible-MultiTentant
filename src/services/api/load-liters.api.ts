@@ -1,7 +1,7 @@
 /**
  * Servicio de Cargas de Combustible (LoadLiters) - API Real con Axios
  */
-import axiosInstance from "@/lib/axios";
+import axiosInstance, { toArray } from "@/lib/axios";
 import type {
   LoadLiters,
   CreateLoadLitersRequest,
@@ -42,7 +42,7 @@ export const loadLitersApi = {
       LOAD_LITERS_ENDPOINTS.getByCompany,
       { params: { idCompany } }
     );
-    return data;
+    return toArray<LoadLiters>(data);
   },
 
   /**
@@ -53,7 +53,7 @@ export const loadLitersApi = {
       LOAD_LITERS_ENDPOINTS.getByBusinessUnit,
       { params: { idBusinessUnit } }
     );
-    return data;
+    return toArray<LoadLiters>(data);
   },
 
   /**

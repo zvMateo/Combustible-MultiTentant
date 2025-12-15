@@ -46,6 +46,8 @@ import {
   useResources,
   useFuelTypes,
   useMovementTypes,
+  useBusinessUnits,
+  useCompany,
 } from "@/hooks/queries";
 import { useAuthStore } from "@/stores/auth.store";
 import type {
@@ -83,6 +85,29 @@ export default function StockMovementsTab() {
   const { data: resources = [] } = useResources();
   const { data: fuelTypes = [] } = useFuelTypes();
   const { data: movementTypes = [] } = useMovementTypes();
+  const { data: businessUnits = [] } = useBusinessUnits();
+  const { data: company } = useCompany(idCompany);
+
+  // Helper para obtener nombre de ubicación (BU o Company)
+  const getLocationName = (movement: FuelStockMovement): string => {
+    // Buscar el recurso en la lista para obtener su idBusinessUnit si no viene en movement
+    const resourceFromList = resources.find((r) => r.id === movement.idResource);
+    const buId = movement.idBusinessUnit ?? movement.resource?.idBusinessUnit ?? resourceFromList?.idBusinessUnit;
+
+    // Si tiene unidad de negocio, buscar el nombre
+    if (buId) {
+      const bu = businessUnits.find((b) => b.id === buId);
+      if (bu?.name) return bu.name;
+    }
+    // Si el recurso tiene businessUnit como string/array
+    if (movement.resource?.businessUnit) {
+      const buArr = movement.resource.businessUnit;
+      if (Array.isArray(buArr) && buArr[0]) return String(buArr[0]);
+      if (typeof buArr === "string" && buArr) return buArr;
+    }
+    // Fallback: nombre de la empresa
+    return company?.name || user?.empresaNombre || "Sin asignar";
+  };
   const createMutation = useCreateFuelStockMovement();
   const updateMutation = useUpdateFuelStockMovement();
 
@@ -219,8 +244,7 @@ export default function StockMovementsTab() {
         m.movementType?.name ||
         movementTypes.find((mt) => mt.id === m.idMovementType)?.name ||
         "-",
-      Empresa: m.resource?.company?.[0] || "-",
-      "Unidad de Negocio": m.resource?.businessUnit?.[0] || "-",
+      Empresa: getLocationName(m),
       Litros: m.liters,
     }));
 
@@ -349,9 +373,7 @@ export default function StockMovementsTab() {
                           "Sin tipo"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {movement.resource?.company?.[0] || "-"}
-                    </TableCell>
+                    <TableCell>{getLocationName(movement)}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant="secondary">{movement.liters} L</Badge>
                     </TableCell>

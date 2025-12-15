@@ -82,8 +82,6 @@ const getAvatarColor = (name: string) => {
 
 export default function UsersPage() {
   const { user } = useAuthStore();
-
-  // CORRECCIÓN AQUÍ: Agregué showExportButtons y showCreateButtons
   const {
     canManageUsers,
     canEdit,
@@ -91,8 +89,8 @@ export default function UsersPage() {
     unidadIdsFilter,
     isSupervisor,
     isAuditor,
-    showExportButtons, // Agregado
-    showCreateButtons, // Agregado
+    showExportButtons, 
+    showCreateButtons, 
   } = useRoleLogic();
 
   // Estados
@@ -149,7 +147,7 @@ export default function UsersPage() {
   }, [users, searchTerm, isSupervisor, isAuditor, unidadIdsFilter]);
 
   const userRoleQueries = useQueries({
-    queries: filteredUsers.map((u) => ({
+    queries: (Array.isArray(users) ? users : []).map((u) => ({
       queryKey: ["userRoles", u.id],
       queryFn: () => userRolesApi.getByUser(u.id),
       enabled: !!u.id,
@@ -159,12 +157,29 @@ export default function UsersPage() {
 
   const roleNameByUserId = useMemo(() => {
     const map = new Map<string, string>();
-    filteredUsers.forEach((u, idx) => {
+    const allUsers = Array.isArray(users) ? users : [];
+    allUsers.forEach((u, idx) => {
       const rolesData = userRoleQueries[idx]?.data;
       map.set(u.id, rolesData?.[0]?.name || "Sin rol");
     });
     return map;
-  }, [filteredUsers, userRoleQueries]);
+  }, [users, userRoleQueries]);
+
+  // Excluir usuarios con rol superadmin de la lista
+  const visibleUsers = useMemo(() => {
+    return filteredUsers.filter((u) => {
+      const roleName = roleNameByUserId.get(u.id)?.toLowerCase() ?? "";
+      return !roleName.includes("superadmin") && !roleName.includes("super admin");
+    });
+  }, [filteredUsers, roleNameByUserId]);
+
+  // Excluir rol superadmin del selector
+  const selectableRoles = useMemo(() => {
+    return roles.filter((r) => {
+      const name = r.name?.toLowerCase() ?? "";
+      return !name.includes("superadmin") && !name.includes("super admin");
+    });
+  }, [roles]);
 
   // Handlers
   const handleEdit = (u: ApiUser) => {
@@ -356,7 +371,7 @@ export default function UsersPage() {
         </SectionCard>
 
         <SectionCard>
-          {filteredUsers.length === 0 ? (
+          {visibleUsers.length === 0 ? (
             <EmptyState
               icon={<ShieldCheck className="size-10" />}
               title="No hay usuarios registrados"
@@ -368,7 +383,7 @@ export default function UsersPage() {
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {filteredUsers.map((u) => (
+              {visibleUsers.map((u) => (
                 <Card
                   key={u.id}
                   className="group hover:shadow-lg transition-all"
@@ -564,7 +579,7 @@ export default function UsersPage() {
                     <SelectValue placeholder="Elegir rol..." />
                   </SelectTrigger>
                   <SelectContent className="w-[--radix-select-trigger-width]">
-                    {roles.map((r) => (
+                    {selectableRoles.map((r) => (
                       <SelectItem
                         key={r.id}
                         value={r.id}
