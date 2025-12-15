@@ -150,10 +150,11 @@ export interface UpdateBusinessUnitRequest extends CreateBusinessUnitRequest {
 export interface Driver {
   id: number;
   idCompany: number;
+  idBusinessUnit?: number;
   name: string;
   dni: string;
   phoneNumber?: string;
-  isActive?: boolean;
+  active?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -175,11 +176,15 @@ export interface UpdateDriverRequest extends CreateDriverRequest {
 export interface ResourceType {
   id: number;
   name: string;
-  isActive?: boolean;
+  active?: boolean;
+  idCompany?: number | null;
+  idBusinessUnit?: number | null;
 }
 
 export interface CreateResourceTypeRequest {
   name: string;
+  idCompany: number;
+  idBusinessUnit?: number;
 }
 
 export interface UpdateResourceTypeRequest extends CreateResourceTypeRequest {
@@ -198,6 +203,7 @@ export interface Resource {
   idBusinessUnit?: number;
   businessUnit?: string[]; // Array de nombres de unidad desde la API
   nativeLiters?: number;
+  initialLiters?: number; // Litros iniciales desde la API
   actualLiters?: number;
   name: string;
   identifier: string;
@@ -228,7 +234,9 @@ export interface UpdateResourceRequest extends CreateResourceRequest {
 export interface FuelType {
   id: number;
   name: string;
-  isActive?: boolean;
+  active?: boolean;
+  idCompany?: number | null;
+  idBusinessUnit?: number | null;
 }
 
 export interface CreateFuelTypeRequest {
@@ -245,7 +253,9 @@ export interface UpdateFuelTypeRequest extends CreateFuelTypeRequest {
 export interface MovementType {
   id: number;
   name: string;
-  isActive?: boolean;
+  active?: boolean;
+  idCompany?: number | null;
+  idBusinessUnit?: number | null;
 }
 
 export interface CreateMovementTypeRequest {

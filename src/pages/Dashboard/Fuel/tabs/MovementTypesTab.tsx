@@ -188,10 +188,10 @@ export default function MovementTypesTab() {
                     <TableCell>
                       <Badge
                         variant={
-                          type.isActive !== false ? "secondary" : "outline"
+                          type.active !== false ? "secondary" : "outline"
                         }
                       >
-                        {type.isActive !== false ? "Activo" : "Inactivo"}
+                        {type.active !== false ? "Activo" : "Inactivo"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -207,11 +207,11 @@ export default function MovementTypesTab() {
                           <Pencil className="size-4" />
                         </Button>
                         <Switch
-                          checked={type.isActive !== false}
+                          checked={type.active !== false}
                           onCheckedChange={() => handleToggleClick(type)}
                           disabled={deactivateMutation.isPending}
                           aria-label={
-                            type.isActive !== false ? "Desactivar" : "Activar"
+                            type.active !== false ? "Desactivar" : "Activar"
                           }
                         />
                       </div>
@@ -279,21 +279,21 @@ export default function MovementTypesTab() {
           if (!open) setToggleType(null);
         }}
         title={
-          toggleType?.isActive !== false
+          toggleType?.active !== false
             ? "Confirmar desactivación"
             : "Confirmar activación"
         }
         description={
           <>
             ¿Estás seguro de{" "}
-            {toggleType?.isActive !== false ? "desactivar" : "activar"} el tipo
+            {toggleType?.active !== false ? "desactivar" : "activar"} el tipo
             de movimiento <strong>{toggleType?.name}</strong>?
           </>
         }
         confirmLabel={
           deactivateMutation.isPending
             ? "Procesando..."
-            : toggleType?.isActive !== false
+            : toggleType?.active !== false
             ? "Desactivar"
             : "Activar"
         }

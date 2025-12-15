@@ -249,24 +249,6 @@ export default function Dashboard() {
             color="#8b5cf6"
             loading={loadingChoferes}
           />
-          <KPICard
-            label="Validación"
-            value="98%"
-            change="1.2%"
-            trend="up"
-            icon={CheckCircle2}
-            color="#10b981"
-            loading={loadingLoads}
-          />
-          <KPICard
-            label="Alertas"
-            value="4"
-            change="3 hoy"
-            trend="up"
-            icon={AlertTriangle}
-            color="#ef4444"
-            loading={loadingLoads}
-          />
         </div>
 
         {/* Gráficos - Estilo Figma */}

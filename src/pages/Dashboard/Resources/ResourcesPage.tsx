@@ -35,9 +35,11 @@ import {
   Plus,
   Search,
   Shapes,
-  Trash2,
   TriangleAlert,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
@@ -80,7 +82,6 @@ export default function ResourcesPage() {
     canDelete,
     showCreateButtons,
     showEditButtons,
-    showDeleteButtons,
     showExportButtons,
     isReadOnly,
     unidadIdsFilter,
@@ -121,6 +122,8 @@ export default function ResourcesPage() {
   const [resourceTypeFormData, setResourceTypeFormData] =
     useState<CreateResourceTypeRequest>({
       name: "",
+      idCompany: idCompany,
+      idBusinessUnit: 0,
     });
   const [resourceTypeErrors, setResourceTypeErrors] = useState<FormErrors>({});
 
@@ -140,10 +143,7 @@ export default function ResourcesPage() {
   const filteredResources = useMemo(() => {
     let filtered = allResources;
 
-    // Filtrar recursos inactivos (active: false)
-    filtered = filtered.filter(
-      (r) => r.active !== false && r.isActive !== false
-    );
+    // NO filtrar recursos inactivos - mostrar todos y usar Switch para activar/desactivar
 
     // 2. Filtrar por unidad de negocio (Supervisor y Auditor solo ven recursos de su(s) unidad(es))
     if (
@@ -161,27 +161,26 @@ export default function ResourcesPage() {
       });
     }
 
-    // Filtrar por tipo (excluir vehículos que tienen idType: 1)
+    // Filtrar por tipo (excluir vehículos)
     // Si filterType es un número, filtrar por ese idType específico
     if (filterType !== "all") {
       filtered = filtered.filter((r) => r.idType === Number(filterType));
     } else {
       // Mostrar todos excepto vehículos
-      // Un recurso es vehículo si: idType === 1 Y (no tiene type array O el type no es tanque/surtidor)
+      // Un recurso es vehículo si tiene "vehiculo" o "vehicle" en el type array, o idType === 5
       filtered = filtered.filter((r) => {
         const typeArray = r.type ?? [];
-        // Si tiene type array, mostrar si es tanque o surtidor (incluso si idType es 1)
         if (typeArray.length > 0) {
-          const isTankOrDispenser = typeArray.some(
+          // Excluir si el type contiene "vehiculo" o "vehicle"
+          const isVehicle = typeArray.some(
             (t) =>
-              t.toLowerCase().includes("tanque") ||
-              t.toLowerCase().includes("surtidor") ||
-              t.toLowerCase().includes("dispenser")
+              t.toLowerCase().includes("vehiculo") ||
+              t.toLowerCase().includes("vehicle")
           );
-          return isTankOrDispenser;
+          return !isVehicle;
         }
-        // Si no tiene type array, excluir idType 1 (vehículos)
-        return r.idType !== 1;
+        // Si no tiene type array, excluir idType 5 (vehículos)
+        return r.idType !== 5;
       });
     }
 
@@ -227,7 +226,7 @@ export default function ResourcesPage() {
         const name = rt.name.toLowerCase();
         const isVehicle = name.includes("vehiculo") || name.includes("vehicle");
         // Incluir solo si está activo y no es vehículo
-        return rt.isActive !== false && !isVehicle;
+        return rt.active !== false && !isVehicle;
       })
       .sort((a, b) => a.name.localeCompare(b.name)); // Ordenar alfabéticamente
   }, [resourceTypes]);
@@ -266,8 +265,9 @@ export default function ResourcesPage() {
     setOpenDialog(true);
   };
 
-  const handleDeleteClick = (resource: Resource) => {
-    setDeleteResource(resource);
+  const handleDeleteClick = (_resource: Resource) => {
+    // Ahora usamos Switch para toggle, pero mantenemos para ConfirmDialog
+    setDeleteResource(_resource);
     setOpenDeleteDialog(true);
   };
 
@@ -378,10 +378,18 @@ export default function ResourcesPage() {
   const handleOpenResourceTypeForm = (resourceType?: ResourceType) => {
     if (resourceType) {
       setEditingResourceType(resourceType);
-      setResourceTypeFormData({ name: resourceType.name });
+      setResourceTypeFormData({
+        name: resourceType.name,
+        idCompany: resourceType.idCompany ?? idCompany,
+        idBusinessUnit: resourceType.idBusinessUnit ?? 0,
+      });
     } else {
       setEditingResourceType(null);
-      setResourceTypeFormData({ name: "" });
+      setResourceTypeFormData({
+        name: "",
+        idCompany: idCompany,
+        idBusinessUnit: 0,
+      });
     }
     setResourceTypeErrors({});
     setOpenResourceTypeFormDialog(true);
@@ -414,10 +422,15 @@ export default function ResourcesPage() {
         const updateData: UpdateResourceTypeRequest = {
           id: editingResourceType.id,
           name: resourceTypeFormData.name,
+          idCompany: resourceTypeFormData.idCompany,
+          idBusinessUnit: resourceTypeFormData.idBusinessUnit,
         };
         await updateResourceTypeMutation.mutateAsync(updateData);
       } else {
-        await createResourceTypeMutation.mutateAsync(resourceTypeFormData);
+        await createResourceTypeMutation.mutateAsync({
+          ...resourceTypeFormData,
+          idCompany: idCompany,
+        });
       }
       setOpenResourceTypeFormDialog(false);
       setOpenResourceTypeListDialog(true); // Volver a la lista
@@ -652,35 +665,42 @@ export default function ResourcesPage() {
                     ) : null}
                   </div>
 
-                  {!isReadOnly ? (
-                    <div className="mt-auto flex gap-2 pt-2">
-                      {showEditButtons && canManageResources ? (
+                  {/* Estado y acciones */}
+                  <div className="mt-auto flex items-center justify-between gap-2 pt-2 border-t">
+                    <div className={`flex items-center gap-1.5 ${resource.active !== false ? "text-green-600" : "text-red-500"}`}>
+                      {resource.active !== false ? <CheckCircle2 className="size-3.5" /> : <XCircle className="size-3.5" />}
+                      <span className="text-xs font-medium">
+                        {resource.active !== false ? "Activo" : "Inactivo"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {!isReadOnly && showEditButtons && canManageResources ? (
                         <Button
                           type="button"
                           variant="outline"
                           size="icon"
+                          className="size-7"
                           onClick={() => handleEdit(resource)}
                           disabled={updateMutation.isPending || !canEdit}
                           aria-label="Editar"
                         >
-                          <Pencil className="size-4" />
+                          <Pencil className="size-3.5" />
                         </Button>
                       ) : null}
 
-                      {showDeleteButtons && canManageResources ? (
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => handleDeleteClick(resource)}
-                          disabled={deactivateMutation.isPending || !canDelete}
-                          aria-label="Desactivar"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                      {!isReadOnly && canManageResources && canDelete ? (
+                        <Switch
+                          checked={resource.active !== false}
+                          onCheckedChange={() => {
+                            deactivateMutation.mutate(resource.id);
+                          }}
+                          disabled={deactivateMutation.isPending}
+                          aria-label={resource.active !== false ? "Desactivar" : "Activar"}
+                        />
                       ) : null}
                     </div>
-                  ) : null}
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -934,16 +954,21 @@ export default function ResourcesPage() {
               {resourceTypes.map((resourceType) => (
                 <Card key={resourceType.id} className="border-border">
                   <CardContent className="flex items-center justify-between gap-3 pt-6">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">
-                        {resourceType.name}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-medium">
+                          {resourceType.name}
+                        </span>
+                        <span className={`text-xs font-medium ${resourceType.active !== false ? "text-green-600" : "text-red-500"}`}>
+                          {resourceType.active !== false ? "Activo" : "Inactivo"}
+                        </span>
                       </div>
                       <div className="text-muted-foreground text-xs">
                         ID: {resourceType.id}
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-3">
                       <Button
                         type="button"
                         variant="outline"
@@ -954,17 +979,14 @@ export default function ResourcesPage() {
                         <Pencil className="size-4" />
                       </Button>
 
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        onClick={() =>
-                          handleDeleteResourceTypeClick(resourceType)
-                        }
-                        aria-label="Desactivar"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <Switch
+                        checked={resourceType.active !== false}
+                        onCheckedChange={() => {
+                          deactivateResourceTypeMutation.mutate(resourceType.id);
+                        }}
+                        disabled={deactivateResourceTypeMutation.isPending}
+                        aria-label={resourceType.active !== false ? "Desactivar" : "Activar"}
+                      />
                     </div>
                   </CardContent>
                 </Card>

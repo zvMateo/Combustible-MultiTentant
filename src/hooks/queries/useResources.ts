@@ -131,19 +131,20 @@ export function useResources(idCompany?: number) {
   const isSuperAdmin = user?.role === "superadmin";
   const isAdmin = user?.role === "admin";
   const isCompanyAdmin = isAdmin || isSuperAdmin;
-  const isAdminAssigned =
-    isAdmin && (!!userBusinessUnitId || !!fallbackAssignedId);
 
-  const businessUnitId =
-    activeBusinessUnitId ??
-    (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
+  // Determinar si usar scope por BU o por Company
+  // - Si hay activeBusinessUnitId seleccionado (desde el selector) → usar BU
+  // - Si no hay BU seleccionada y es admin/superadmin → usar Company
+  // - Si no es admin/superadmin → usar la BU asignada del usuario
+  const businessUnitId = activeBusinessUnitId ?? 
     (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
 
-  const useBusinessUnitScope = !!businessUnitId;
-  const shouldHaveBusinessUnit = !isCompanyAdmin || isAdminAssigned;
-  const enabled =
-    hasUser &&
-    (useBusinessUnitScope ? true : shouldHaveBusinessUnit ? false : !!companyId);
+  const useBusinessUnitScope = !!businessUnitId && businessUnitId > 0;
+  
+  // Habilitar query si:
+  // - Hay usuario Y
+  // - (Hay BU para filtrar O hay Company para filtrar siendo admin/superadmin)
+  const enabled = hasUser && (useBusinessUnitScope || (isCompanyAdmin && !!companyId));
 
   return useQuery({
     queryKey: useBusinessUnitScope
@@ -226,19 +227,13 @@ export function useVehicles() {
   const isSuperAdmin = user?.role === "superadmin";
   const isAdmin = user?.role === "admin";
   const isCompanyAdmin = isAdmin || isSuperAdmin;
-  const isAdminAssigned =
-    isAdmin && (!!userBusinessUnitId || !!fallbackAssignedId);
 
-  const businessUnitId =
-    activeBusinessUnitId ??
-    (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
+  // Determinar si usar scope por BU o por Company
+  const businessUnitId = activeBusinessUnitId ?? 
     (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
 
-  const useBusinessUnitScope = !!businessUnitId;
-  const shouldHaveBusinessUnit = !isCompanyAdmin || isAdminAssigned;
-  const enabled =
-    hasUser &&
-    (useBusinessUnitScope ? true : shouldHaveBusinessUnit ? false : !!companyId);
+  const useBusinessUnitScope = !!businessUnitId && businessUnitId > 0;
+  const enabled = hasUser && (useBusinessUnitScope || (isCompanyAdmin && !!companyId));
 
   return useQuery({
     queryKey: useBusinessUnitScope
@@ -476,16 +471,40 @@ export function useDeactivateResource() {
 // ============================================
 
 /**
- * Obtener todos los tipos de recursos
+ * Obtener todos los tipos de recursos (scoped por Company o BusinessUnit)
  */
 export function useResourceTypes() {
   const storeCompanyId = useIdCompany();
   const companyId = storeCompanyId ?? 0;
 
+  const user = useAuthStore((s) => s.user);
+  const hasUser = !!user;
+  const activeBusinessUnitId = useUnidadActivaId();
+  const userBusinessUnitId = useIdBusinessUnit();
+  const fallbackAssignedId = user?.unidadesAsignadas?.[0] ?? null;
+
+  const isSuperAdmin = user?.role === "superadmin";
+  const isAdmin = user?.role === "admin";
+  const isCompanyAdmin = isAdmin || isSuperAdmin;
+
+  // Determinar si usar scope por BU o por Company
+  const businessUnitId = activeBusinessUnitId ?? 
+    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
+
+  const useBusinessUnitScope = !!businessUnitId && businessUnitId > 0;
+  const enabled = hasUser && (useBusinessUnitScope || (isCompanyAdmin && !!companyId));
+
   return useQuery({
-    queryKey: resourceTypesKeys.byCompany(companyId),
-    queryFn: () => resourceTypesApi.getByCompany(companyId),
-    enabled: !!companyId,
+    queryKey: useBusinessUnitScope
+      ? [...resourceTypesKeys.all, "byBusinessUnit", businessUnitId]
+      : resourceTypesKeys.byCompany(companyId),
+    queryFn: async () => {
+      const data = useBusinessUnitScope
+        ? await resourceTypesApi.getByBusinessUnit(businessUnitId as number)
+        : await resourceTypesApi.getByCompany(companyId);
+      return Array.isArray(data) ? data : [];
+    },
+    enabled,
     staleTime: 1000 * 60 * 10, // 10 minutos
   });
 }
