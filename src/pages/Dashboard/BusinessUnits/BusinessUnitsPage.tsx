@@ -1,18 +1,16 @@
-// src/pages/Dashboard/BusinessUnits/BusinessUnitsPage.tsx
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   useBusinessUnits,
   useCreateBusinessUnit,
   useUpdateBusinessUnit,
   useDeactivateBusinessUnit,
+  useCompanies,
 } from "@/hooks/queries";
-import { useCompanies } from "@/hooks/queries";
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
 import type {
   BusinessUnit,
   CreateBusinessUnitRequest,
-  UpdateBusinessUnitRequest,
 } from "@/types/api.types";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -24,34 +22,35 @@ import {
   Store,
   Download,
   Building,
-  CheckCircle,
-  XCircle,
+  CheckCircle2,
   AlertCircle,
   Info,
+  MoreVertical,
+  Briefcase,
 } from "lucide-react";
 
 // shadcn components
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const initialFormData: CreateBusinessUnitRequest = {
   idCompany: 0,
@@ -66,8 +65,6 @@ export default function BusinessUnitsPage() {
     canEdit,
     canDelete,
     showCreateButtons,
-    showEditButtons,
-    showDeleteButtons,
     showExportButtons,
     isReadOnly,
     companyIdFilter,
@@ -80,95 +77,49 @@ export default function BusinessUnitsPage() {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [editingUnit, setEditingUnit] = useState<BusinessUnit | null>(null);
   const [deleteUnit, setDeleteUnit] = useState<BusinessUnit | null>(null);
-  const [formData, setFormData] =
-    useState<CreateBusinessUnitRequest>(initialFormData);
+  const [formData, setFormData] = useState<CreateBusinessUnitRequest>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // React Query hooks
+  const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
+  const effectiveCompanyId = idCompany || companies[0]?.id || 0;
   const {
     data: businessUnitsAll = [],
-    isLoading: loadingAll,
-    error: errorAll,
-  } = useBusinessUnits();
+    isLoading: loadingUnits,
+    error: unitsError,
+  } = useBusinessUnits(effectiveCompanyId);
 
-  const businessUnits = useMemo(
-    () => (Array.isArray(businessUnitsAll) ? businessUnitsAll : []),
-    [businessUnitsAll]
-  );
-
-  const isLoading = loadingAll;
-  const error = errorAll;
-
-  const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
   const createMutation = useCreateBusinessUnit();
   const updateMutation = useUpdateBusinessUnit();
   const deactivateMutation = useDeactivateBusinessUnit();
 
-  // Asegurar que idCompany se setee correctamente cuando se abra el diálogo
-  useEffect(() => {
-    if (openDialog && !formData.idCompany) {
-      const fallbackCompanyId =
-        idCompany ||
-        companies[0]?.id ||
-        (companies.length > 0 ? companies[0].id : 0);
-      if (fallbackCompanyId && fallbackCompanyId !== formData.idCompany) {
-        setFormData((prev) => ({
-          ...prev,
-          idCompany: prev.idCompany || fallbackCompanyId,
-        }));
-      }
-    }
-  }, [openDialog, idCompany, companies, formData.idCompany]);
+  const isSaving = createMutation.isPending || updateMutation.isPending;
+
+  const businessUnits = useMemo(() => (Array.isArray(businessUnitsAll) ? businessUnitsAll : []), [businessUnitsAll]);
 
   const filteredUnits = useMemo(() => {
     let filtered = businessUnits;
-
-    if (idCompany && idCompany > 0) {
-      filtered = filtered.filter((u) => u.idCompany === idCompany);
-    }
-
+    if (idCompany > 0) filtered = filtered.filter((u) => u.idCompany === idCompany);
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (u) =>
-          u.name.toLowerCase().includes(term) ||
-          (u.detail && u.detail.toLowerCase().includes(term))
-      );
+      filtered = filtered.filter((u) => u.name.toLowerCase().includes(term) || (u.detail && u.detail.toLowerCase().includes(term)));
     }
-
     return filtered;
   }, [businessUnits, searchTerm, idCompany]);
 
-  // Handlers
   const handleNew = () => {
-    const fallbackCompanyId =
-      idCompany ||
-      companies[0]?.id ||
-      (companies.length > 0 ? companies[0].id : 0);
-
+    if (!effectiveCompanyId) {
+      toast.error("No hay una empresa activa para crear unidades de negocio");
+      return;
+    }
     setEditingUnit(null);
-    setFormData({
-      idCompany: idCompany || fallbackCompanyId,
-      name: "",
-      detail: "",
-    });
+    setFormData({ idCompany: effectiveCompanyId, name: "", detail: "" });
     setErrors({});
     setOpenDialog(true);
-
-    if (!idCompany && companies.length === 0 && !loadingCompanies) {
-      toast.error(
-        "No hay empresas disponibles. Por favor, contacta al administrador."
-      );
-    }
   };
 
   const handleEdit = (unit: BusinessUnit) => {
     setEditingUnit(unit);
-    setFormData({
-      idCompany: unit.idCompany,
-      name: unit.name,
-      detail: unit.detail || "",
-    });
+    setFormData({ idCompany: unit.idCompany, name: unit.name, detail: unit.detail || "" });
     setErrors({});
     setOpenDialog(true);
   };
@@ -178,140 +129,71 @@ export default function BusinessUnitsPage() {
     setOpenDeleteDialog(true);
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = "El nombre es requerido";
-    }
-
-    const finalIdCompany =
-      formData.idCompany || idCompany || companies[0]?.id || 0;
-
-    if (!finalIdCompany || finalIdCompany === 0) {
-      if (companies.length === 0 && !loadingCompanies) {
-        newErrors.idCompany =
-          "No hay empresas disponibles. Contacta al administrador.";
-      } else if (loadingCompanies) {
-        newErrors.idCompany = "Cargando empresas...";
-      } else {
-        newErrors.idCompany = "Debe seleccionar una empresa";
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSave = async () => {
-    if (!validateForm()) return;
+    if (!formData.name.trim()) {
+      setErrors({ name: "El nombre es obligatorio" });
+      return;
+    }
+
+    const finalCompanyId = formData.idCompany || effectiveCompanyId;
+    if (!finalCompanyId) {
+      setErrors({ idCompany: "Debe existir una empresa para crear/editar la unidad" });
+      toast.error("Debe existir una empresa para guardar la unidad");
+      return;
+    }
 
     try {
-      const finalIdCompany =
-        idCompany || user?.idCompany || user?.empresaId || 0;
-      const dataToSend = { ...formData, idCompany: finalIdCompany };
-
       if (editingUnit) {
-        const updateData: UpdateBusinessUnitRequest = {
-          id: editingUnit.id,
-          idCompany: dataToSend.idCompany,
-          name: dataToSend.name,
-          detail: dataToSend.detail,
-        };
-        await updateMutation.mutateAsync(updateData);
-        toast.success("Unidad de negocio actualizada correctamente");
+        await updateMutation.mutateAsync({ id: editingUnit.id, ...formData, idCompany: finalCompanyId });
       } else {
-        await createMutation.mutateAsync(dataToSend);
-        toast.success("Unidad de negocio creada correctamente");
+        await createMutation.mutateAsync({ ...formData, idCompany: finalCompanyId });
       }
       setOpenDialog(false);
-    } catch (error) {
-      toast.error("Error al guardar la unidad de negocio");
+    } catch {
+      toast.error("Error al procesar la solicitud");
     }
   };
 
   const handleConfirmDelete = async () => {
-    if (deleteUnit) {
-      try {
-        await deactivateMutation.mutateAsync(deleteUnit.id);
-        toast.success("Unidad de negocio desactivada correctamente");
-        setOpenDeleteDialog(false);
-        setDeleteUnit(null);
-      } catch (error) {
-        toast.error("Error al desactivar la unidad de negocio");
-      }
+    if (!deleteUnit) return;
+    try {
+      await deactivateMutation.mutateAsync(deleteUnit.id);
+      setOpenDeleteDialog(false);
+      setDeleteUnit(null);
+    } catch {
+      toast.error("Error al desactivar");
     }
   };
 
   const handleExport = () => {
-    const exportData = filteredUnits.map((u) => {
-      const company = companies.find((c) => c.id === u.idCompany);
-      return {
-        Nombre: u.name,
-        Detalle: u.detail || "",
-        Empresa: company?.name || "",
-        Estado: u.isActive !== false ? "Activo" : "Inactivo",
-      };
-    });
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    const ws = XLSX.utils.json_to_sheet(filteredUnits);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Business Units");
-    XLSX.writeFile(
-      wb,
-      `business_units_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
+    XLSX.utils.book_append_sheet(wb, ws, "Unidades");
+    XLSX.writeFile(wb, "unidades_negocio.xlsx");
   };
 
-  // Stats
-  const stats = {
-    total: filteredUnits.length,
-    activas: filteredUnits.filter((u) => u.isActive !== false).length,
-  };
-
-  // Loading state
-  if (isLoading) {
+  if (loadingUnits) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-          <Skeleton className="h-10 w-32" />
+      <div className="p-8 space-y-6">
+        <Skeleton className="h-10 w-64 rounded-xl" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
         </div>
-        
-        <Progress value={33} className="w-full" />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-6 w-16" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Skeleton className="h-[400px] w-full rounded-2xl" />
       </div>
     );
   }
 
-  // Error state
-  if (error) {
+  if (unitsError) {
     return (
-      <div className="p-6">
+      <div className="p-8">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
-            Error al cargar unidades de negocio:{" "}
-            {error instanceof Error ? error.message : "Error desconocido"}
+            Error al cargar unidades de negocio.
           </AlertDescription>
         </Alert>
       </div>
@@ -319,330 +201,243 @@ export default function BusinessUnitsPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-          Unidades de Negocio
-        </h1>
-        <p className="text-gray-600">
-          Gestiona las sucursales, campos y divisiones de tu empresa
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="border border-gray-200 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <Building className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Unidades</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-gray-200 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-emerald-50 rounded-lg">
-                <Store className="h-6 w-6 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Activas</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.activas}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="relative w-full sm:w-auto sm:min-w-[300px]">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Buscar unidades..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header Sección */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Unidades de Negocio</h1>
+          <p className="text-slate-500 font-medium mt-1 text-sm">Gestioná las sedes, campos y puntos de carga de la organización.</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {showExportButtons && (
             <Button
               variant="outline"
               onClick={handleExport}
               disabled={filteredUnits.length === 0}
-              className="gap-2"
+              className="h-10 rounded-xl border-slate-200 bg-white font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50"
             >
-              <Download className="h-4 w-4" />
+              <Download className="mr-2 h-4 w-4 text-slate-400" />
               Exportar
             </Button>
           )}
           {showCreateButtons && canManageBusinessUnits && (
             <Button
               onClick={handleNew}
-              disabled={
-                createMutation.isPending ||
-                isReadOnly ||
-                (!idCompany && companies.length === 0 && !loadingCompanies)
-              }
-              className="gap-2 bg-blue-600 hover:bg-blue-700"
+              disabled={isReadOnly || isSaving || loadingCompanies || !effectiveCompanyId}
+              className="h-10 rounded-xl bg-[#1E2C56] font-semibold text-white shadow-lg transition-all hover:bg-[#2a3c74] active:scale-95"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="mr-2 h-4 w-4" />
               Nueva Unidad
             </Button>
           )}
         </div>
       </div>
 
-      {/* Grid de Unidades */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <Input
+          placeholder="Buscar unidad por nombre..."
+          className="h-12 pl-11 rounded-2xl border-none bg-white shadow-sm focus-visible:ring-primary/20 text-sm font-medium"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      {/* Stats Quick View */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-none shadow-sm bg-white rounded-2xl">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+              <Building size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Total</p>
+              <p className="text-2xl font-bold text-slate-800 tracking-tight">{filteredUnits.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white rounded-2xl">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-[#1E2C56]/10 flex items-center justify-center text-[#1E2C56]">
+              <CheckCircle2 size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Activas</p>
+              <p className="text-2xl font-bold text-slate-800 tracking-tight">{filteredUnits.filter(u => u.isActive !== false).length}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Grid de Contenido */}
       {filteredUnits.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredUnits.map((unit) => {
-            const company = companies.find((c) => c.id === unit.idCompany);
             const isActive = unit.active !== false && unit.isActive !== false;
-            
             return (
-              <Card 
-                key={unit.id} 
-                className={`border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200 ${
-                  !isActive ? "opacity-70" : ""
-                }`}
-              >
+              <Card key={unit.id} className={`group border-none bg-white shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden ${!isActive ? 'opacity-75 grayscale-[0.5]' : ''}`}>
+                <div className="h-1.5 w-full" style={{ backgroundColor: isActive ? '#10b981' : '#cbd5e1' }} />
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-blue-50 rounded-lg">
-                        <Store className="h-5 w-5 text-blue-600" />
+                    <div className="flex items-center gap-3">
+                      <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${isActive ? 'bg-slate-50 text-slate-600' : 'bg-slate-100 text-slate-400'}`}>
+                        <Store size={20} />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{unit.name}</h3>
-                        {company && (
-                          <Badge variant="outline" className="mt-1 text-xs">
-                            {company.name}
-                          </Badge>
-                        )}
+                        <h3 className="text-base font-bold text-slate-800 leading-tight">{unit.name}</h3>
+                        <p className="text-[11px] font-bold text-primary/60 uppercase tracking-wider mt-0.5">ID: #{unit.id}</p>
                       </div>
                     </div>
-                    <Badge
-                      variant={isActive ? "default" : "secondary"}
-                      className={isActive ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" : "bg-amber-100 text-amber-800 hover:bg-amber-100"}
-                    >
-                      {isActive ? (
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                      ) : (
-                        <XCircle className="h-3 w-3 mr-1" />
-                      )}
-                      {isActive ? "Activa" : "Inactiva"}
-                    </Badge>
+                    
+                    {!isReadOnly && canManageBusinessUnits && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                            <MoreVertical size={16} className="text-slate-400" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-xl">
+                          <DropdownMenuItem
+                            onClick={() => handleEdit(unit)}
+                            disabled={!canEdit || isSaving}
+                            className="cursor-pointer gap-2 text-sm font-medium py-2"
+                          >
+                            <Edit size={14} className="text-blue-500" /> Editar unidad
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(unit)}
+                            disabled={!canDelete || deactivateMutation.isPending}
+                            className="cursor-pointer gap-2 text-sm font-medium py-2 text-rose-600 focus:bg-rose-50 focus:text-rose-600"
+                          >
+                            <Trash2 size={14} /> Desactivar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
 
-                  {unit.detail && (
-                    <p className="text-sm text-gray-600 mb-4">{unit.detail}</p>
-                  )}
+                  <p className="text-sm text-slate-500 line-clamp-2 min-h-[40px] font-medium leading-relaxed">
+                    {unit.detail || "Sin descripción adicional registrada para esta unidad."}
+                  </p>
 
-                  {!isReadOnly && (
-                    <div className="flex justify-end space-x-2 pt-4 border-t">
-                      {showEditButtons && canManageBusinessUnits && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(unit)}
-                          disabled={updateMutation.isPending || !canEdit}
-                          className="h-8 px-2"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {showDeleteButtons && canManageBusinessUnits && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(unit)}
-                          disabled={deactivateMutation.isPending || !canDelete}
-                          className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                  <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-50">
+                    <Badge variant="outline" className={`rounded-md px-2 py-0 h-6 text-[10px] font-bold border-none uppercase tracking-widest ${isActive ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>
+                      {isActive ? 'Operativa' : 'Inactiva'}
+                    </Badge>
+                    <div className="flex items-center text-slate-300 gap-1">
+                        <Briefcase size={12} />
+                        <span className="text-[10px] font-bold uppercase tracking-tighter">Empresa #{unit.idCompany}</span>
                     </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
             );
           })}
         </div>
       ) : (
-        // Empty State
-        <Card className="border border-gray-200 shadow-sm">
-          <CardContent className="p-12 text-center">
-            <div className="flex flex-col items-center justify-center space-y-4">
-              <div className="p-4 bg-gray-100 rounded-full">
-                <Store className="h-12 w-12 text-gray-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  No hay unidades de negocio
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Crea tu primera unidad para comenzar a organizar tu empresa
-                </p>
-              </div>
-              <Button
-                onClick={handleNew}
-                disabled={!idCompany && companies.length === 0}
-                className="mt-4"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Crear Primera Unidad
-              </Button>
+        <Card className="border-2 border-dashed border-slate-200 bg-slate-50/50 rounded-3xl">
+          <CardContent className="flex flex-col items-center justify-center p-16 text-center">
+            <div className="h-20 w-20 rounded-full bg-white shadow-sm flex items-center justify-center mb-6">
+              <Store size={40} className="text-slate-300" />
             </div>
+            <h3 className="text-xl font-bold text-slate-800">No hay resultados</h3>
+            <p className="text-slate-500 max-w-sm mt-2 font-medium">No encontramos unidades de negocio que coincidan con tu búsqueda o filtros actuales.</p>
+            <Button onClick={handleNew} variant="outline" className="mt-8 rounded-xl font-bold px-8 border-slate-300">Crear Nueva Unidad</Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Dialog Crear/Editar */}
+      {/* Dialogo Guardar/Editar - Refactorizado */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingUnit ? "Editar Unidad de Negocio" : "Nueva Unidad de Negocio"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingUnit 
-                ? "Modifica los datos de la unidad de negocio"
-                : "Completa los datos para crear una nueva unidad de negocio"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {idCompany > 0 && (
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Información</AlertTitle>
-                <AlertDescription>
-                  Se usará tu empresa actual para crear la unidad de negocio
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {!idCompany && companies.length === 0 && !loadingCompanies && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
-                  No hay empresas disponibles. Por favor, contacta al administrador o verifica tu sesión.
-                </AlertDescription>
-              </Alert>
-            )}
-
+        <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
+          <div className="bg-[#1E2C56] px-6 py-8 text-white">
+            <DialogTitle className="text-xl font-bold">{editingUnit ? 'Editar Unidad' : 'Nueva Unidad de Negocio'}</DialogTitle>
+            <DialogDescription className="text-white/60 text-xs mt-1 font-medium">Configurá los detalles básicos del punto operativo.</DialogDescription>
+          </div>
+          
+          <div className="p-6 space-y-5 bg-white">
             <div className="space-y-2">
-              <Label htmlFor="name">Nombre *</Label>
-              <Input
-                id="name"
-                placeholder="Nombre de la unidad de negocio"
+              <Label htmlFor="name" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 ml-1">Nombre de la Unidad</Label>
+              <Input 
+                id="name" 
+                placeholder="Ej: Sucursal Centro / Campo Norte" 
+                className={`h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all ${errors.name ? 'border-rose-500 ring-rose-50' : ''}`}
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className={errors.name ? "border-red-500" : ""}
+                onChange={e => setFormData({...formData, name: e.target.value})}
               />
-              {errors.name && (
-                <p className="text-sm text-red-500">{errors.name}</p>
-              )}
+              {errors.name && <p className="text-[10px] font-bold text-rose-500 ml-1">{errors.name}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="detail">Detalle (opcional)</Label>
-              <Textarea
-                id="detail"
-                placeholder="Información adicional sobre la unidad de negocio"
+              <Label htmlFor="detail" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 ml-1">Detalle / Notas</Label>
+              <Textarea 
+                id="detail" 
+                placeholder="Descripción opcional de la ubicación o función..." 
+                className="rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all min-h-[100px] resize-none"
                 value={formData.detail || ""}
-                onChange={(e) => setFormData({ ...formData, detail: e.target.value })}
-                rows={3}
+                onChange={e => setFormData({...formData, detail: e.target.value})}
               />
-              <p className="text-sm text-gray-500">
-                Información adicional sobre la unidad de negocio
-              </p>
+            </div>
+
+            <div className="rounded-xl bg-blue-50 p-4 border border-blue-100 flex gap-3">
+                <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-blue-800 font-medium leading-relaxed">
+                    Esta unidad será vinculada automáticamente a tu empresa principal para el reporte de cargas de combustible.
+                </p>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="p-6 bg-slate-50/50 border-t border-slate-100 flex gap-2">
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setOpenDialog(false)}
-              disabled={createMutation.isPending || updateMutation.isPending}
+              disabled={isSaving}
+              className="rounded-xl font-bold text-slate-500 hover:bg-slate-100"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
-              disabled={
-                createMutation.isPending ||
-                updateMutation.isPending ||
-                (!idCompany && companies.length === 0 && !loadingCompanies)
-              }
+              disabled={isSaving || loadingCompanies || !effectiveCompanyId}
+              className="rounded-xl bg-[#1E2C56] font-bold px-6 shadow-lg shadow-blue-900/10 hover:bg-[#2a3c74]"
             >
-              {createMutation.isPending || updateMutation.isPending ? (
-                <span className="flex items-center gap-2">
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Guardando...
-                </span>
-              ) : editingUnit ? (
-                "Guardar Cambios"
-              ) : (
-                "Crear Unidad"
-              )}
+              {editingUnit ? 'Guardar Cambios' : 'Crear Unidad'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Eliminar */}
+      {/* Dialogo Eliminar - Más amigable */}
       <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Desactivar Unidad</DialogTitle>
-            <DialogDescription>
-              Esta acción no se puede deshacer.
+        <DialogContent className="sm:max-w-[400px] rounded-3xl border-none p-8">
+          <div className="flex flex-col items-center text-center">
+            <div className="h-16 w-16 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mb-4">
+              <Trash2 size={32} />
+            </div>
+            <DialogTitle className="text-xl font-bold text-slate-800">¿Desactivar unidad?</DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium mt-2">
+              La unidad <span className="text-slate-800 font-bold">"{deleteUnit?.name}"</span> dejará de estar disponible para nuevas cargas, pero mantendrá su historial.
             </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4">
-            <p className="text-gray-700">
-              ¿Estás seguro de desactivar la unidad{" "}
-              <span className="font-semibold">{deleteUnit?.name}</span>?
-            </p>
           </div>
-
-          <DialogFooter>
+          <div className="flex gap-3 mt-8">
             <Button
               variant="outline"
+              className="flex-1 rounded-xl h-12 font-bold border-slate-200"
               onClick={() => setOpenDeleteDialog(false)}
               disabled={deactivateMutation.isPending}
             >
-              Cancelar
+              No, cancelar
             </Button>
             <Button
               variant="destructive"
+              className="flex-1 rounded-xl h-12 font-bold shadow-lg shadow-rose-200"
               onClick={handleConfirmDelete}
               disabled={deactivateMutation.isPending}
             >
-              {deactivateMutation.isPending ? (
-                <span className="flex items-center gap-2">
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Desactivando...
-                </span>
-              ) : (
-                "Desactivar"
-              )}
+              Sí, desactivar
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

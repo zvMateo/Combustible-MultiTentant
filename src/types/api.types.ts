@@ -198,6 +198,7 @@ export interface Resource {
   idBusinessUnit?: number;
   businessUnit?: string[]; // Array de nombres de unidad desde la API
   nativeLiters?: number;
+  actualLiters?: number;
   name: string;
   identifier: string;
   active?: boolean; // La API usa "active" en lugar de "isActive"
@@ -212,6 +213,7 @@ export interface CreateResourceRequest {
   idCompany: number;
   idBusinessUnit?: number;
   nativeLiters?: number;
+  actualLiters?: number;
   name: string;
   identifier: string;
 }

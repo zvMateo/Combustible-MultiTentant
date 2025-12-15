@@ -96,6 +96,7 @@ export default function ResourcesPage() {
     idCompany: idCompany || 0,
     idBusinessUnit: undefined,
     nativeLiters: undefined,
+    actualLiters: undefined,
     name: "",
     identifier: "",
   });
@@ -163,14 +164,15 @@ export default function ResourcesPage() {
       // Mostrar todos excepto vehículos
       // Un recurso es vehículo si: idType === 1 Y (no tiene type array O el type no es tanque/surtidor)
       filtered = filtered.filter((r) => {
-        const typeArray = (r as any).type || [];
+        const typeArray = (r as { type?: unknown[] }).type ?? [];
         // Si tiene type array, mostrar si es tanque o surtidor (incluso si idType es 1)
         if (typeArray.length > 0) {
           const isTankOrDispenser = typeArray.some(
-            (t: string) =>
-              t.toLowerCase().includes("tanque") ||
-              t.toLowerCase().includes("surtidor") ||
-              t.toLowerCase().includes("dispenser")
+            (t: unknown) =>
+              typeof t === "string" &&
+              (t.toLowerCase().includes("tanque") ||
+                t.toLowerCase().includes("surtidor") ||
+                t.toLowerCase().includes("dispenser"))
           );
           return isTankOrDispenser;
         }
@@ -193,7 +195,6 @@ export default function ResourcesPage() {
   }, [
     allResources,
     searchTerm,
-    companyIdFilter,
     isSupervisor,
     isAuditor,
     unidadIdsFilter,
@@ -238,6 +239,7 @@ export default function ResourcesPage() {
       idCompany: finalIdCompany,
       idBusinessUnit: undefined,
       nativeLiters: undefined,
+      actualLiters: undefined,
       name: "",
       identifier: "",
     });
@@ -252,6 +254,7 @@ export default function ResourcesPage() {
       idCompany: resource.idCompany,
       idBusinessUnit: resource.idBusinessUnit,
       nativeLiters: resource.nativeLiters,
+      actualLiters: resource.actualLiters,
       name: resource.name,
       identifier: resource.identifier,
     });
@@ -294,7 +297,8 @@ export default function ResourcesPage() {
           idType: formData.idType,
           idCompany: formData.idCompany,
           idBusinessUnit: formData.idBusinessUnit,
-          nativeLiters: formData.nativeLiters,
+          nativeLiters: formData.nativeLiters ?? 0,
+          actualLiters: formData.actualLiters ?? 0,
           name: formData.name,
           identifier: formData.identifier,
         };
@@ -306,6 +310,7 @@ export default function ResourcesPage() {
           idCompany: finalIdCompany,
           idBusinessUnit: formData.idBusinessUnit ?? 0,
           nativeLiters: formData.nativeLiters ?? 0,
+          actualLiters: formData.actualLiters ?? 0,
           name: formData.name.trim(),
           identifier: formData.identifier.trim(),
         };
@@ -335,7 +340,7 @@ export default function ResourcesPage() {
       const businessUnit = businessUnits.find(
         (bu) => bu.id === r.idBusinessUnit
       );
-      const typeArray = (r as any).type || [];
+      const typeArray = (r as { type?: unknown[] }).type ?? [];
       const typeName =
         typeArray.join(", ") ||
         resourceTypes.find((rt) => rt.id === r.idType)?.name ||
@@ -430,7 +435,7 @@ export default function ResourcesPage() {
   };
 
   const getResourceIcon = (resource: Resource) => {
-    const typeArray = (resource as any).type || [];
+    const typeArray = (resource as { type?: unknown[] }).type ?? [];
     const typeName = typeArray.join(" ").toLowerCase() || "";
     if (typeName.includes("tanque")) {
       return <PropaneTankIcon />;
@@ -442,9 +447,9 @@ export default function ResourcesPage() {
   };
 
   const getResourceTypeName = (resource: Resource) => {
-    const typeArray = (resource as any).type || [];
+    const typeArray = (resource as { type?: unknown[] }).type ?? [];
     if (typeArray.length > 0) {
-      return typeArray[0];
+      return typeof typeArray[0] === "string" ? typeArray[0] : "Recurso";
     }
     return (
       resourceTypes.find((rt) => rt.id === resource.idType)?.name || "Recurso"

@@ -1,7 +1,5 @@
 import { useState } from "react";
 import {
-  Bell,
-  Building2,
   ChevronDown,
   LogOut,
   Settings,
@@ -15,6 +13,7 @@ import type { UserRole } from "@/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -32,237 +31,167 @@ export default function Header() {
   const { user, logout } = useAuthStore();
   const { unidades, unidadActiva, setUnidadActiva } = useUnidadStore();
   const navigate = useNavigate();
-
   const [open, setOpen] = useState(false);
-
-  const handleClose = () => setOpen(false);
 
   const handleLogout = () => {
     logout();
-    handleClose();
+    setOpen(false);
     navigate("/login");
   };
 
   const isAdmin = user?.role === "admin";
   const canSwitchUnidad = isAdmin && unidades.length > 1;
 
-  const handleUnidadChange = (unidadId: number | "all") => {
-    if (unidadId === "all") {
-      setUnidadActiva(null);
-    } else {
-      const unidad = unidades.find((u) => u.id === unidadId);
-      if (unidad) {
-        setUnidadActiva(unidad);
-      }
-    }
-  };
+  const getAvatarColor = () => "#1E2C56";
 
-  const getAvatarColor = (): string => {
-    return "#1E2C56";
-  };
-
-  const getRolColor = (
-    rol: UserRole | undefined
-  ): { bg: string; color: string } => {
+  const getRolColor = (rol: UserRole | undefined) => {
     const colors: Record<UserRole, { bg: string; color: string }> = {
-      admin: { bg: "#3b82f615", color: "#3b82f6" },
-      supervisor: { bg: "#10b98115", color: "#10b981" },
-      operador: { bg: "#f59e0b15", color: "#f59e0b" },
-      auditor: { bg: "#6b728015", color: "#6b7280" },
+      admin: { bg: "#1E2C5610", color: "#1E2C56" },
+      supervisor: { bg: "#3b82f610", color: "#3b82f6" },
+      operador: { bg: "#f59e0b10", color: "#f59e0b" },
+      auditor: { bg: "#64748b10", color: "#64748b" },
     };
-    return rol ? colors[rol] : { bg: "#99999915", color: "#999" };
+    return rol ? colors[rol] : { bg: "#f8fafc", color: "#64748b" };
   };
 
-  const getRolLabel = (rol: UserRole | undefined): string => {
-    const labels: Record<UserRole, string> = {
-      admin: "Administrador",
-      supervisor: "Supervisor",
-      operador: "Operador",
-      auditor: "Auditor",
-    };
-    return rol ? labels[rol] : "Usuario";
-  };
-
-  const getInitials = (name: string = ""): string => {
-    const parts = name.split(" ");
-    if (parts.length >= 2) {
-      return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
-    }
-    return name.charAt(0).toUpperCase();
+  const getInitials = (name: string = "") => {
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/75 shadow-[0_2px_12px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white shadow-sm">
       <div className="flex h-20 items-center justify-between px-8">
-        {/* Lado Izquierdo - Saludo y usuario */}
+        
+        {/* Lado Izquierdo - Menos bold, más aire */}
         <div className="flex items-center gap-6">
-          <div>
-            <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Bienvenido
-            </div>
-            <div className="mt-1 flex items-center gap-3">
-              <h1 className="text-[24px] font-bold tracking-[-0.02em] text-slate-900">
+          <div className="flex flex-col">
+            <span className="text-[11px] font-medium uppercase tracking-widest text-slate-400">
+              Panel de Gestión
+            </span>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
                 {user?.name}
               </h1>
-              <Badge
-                className="h-7 rounded-md px-3 text-[11px] font-bold border-0"
-                style={{
-                  backgroundColor: getRolColor(user?.role).bg,
-                  color: getRolColor(user?.role).color,
+              <Badge 
+                className="h-6 px-2 text-[10px] font-medium border-none rounded-md"
+                style={{ 
+                  backgroundColor: getRolColor(user?.role).bg, 
+                  color: getRolColor(user?.role).color 
                 }}
               >
-                {getRolLabel(user?.role)}
+                {user?.role?.toUpperCase()}
               </Badge>
             </div>
           </div>
 
-          {/* Separador */}
-          <Separator orientation="vertical" className="h-10 bg-slate-200" />
+          <Separator orientation="vertical" className="h-10 bg-slate-100" />
 
-          {/* Unidad actual */}
-          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2">
-            <Store className="h-4 w-4 text-slate-500" />
-            <span className="max-w-[320px] truncate text-[14px] font-semibold text-slate-700">
-              {unidadActiva?.nombre || "Todas las unidades"}
+          {/* Unidad con estilo más suave */}
+          <div className="hidden items-center gap-3 md:flex bg-slate-50/50 px-4 py-2 rounded-xl border border-slate-100">
+            <Store size={18} className="text-slate-400" />
+            <span className="text-[15px] font-medium text-slate-600">
+              {unidadActiva?.nombre || "Todas las Unidades"}
             </span>
           </div>
         </div>
 
-        {/* Lado Derecho - Acciones */}
-        <div className="flex items-center gap-4">
-          {/* Selector de unidad para admin */}
+        {/* Lado Derecho */}
+        <div className="flex items-center gap-5">
+          
           {canSwitchUnidad && (
             <Select
               value={String(unidadActiva?.id ?? "all")}
-              onValueChange={(value) =>
-                handleUnidadChange(value === "all" ? "all" : Number(value))
-              }
+              onValueChange={(val) => setUnidadActiva(val === "all" ? null : unidades.find(u => u.id === Number(val)) || null)}
             >
-              <SelectTrigger className="h-11 w-60 rounded-xl border-slate-200 bg-white text-[14px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
-                <div className="flex items-center gap-2">
-                  <Store className="h-4 w-4 text-blue-600" />
-                  <SelectValue placeholder="Seleccionar unidad" />
-                </div>
+              <SelectTrigger className="h-10 w-52 border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
+                <SelectValue placeholder="Cambiar Unidad" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las unidades</SelectItem>
-                {unidades.map((unidad) => (
-                  <SelectItem key={unidad.id} value={String(unidad.id)}>
-                    {unidad.nombre}
+              <SelectContent className="bg-white border-slate-200 shadow-xl z-[60]">
+                <SelectItem value="all" className="text-sm font-medium">Todas las Unidades</SelectItem>
+                {unidades.map((u) => (
+                  <SelectItem key={u.id} value={String(u.id)} className="text-sm">
+                    {u.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
 
-          {/* Notificaciones */}
-          <button
-            type="button"
-            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors hover:bg-slate-50 active:bg-slate-100"
-          >
-            <Bell className="h-[22px] w-[22px] text-slate-500" />
-            <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-              3
-            </span>
-          </button>
-
-          {/* Perfil de usuario */}
+          {/* Perfil de Usuario - Fondo sólido y sombra suave */}
           <DropdownMenu open={open} onOpenChange={setOpen}>
             <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-3 shadow-sm transition-colors hover:bg-slate-50 active:bg-slate-100"
-              >
+              <button className="flex items-center gap-3 rounded-full border border-slate-200 bg-white p-1.5 pr-4 transition-all hover:bg-slate-50 active:scale-95 outline-none">
                 <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
                   <AvatarFallback 
-                    className="text-[14px] font-bold text-white"
+                    className="text-xs font-semibold text-white"
                     style={{ backgroundColor: getAvatarColor() }}
                   >
                     {getInitials(user?.name)}
                   </AvatarFallback>
                 </Avatar>
-                <ChevronDown className="h-4 w-4 text-slate-400" />
+                <div className="flex flex-col items-start leading-tight">
+                  <span className="text-[13px] font-semibold text-slate-700">Mi Cuenta</span>
+                  <span className="text-[11px] text-slate-400 font-normal">Opciones</span>
+                </div>
+                <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-80 rounded-2xl border border-slate-200 p-0 shadow-[0_18px_50px_rgba(15,23,42,0.14)]"
-            >
-              {/* Información del usuario */}
-              <div className="rounded-t-2xl border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12 border-2 border-slate-100">
-                    <AvatarFallback 
-                      className="text-[16px] font-bold text-white"
-                      style={{ backgroundColor: getAvatarColor() }}
-                    >
-                      {getInitials(user?.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-[15px] font-bold text-slate-800">
-                      {user?.name}
-                    </p>
-                    <p className="text-[13px] text-slate-500">{user?.email}</p>
-                  </div>
-                </div>
 
-                {/* Información adicional */}
-                <div className="mt-3 space-y-1.5">
-                  {user?.empresaNombre && (
-                    <div className="flex items-center gap-2 text-[13px] text-slate-500">
-                      <Building2 className="h-4 w-4 text-slate-400" />
-                      {user.empresaNombre}
-                    </div>
-                  )}
-                  {unidadActiva && (
-                    <div className="flex items-center gap-2 text-[13px] text-slate-500">
-                      <Store className="h-4 w-4 text-slate-400" />
-                      {unidadActiva.nombre}
-                    </div>
-                  )}
+            {/* Menu sólido sin transparencias */}
+            <DropdownMenuContent 
+              align="end" 
+              sideOffset={8}
+              className="w-64 border border-slate-200 bg-white p-1.5 shadow-xl rounded-2xl z-[60]"
+            >
+              <div className="flex items-center gap-3 p-3 mb-1">
+                <Avatar className="h-10 w-10 border border-slate-100">
+                  <AvatarFallback style={{ backgroundColor: getAvatarColor() }} className="text-white font-semibold text-sm">
+                    {getInitials(user?.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col overflow-hidden">
+                  <span className="text-sm font-semibold text-slate-900 truncate">{user?.name}</span>
+                  <span className="text-[11px] font-normal text-slate-400 truncate">{user?.email}</span>
                 </div>
               </div>
 
-              {/* Opciones del menú - SIN hover verde */}
-              <div className="py-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleClose();
+              <Separator className="my-1 bg-slate-50" />
+
+              <div className="py-1">
+                <DropdownMenuItem 
+                  onSelect={() => {
+                    setOpen(false);
                     navigate("/dashboard/profile");
                   }}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-[14px] font-semibold text-slate-700 hover:bg-slate-50"
+                  className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-slate-600 focus:bg-slate-50 focus:text-slate-900"
                 >
-                  <User className="h-4 w-4 text-slate-400" />
-                  Mi perfil
-                </button>
+                  <User size={16} className="text-slate-400" />
+                  <span className="text-sm font-medium">Mi Perfil</span>
+                </DropdownMenuItem>
 
                 {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleClose();
+                  <DropdownMenuItem 
+                    onSelect={() => {
+                      setOpen(false);
                       navigate("/dashboard/settings");
                     }}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-[14px] font-semibold text-slate-700 hover:bg-slate-50"
+                    className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-slate-600 focus:bg-slate-50 focus:text-slate-900"
                   >
-                    <Settings className="h-4 w-4 text-slate-400" />
-                    Configuración
-                  </button>
+                    <Settings size={16} className="text-slate-400" />
+                    <span className="text-sm font-medium">Configuración</span>
+                  </DropdownMenuItem>
                 )}
               </div>
 
-              <div className="border-t border-slate-100 py-2">
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-[14px] font-semibold text-red-600 hover:bg-red-50"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Cerrar sesión
-                </button>
-              </div>
+              <Separator className="my-1 bg-slate-50" />
+
+              <DropdownMenuItem 
+                onClick={handleLogout}
+                className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-rose-500 focus:bg-rose-50/50 focus:text-rose-600"
+              >
+                <LogOut size={16} />
+                <span className="text-sm font-semibold">Cerrar Sesión</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
