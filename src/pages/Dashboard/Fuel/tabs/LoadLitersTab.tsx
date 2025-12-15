@@ -1,35 +1,48 @@
 // src/pages/Dashboard/Fuel/tabs/LoadLitersTab.tsx
 import { useState, useMemo } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Box,
-  Button,
-  TextField,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Typography,
-  InputAdornment,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Chip,
-  IconButton,
-  Card,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
-  Grid,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import EditIcon from "@mui/icons-material/Edit";
-import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Download,
+  Droplet,
+  Pencil,
+  Plus,
+  Search,
+  TriangleAlert,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import {
@@ -75,7 +88,7 @@ export default function LoadLitersTab() {
   const [errors, setErrors] = useState<FormErrors>({});
 
   // React Query hooks
-  const { data: loads = [], isLoading } = useLoadLiters();
+  const { data: loads = [], isLoading, error } = useLoadLiters();
   const { data: resources = [] } = useResources();
   const { data: fuelTypes = [] } = useFuelTypes();
   const createMutation = useCreateLoadLiters();
@@ -250,330 +263,319 @@ export default function LoadLitersTab() {
     toast.success("Archivo exportado correctamente");
   };
 
+  if (isLoading) {
+    return (
+      <Card className="border-border">
+        <CardContent className="flex items-center gap-2 pt-6">
+          <Spinner className="size-4" />
+          <span className="text-sm text-muted-foreground">
+            Cargando cargas...
+          </span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-border">
+        <CardContent className="pt-6">
+          <Alert variant="destructive">
+            <TriangleAlert className="size-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              Error al cargar cargas de litros:{" "}
+              {error instanceof Error ? error.message : "Error desconocido"}
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-      <Box sx={{ p: 3 }}>
-        {/* Header */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
-        >
-          <Box>
-            <Typography variant="h6" fontWeight={700}>
-              Cargas de Litros
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {filteredLoads.length}{" "}
-              {filteredLoads.length === 1
-                ? "carga registrada"
-                : "cargas registradas"}
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            {showExportButtons && (
-              <Button
-                variant="outlined"
-                startIcon={<FileDownloadIcon />}
-                onClick={handleExport}
-                disabled={filteredLoads.length === 0}
-                size="small"
-              >
-                Exportar
-              </Button>
-            )}
-            {showCreateButtons && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleNew}
-                disabled={createMutation.isPending || isReadOnly}
-                size="small"
-              >
-                Nueva Carga
-              </Button>
-            )}
-          </Box>
-        </Box>
+    <Card className="border-border">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+        <div>
+          <CardTitle>Cargas de Litros</CardTitle>
+          <CardDescription>
+            {filteredLoads.length}{" "}
+            {filteredLoads.length === 1
+              ? "carga registrada"
+              : "cargas registradas"}
+          </CardDescription>
+        </div>
+        <div className="flex gap-2">
+          {showExportButtons ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleExport}
+              disabled={filteredLoads.length === 0}
+              size="sm"
+            >
+              <Download className="size-4" />
+              Exportar
+            </Button>
+          ) : null}
+          {showCreateButtons ? (
+            <Button
+              type="button"
+              onClick={handleNew}
+              disabled={createMutation.isPending || isReadOnly}
+              size="sm"
+            >
+              <Plus className="size-4" />
+              Nueva Carga
+            </Button>
+          ) : null}
+        </div>
+      </CardHeader>
 
-        {/* Buscador */}
-        <TextField
-          placeholder="Buscar por recurso o detalle..."
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          fullWidth
-          sx={{ mb: 3 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: "#9ca3af" }} />
-              </InputAdornment>
-            ),
-          }}
-        />
+      <CardContent className="space-y-4">
+        <div className="relative">
+          <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+          <Input
+            placeholder="Buscar por recurso o detalle..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
 
-        {/* Tabla */}
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>Fecha</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Recurso</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700 }}>
-                  L. Iniciales
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700 }}>
-                  L. Finales
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700 }}>
-                  Total
-                </TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Combustible</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Acciones</TableCell>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Recurso</TableHead>
+                <TableHead className="text-right">L. Iniciales</TableHead>
+                <TableHead className="text-right">L. Finales</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead>Combustible</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {filteredLoads.map((load) => (
-                <TableRow key={load.id} hover>
+                <TableRow key={load.id}>
                   <TableCell>
                     {new Date(load.loadDate).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
                     {load.nameResource || load.resource?.name || "-"}
                   </TableCell>
-                  <TableCell align="right">{load.initialLiters} L</TableCell>
-                  <TableCell align="right">{load.finalLiters} L</TableCell>
-                  <TableCell align="right">
-                    <Chip
-                      label={`${load.totalLiters} L`}
-                      size="small"
-                      sx={{
-                        bgcolor: "#10b98115",
-                        color: "#10b981",
-                        fontWeight: 600,
-                      }}
-                    />
+                  <TableCell className="text-right">
+                    {load.initialLiters} L
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {load.finalLiters} L
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Badge variant="secondary">{load.totalLiters} L</Badge>
                   </TableCell>
                   <TableCell>
                     {load.nameFuelType || load.fuelType?.name || "-"}
                   </TableCell>
-                  <TableCell>
-                    <IconButton
-                      size="small"
+                  <TableCell className="text-right">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
                       onClick={() => handleEdit(load)}
                       disabled={updateMutation.isPending}
-                      sx={{
-                        bgcolor: "#f3f4f6",
-                        "&:hover": { bgcolor: "#e5e7eb" },
-                      }}
+                      aria-label="Editar"
                     >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
+                      <Pencil className="size-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
+
+              {filteredLoads.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-10 text-center">
+                    <div className="text-muted-foreground flex flex-col items-center gap-2">
+                      <Droplet className="size-8" />
+                      <span>No hay cargas registradas</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : null}
             </TableBody>
           </Table>
-        </TableContainer>
+        </div>
+      </CardContent>
 
-        {filteredLoads.length === 0 && !isLoading && (
-          <Box sx={{ textAlign: "center", py: 8 }}>
-            <LocalGasStationIcon sx={{ fontSize: 64, color: "#ddd", mb: 2 }} />
-            <Typography variant="h6" color="text.secondary">
-              No hay cargas registradas
-            </Typography>
-          </Box>
-        )}
-      </Box>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingLoad ? "Editar Carga" : "Nueva Carga de Litros"}
+            </DialogTitle>
+          </DialogHeader>
 
-      {/* Dialog Crear/Editar */}
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          {editingLoad ? "Editar Carga" : "Nueva Carga de Litros"}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth size="small" error={!!errors.idResource}>
-                  <InputLabel>Recurso *</InputLabel>
-                  <Select
-                    value={formData.idResource}
-                    label="Recurso *"
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        idResource: Number(e.target.value),
-                      })
-                    }
-                  >
-                    {resources.map((r) => (
-                      <MenuItem key={r.id} value={r.id}>
-                        {r.name} ({r.identifier})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {errors.idResource && (
-                    <Typography
-                      variant="caption"
-                      color="error"
-                      sx={{ mt: 0.5 }}
-                    >
-                      {errors.idResource}
-                    </Typography>
-                  )}
-                </FormControl>
-              </Grid>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Recurso *</label>
+              <Select
+                value={String(formData.idResource)}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, idResource: Number(value) })
+                }
+              >
+                <SelectTrigger aria-invalid={!!errors.idResource}>
+                  <SelectValue placeholder="Seleccionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {resources.map((r) => (
+                    <SelectItem key={r.id} value={String(r.id)}>
+                      {r.name} ({r.identifier})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.idResource ? (
+                <p className="text-destructive text-xs">{errors.idResource}</p>
+              ) : null}
+            </div>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Fecha de Carga"
-                  type="date"
-                  value={formData.loadDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, loadDate: e.target.value })
-                  }
-                  error={!!errors.loadDate}
-                  helperText={errors.loadDate}
-                  required
-                  fullWidth
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Fecha de Carga *</label>
+              <Input
+                type="date"
+                value={formData.loadDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, loadDate: e.target.value })
+                }
+                aria-invalid={!!errors.loadDate}
+              />
+              {errors.loadDate ? (
+                <p className="text-destructive text-xs">{errors.loadDate}</p>
+              ) : null}
+            </div>
 
-              <Grid item xs={12} md={4}>
-                <TextField
-                  label="Litros Iniciales"
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Litros Iniciales</label>
+              <div className="relative">
+                <Input
                   type="number"
-                  value={formData.initialLiters}
+                  value={String(formData.initialLiters)}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
                       initialLiters: Number(e.target.value),
                     })
                   }
-                  error={!!errors.initialLiters}
-                  helperText={errors.initialLiters}
-                  fullWidth
-                  size="small"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">L</InputAdornment>
-                    ),
-                  }}
+                  aria-invalid={!!errors.initialLiters}
                 />
-              </Grid>
+                <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                  L
+                </div>
+              </div>
+              {errors.initialLiters ? (
+                <p className="text-destructive text-xs">
+                  {errors.initialLiters}
+                </p>
+              ) : null}
+            </div>
 
-              <Grid item xs={12} md={4}>
-                <TextField
-                  label="Litros Finales"
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Litros Finales</label>
+              <div className="relative">
+                <Input
                   type="number"
-                  value={formData.finalLiters}
+                  value={String(formData.finalLiters)}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
                       finalLiters: Number(e.target.value),
                     })
                   }
-                  error={!!errors.finalLiters}
-                  helperText={errors.finalLiters}
-                  fullWidth
-                  size="small"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">L</InputAdornment>
-                    ),
-                  }}
+                  aria-invalid={!!errors.finalLiters}
                 />
-              </Grid>
+                <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                  L
+                </div>
+              </div>
+              {errors.finalLiters ? (
+                <p className="text-destructive text-xs">{errors.finalLiters}</p>
+              ) : null}
+            </div>
 
-              <Grid item xs={12} md={4}>
-                <TextField
-                  label="Total Litros"
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Total Litros</label>
+              <div className="relative">
+                <Input
                   type="number"
-                  value={formData.totalLiters}
+                  value={String(formData.totalLiters)}
                   disabled
-                  fullWidth
-                  size="small"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">L</InputAdornment>
-                    ),
-                  }}
                 />
-              </Grid>
+                <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                  L
+                </div>
+              </div>
+            </div>
 
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth size="small" error={!!errors.idFuelType}>
-                  <InputLabel>Tipo de Combustible *</InputLabel>
-                  <Select
-                    value={formData.idFuelType}
-                    label="Tipo de Combustible *"
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        idFuelType: Number(e.target.value),
-                      })
-                    }
-                  >
-                    {fuelTypes.map((ft) => (
-                      <MenuItem key={ft.id} value={ft.id}>
-                        {ft.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {errors.idFuelType && (
-                    <Typography
-                      variant="caption"
-                      color="error"
-                      sx={{ mt: 0.5 }}
-                    >
-                      {errors.idFuelType}
-                    </Typography>
-                  )}
-                </FormControl>
-              </Grid>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Tipo de Combustible *
+              </label>
+              <Select
+                value={String(formData.idFuelType)}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, idFuelType: Number(value) })
+                }
+              >
+                <SelectTrigger aria-invalid={!!errors.idFuelType}>
+                  <SelectValue placeholder="Seleccionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fuelTypes.map((ft) => (
+                    <SelectItem key={ft.id} value={String(ft.id)}>
+                      {ft.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.idFuelType ? (
+                <p className="text-destructive text-xs">{errors.idFuelType}</p>
+              ) : null}
+            </div>
 
-              <Grid item xs={12}>
-                <TextField
-                  label="Detalle (opcional)"
-                  value={formData.detail || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, detail: e.target.value })
-                  }
-                  multiline
-                  rows={2}
-                  fullWidth
-                  size="small"
-                />
-              </Grid>
-            </Grid>
-          </Box>
+            <div className="space-y-2 sm:col-span-2">
+              <label className="text-sm font-medium">Detalle (opcional)</label>
+              <Textarea
+                value={formData.detail || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, detail: e.target.value })
+                }
+                rows={2}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpenDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {createMutation.isPending || updateMutation.isPending
+                ? "Guardando..."
+                : editingLoad
+                ? "Guardar Cambios"
+                : "Crear Carga"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={createMutation.isPending || updateMutation.isPending}
-          >
-            {createMutation.isPending || updateMutation.isPending
-              ? "Guardando..."
-              : editingLoad
-              ? "Guardar Cambios"
-              : "Crear Carga"}
-          </Button>
-        </DialogActions>
       </Dialog>
     </Card>
   );

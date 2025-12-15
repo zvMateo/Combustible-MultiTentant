@@ -1,37 +1,47 @@
 // src/pages/Dashboard/Fuel/tabs/StockMovementsTab.tsx
 import { useState, useMemo } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Box,
-  Button,
-  TextField,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Typography,
-  InputAdornment,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Chip,
-  IconButton,
-  Card,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
-  Grid,
-  LinearProgress,
-  Alert,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import EditIcon from "@mui/icons-material/Edit";
-import MoveUpIcon from "@mui/icons-material/MoveUp";
+} from "@/components/ui/table";
+import {
+  ArrowUpDown,
+  Download,
+  Pencil,
+  Plus,
+  Search,
+  TriangleAlert,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import {
@@ -91,16 +101,35 @@ export default function StockMovementsTab() {
 
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (m) =>
-          m.resource?.toLowerCase().includes(term) ||
-          m.fuelType?.toLowerCase().includes(term) ||
-          m.movement?.toLowerCase().includes(term)
-      );
+      filtered = filtered.filter((m) => {
+        const fuelTypeName =
+          m.fuelType?.name ||
+          fuelTypes.find((ft) => ft.id === m.idFuelType)?.name ||
+          "";
+        const resourceName =
+          m.resource?.name ||
+          resources.find((r) => r.id === m.idResource)?.name ||
+          "";
+        const resourceIdentifier =
+          m.resource?.identifier ||
+          resources.find((r) => r.id === m.idResource)?.identifier ||
+          "";
+        const movementTypeName =
+          m.movementType?.name ||
+          movementTypes.find((mt) => mt.id === m.idMovementType)?.name ||
+          "";
+
+        return (
+          resourceName.toLowerCase().includes(term) ||
+          resourceIdentifier.toLowerCase().includes(term) ||
+          fuelTypeName.toLowerCase().includes(term) ||
+          movementTypeName.toLowerCase().includes(term)
+        );
+      });
     }
 
     return filtered;
-  }, [movements, searchTerm, idCompany, user?.role]);
+  }, [movements, searchTerm, idCompany, fuelTypes, resources, movementTypes]);
 
   const handleNew = () => {
     setEditingMovement(null);
@@ -158,11 +187,6 @@ export default function StockMovementsTab() {
     // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado
     const finalIdCompany = idCompany || user?.idCompany || user?.empresaId || 0;
 
-    console.log(
-      "🏢 [StockMovementsTab] Multi-tenant: idCompany del usuario autenticado:",
-      finalIdCompany
-    );
-
     try {
       if (editingMovement) {
         const updateData: UpdateFuelStockMovementRequest = {
@@ -188,11 +212,20 @@ export default function StockMovementsTab() {
   const handleExport = () => {
     const dataToExport = filteredMovements.map((m) => ({
       Fecha: new Date(m.date).toLocaleDateString(),
-      "Tipo Combustible": m.fuelType,
-      Recurso: m.resource,
-      Movimiento: m.movement || "-",
-      Empresa: m.company,
-      "Unidad de Negocio": m.businessUnit,
+      "Tipo Combustible":
+        m.fuelType?.name ||
+        fuelTypes.find((ft) => ft.id === m.idFuelType)?.name ||
+        "-",
+      Recurso:
+        m.resource?.name ||
+        resources.find((r) => r.id === m.idResource)?.name ||
+        "-",
+      Movimiento:
+        m.movementType?.name ||
+        movementTypes.find((mt) => mt.id === m.idMovementType)?.name ||
+        "-",
+      Empresa: m.resource?.company?.[0] || "-",
+      "Unidad de Negocio": m.resource?.businessUnit?.[0] || "-",
       Litros: m.liters,
     }));
 
@@ -208,328 +241,300 @@ export default function StockMovementsTab() {
 
   if (isLoading) {
     return (
-      <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-        <Box sx={{ p: 3 }}>
-          <LinearProgress sx={{ mb: 2 }} />
-          <Typography>Cargando movimientos de stock...</Typography>
-        </Box>
+      <Card className="border-border">
+        <CardContent className="flex items-center gap-2 pt-6">
+          <Spinner className="size-4" />
+          <span className="text-sm text-muted-foreground">
+            Cargando movimientos de stock...
+          </span>
+        </CardContent>
       </Card>
     );
   }
 
   if (error) {
     return (
-      <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-        <Box sx={{ p: 3 }}>
-          <Alert severity="error">
-            Error al cargar movimientos:{" "}
-            {error instanceof Error ? error.message : "Error desconocido"}
+      <Card className="border-border">
+        <CardContent className="pt-6">
+          <Alert variant="destructive">
+            <TriangleAlert className="size-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              Error al cargar movimientos:{" "}
+              {error instanceof Error ? error.message : "Error desconocido"}
+            </AlertDescription>
           </Alert>
-        </Box>
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-      <Box sx={{ p: 3 }}>
-        {/* Header */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
-        >
-          <Box>
-            <Typography variant="h6" fontWeight={700}>
-              Movimientos de Stock
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {filteredMovements.length}{" "}
-              {filteredMovements.length === 1 ? "movimiento" : "movimientos"}{" "}
-              registrados
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <Button
-              variant="outlined"
-              startIcon={<FileDownloadIcon />}
-              onClick={handleExport}
-              disabled={filteredMovements.length === 0}
-              size="small"
-            >
-              Exportar
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleNew}
-              disabled={createMutation.isPending}
-              size="small"
-            >
-              Nuevo Movimiento
-            </Button>
-          </Box>
-        </Box>
+    <Card className="border-border">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+        <div>
+          <CardTitle>Movimientos de Stock</CardTitle>
+          <CardDescription>
+            {filteredMovements.length}{" "}
+            {filteredMovements.length === 1 ? "movimiento" : "movimientos"}{" "}
+            registrados
+          </CardDescription>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExport}
+            disabled={filteredMovements.length === 0}
+            size="sm"
+          >
+            <Download className="size-4" />
+            Exportar
+          </Button>
+          <Button
+            type="button"
+            onClick={handleNew}
+            disabled={createMutation.isPending}
+            size="sm"
+          >
+            <Plus className="size-4" />
+            Nuevo Movimiento
+          </Button>
+        </div>
+      </CardHeader>
 
-        {/* Buscador */}
-        <TextField
-          placeholder="Buscar por recurso, combustible o tipo..."
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          fullWidth
-          sx={{ mb: 3 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: "#9ca3af" }} />
-              </InputAdornment>
-            ),
-          }}
-        />
+      <CardContent className="space-y-4">
+        <div className="relative">
+          <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+          <Input
+            placeholder="Buscar por recurso, combustible o tipo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
 
-        {/* Tabla */}
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>Fecha</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Combustible</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Recurso</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Tipo Movimiento</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Empresa</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700 }}>
-                  Litros
-                </TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Acciones</TableCell>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Combustible</TableHead>
+                <TableHead>Recurso</TableHead>
+                <TableHead>Tipo Movimiento</TableHead>
+                <TableHead>Empresa</TableHead>
+                <TableHead className="text-right">Litros</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {filteredMovements.map((movement) => (
-                <TableRow key={movement.id} hover>
+                <TableRow key={movement.id}>
                   <TableCell>
                     {new Date(movement.date).toLocaleDateString()}
                   </TableCell>
-                  <TableCell>{movement.fuelType}</TableCell>
-                  <TableCell>{movement.resource}</TableCell>
                   <TableCell>
-                    <Chip
-                      label={movement.movement || "Sin tipo"}
-                      size="small"
-                      sx={{
-                        bgcolor: "#3b82f615",
-                        color: "#3b82f6",
-                        fontWeight: 600,
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>{movement.company}</TableCell>
-                  <TableCell align="right">
-                    <Chip
-                      label={`${movement.liters} L`}
-                      size="small"
-                      sx={{
-                        bgcolor: "#10b98115",
-                        color: "#10b981",
-                        fontWeight: 600,
-                      }}
-                    />
+                    {movement.fuelType?.name ||
+                      fuelTypes.find((ft) => ft.id === movement.idFuelType)
+                        ?.name ||
+                      "-"}
                   </TableCell>
                   <TableCell>
-                    <IconButton
-                      size="small"
+                    {movement.resource?.name ||
+                      resources.find((r) => r.id === movement.idResource)
+                        ?.name ||
+                      "-"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">
+                      {movement.movementType?.name ||
+                        movementTypes.find(
+                          (mt) => mt.id === movement.idMovementType
+                        )?.name ||
+                        "Sin tipo"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {movement.resource?.company?.[0] || "-"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Badge variant="secondary">{movement.liters} L</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
                       onClick={() => handleEdit(movement)}
                       disabled={updateMutation.isPending}
-                      sx={{
-                        bgcolor: "#f3f4f6",
-                        "&:hover": { bgcolor: "#e5e7eb" },
-                      }}
+                      aria-label="Editar"
                     >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
+                      <Pencil className="size-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
+
+              {filteredMovements.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-10 text-center">
+                    <div className="text-muted-foreground flex flex-col items-center gap-2">
+                      <ArrowUpDown className="size-8" />
+                      <span>No hay movimientos registrados</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : null}
             </TableBody>
           </Table>
-        </TableContainer>
+        </div>
+      </CardContent>
 
-        {filteredMovements.length === 0 && (
-          <Box sx={{ textAlign: "center", py: 8 }}>
-            <MoveUpIcon sx={{ fontSize: 64, color: "#ddd", mb: 2 }} />
-            <Typography variant="h6" color="text.secondary">
-              No hay movimientos registrados
-            </Typography>
-          </Box>
-        )}
-      </Box>
-
-      {/* Dialog Crear/Editar */}
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {editingMovement ? "Editar Movimiento" : "Nuevo Movimiento de Stock"}
-        </DialogTitle>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth size="small" error={!!errors.idFuelType}>
-                  <InputLabel>Tipo de Combustible *</InputLabel>
-                  <Select
-                    value={formData.idFuelType}
-                    label="Tipo de Combustible *"
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        idFuelType: Number(e.target.value),
-                      })
-                    }
-                  >
-                    {fuelTypes.map((ft) => (
-                      <MenuItem key={ft.id} value={ft.id}>
-                        {ft.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {errors.idFuelType && (
-                    <Typography
-                      variant="caption"
-                      color="error"
-                      sx={{ mt: 0.5 }}
-                    >
-                      {errors.idFuelType}
-                    </Typography>
-                  )}
-                </FormControl>
-              </Grid>
+          <DialogHeader>
+            <DialogTitle>
+              {editingMovement
+                ? "Editar Movimiento"
+                : "Nuevo Movimiento de Stock"}
+            </DialogTitle>
+          </DialogHeader>
 
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth size="small" error={!!errors.idResource}>
-                  <InputLabel>Recurso *</InputLabel>
-                  <Select
-                    value={formData.idResource}
-                    label="Recurso *"
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        idResource: Number(e.target.value),
-                      })
-                    }
-                  >
-                    {resources.map((r) => (
-                      <MenuItem key={r.id} value={r.id}>
-                        {r.name} ({r.identifier})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {errors.idResource && (
-                    <Typography
-                      variant="caption"
-                      color="error"
-                      sx={{ mt: 0.5 }}
-                    >
-                      {errors.idResource}
-                    </Typography>
-                  )}
-                </FormControl>
-              </Grid>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Tipo de Combustible *
+              </label>
+              <Select
+                value={String(formData.idFuelType)}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, idFuelType: Number(value) })
+                }
+              >
+                <SelectTrigger aria-invalid={!!errors.idFuelType}>
+                  <SelectValue placeholder="Seleccionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fuelTypes.map((ft) => (
+                    <SelectItem key={ft.id} value={String(ft.id)}>
+                      {ft.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.idFuelType ? (
+                <p className="text-destructive text-xs">{errors.idFuelType}</p>
+              ) : null}
+            </div>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Fecha"
-                  type="datetime-local"
-                  value={formData.date.split(".")[0]}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      date: new Date(e.target.value).toISOString(),
-                    })
-                  }
-                  fullWidth
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Recurso *</label>
+              <Select
+                value={String(formData.idResource)}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, idResource: Number(value) })
+                }
+              >
+                <SelectTrigger aria-invalid={!!errors.idResource}>
+                  <SelectValue placeholder="Seleccionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {resources.map((r) => (
+                    <SelectItem key={r.id} value={String(r.id)}>
+                      {r.name} ({r.identifier})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.idResource ? (
+                <p className="text-destructive text-xs">{errors.idResource}</p>
+              ) : null}
+            </div>
 
-              <Grid item xs={12} md={6}>
-                <FormControl
-                  fullWidth
-                  size="small"
-                  error={!!errors.idMovementType}
-                >
-                  <InputLabel>Tipo de Movimiento *</InputLabel>
-                  <Select
-                    value={formData.idMovementType}
-                    label="Tipo de Movimiento *"
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        idMovementType: Number(e.target.value),
-                      })
-                    }
-                  >
-                    {movementTypes.map((mt) => (
-                      <MenuItem key={mt.id} value={mt.id}>
-                        {mt.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {errors.idMovementType && (
-                    <Typography
-                      variant="caption"
-                      color="error"
-                      sx={{ mt: 0.5 }}
-                    >
-                      {errors.idMovementType}
-                    </Typography>
-                  )}
-                </FormControl>
-              </Grid>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Fecha</label>
+              <Input
+                type="datetime-local"
+                value={new Date(formData.date).toISOString().slice(0, 16)}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    date: new Date(e.target.value).toISOString(),
+                  })
+                }
+              />
+            </div>
 
-              <Grid item xs={12}>
-                <TextField
-                  label="Litros *"
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Tipo de Movimiento *
+              </label>
+              <Select
+                value={String(formData.idMovementType)}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, idMovementType: Number(value) })
+                }
+              >
+                <SelectTrigger aria-invalid={!!errors.idMovementType}>
+                  <SelectValue placeholder="Seleccionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {movementTypes.map((mt) => (
+                    <SelectItem key={mt.id} value={String(mt.id)}>
+                      {mt.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.idMovementType ? (
+                <p className="text-destructive text-xs">
+                  {errors.idMovementType}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <label className="text-sm font-medium">Litros *</label>
+              <div className="relative">
+                <Input
                   type="number"
-                  value={formData.liters}
+                  value={String(formData.liters)}
                   onChange={(e) =>
                     setFormData({ ...formData, liters: Number(e.target.value) })
                   }
-                  error={!!errors.liters}
-                  helperText={errors.liters}
-                  fullWidth
-                  size="small"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">L</InputAdornment>
-                    ),
-                  }}
+                  aria-invalid={!!errors.liters}
                 />
-              </Grid>
-            </Grid>
-          </Box>
+                <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                  L
+                </div>
+              </div>
+              {errors.liters ? (
+                <p className="text-destructive text-xs">{errors.liters}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpenDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {createMutation.isPending || updateMutation.isPending
+                ? "Guardando..."
+                : editingMovement
+                ? "Guardar Cambios"
+                : "Crear Movimiento"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={createMutation.isPending || updateMutation.isPending}
-          >
-            {createMutation.isPending || updateMutation.isPending
-              ? "Guardando..."
-              : editingMovement
-              ? "Guardar Cambios"
-              : "Crear Movimiento"}
-          </Button>
-        </DialogActions>
       </Dialog>
     </Card>
   );

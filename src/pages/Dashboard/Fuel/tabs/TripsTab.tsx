@@ -1,29 +1,40 @@
 // src/pages/Dashboard/Fuel/tabs/TripsTab.tsx
 import { useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
-  Box,
-  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Typography,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  IconButton,
-  Card,
-  TextField,
-  LinearProgress,
-  Alert,
-  MenuItem,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
-import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { Car, Pencil, Plus, TriangleAlert } from "lucide-react";
 import {
   useTrips,
   useCreateTrip,
@@ -151,78 +162,70 @@ export default function TripsTab() {
 
   if (isLoading) {
     return (
-      <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-        <Box sx={{ p: 3 }}>
-          <LinearProgress sx={{ mb: 2 }} />
-          <Typography>Cargando viajes...</Typography>
-        </Box>
+      <Card className="border-border">
+        <CardContent className="flex items-center gap-2 pt-6">
+          <Spinner className="size-4" />
+          <span className="text-sm text-muted-foreground">
+            Cargando viajes...
+          </span>
+        </CardContent>
       </Card>
     );
   }
 
   if (error) {
     return (
-      <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-        <Box sx={{ p: 3 }}>
-          <Alert severity="error">
-            Error al cargar viajes:{" "}
-            {error instanceof Error ? error.message : "Error desconocido"}
+      <Card className="border-border">
+        <CardContent className="pt-6">
+          <Alert variant="destructive">
+            <TriangleAlert className="size-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              Error al cargar viajes:{" "}
+              {error instanceof Error ? error.message : "Error desconocido"}
+            </AlertDescription>
           </Alert>
-        </Box>
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-      <Box sx={{ p: 3 }}>
-        {/* Header */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
-        >
-          <Box>
-            <Typography variant="h6" fontWeight={700}>
-              Viajes
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Gestión de viajes y recorridos
-            </Typography>
-          </Box>
-          {showCreateButtons && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleNew}
-              disabled={createMutation.isPending || isReadOnly}
-              size="small"
-            >
-              Nuevo Viaje
-            </Button>
-          )}
-        </Box>
+    <Card className="border-border">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+        <div>
+          <CardTitle>Viajes</CardTitle>
+          <CardDescription>Gestión de viajes y recorridos</CardDescription>
+        </div>
+        {showCreateButtons ? (
+          <Button
+            onClick={handleNew}
+            disabled={createMutation.isPending || isReadOnly}
+            size="sm"
+          >
+            <Plus className="size-4" />
+            Nuevo Viaje
+          </Button>
+        ) : null}
+      </CardHeader>
 
-        {/* Tabla */}
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>ID</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Conductor</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Origen</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Destino</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Distancia (km)</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Acciones</TableCell>
+                <TableHead className="w-[80px]">ID</TableHead>
+                <TableHead>Conductor</TableHead>
+                <TableHead>Origen</TableHead>
+                <TableHead>Destino</TableHead>
+                <TableHead className="w-[140px]">Distancia (km)</TableHead>
+                <TableHead className="w-[120px] text-right">Acciones</TableHead>
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {trips.map((trip) => (
-                <TableRow key={trip.id} hover>
-                  <TableCell>{trip.id}</TableCell>
+                <TableRow key={trip.id}>
+                  <TableCell className="font-mono text-xs">{trip.id}</TableCell>
                   <TableCell>
                     {trip.nameDriver ||
                       drivers.find((d) => d.id === trip.idDriver)?.name ||
@@ -231,144 +234,164 @@ export default function TripsTab() {
                   <TableCell>{trip.initialLocation || "-"}</TableCell>
                   <TableCell>{trip.finalLocation || "-"}</TableCell>
                   <TableCell>{trip.totalKm || "-"}</TableCell>
-                  <TableCell>
-                    {!isReadOnly && showEditButtons && (
-                      <IconButton
-                        size="small"
+                  <TableCell className="text-right">
+                    {!isReadOnly && showEditButtons ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
                         onClick={() => handleEdit(trip)}
                         disabled={updateMutation.isPending || !canEdit}
-                        sx={{
-                          bgcolor: "#f3f4f6",
-                          "&:hover": { bgcolor: "#e5e7eb" },
-                        }}
+                        aria-label="Editar"
                       >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    )}
+                        <Pencil className="size-4" />
+                      </Button>
+                    ) : null}
                   </TableCell>
                 </TableRow>
               ))}
+
+              {trips.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-10 text-center">
+                    <div className="text-muted-foreground flex flex-col items-center gap-2">
+                      <Car className="size-8" />
+                      <span>No hay viajes registrados</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : null}
             </TableBody>
           </Table>
-        </TableContainer>
+        </div>
+      </CardContent>
 
-        {trips.length === 0 && (
-          <Box sx={{ textAlign: "center", py: 8 }}>
-            <DirectionsCarIcon sx={{ fontSize: 64, color: "#ddd", mb: 2 }} />
-            <Typography variant="h6" color="text.secondary">
-              No hay viajes registrados
-            </Typography>
-          </Box>
-        )}
-      </Box>
-
-      {/* Dialog Crear/Editar */}
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {editingTrip ? "Editar Viaje" : "Nuevo Viaje"}
-        </DialogTitle>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent>
-          <Box sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-            <TextField
-              select
-              label="Conductor *"
-              value={formData.idDriver}
-              onChange={(e) =>
-                setFormData({ ...formData, idDriver: Number(e.target.value) })
-              }
-              error={!!errors.idDriver}
-              helperText={errors.idDriver}
-              fullWidth
-              size="small"
+          <DialogHeader>
+            <DialogTitle>
+              {editingTrip ? "Editar Viaje" : "Nuevo Viaje"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Conductor *</label>
+              <Select
+                value={String(formData.idDriver)}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, idDriver: Number(value) })
+                }
+              >
+                <SelectTrigger aria-invalid={!!errors.idDriver}>
+                  <SelectValue placeholder="Seleccionar conductor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Seleccionar conductor</SelectItem>
+                  {drivers
+                    .filter((driver) => driver.isActive !== false)
+                    .map((driver) => (
+                      <SelectItem key={driver.id} value={String(driver.id)}>
+                        {driver.name} {driver.dni ? `(${driver.dni})` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {errors.idDriver ? (
+                <p className="text-destructive text-xs">{errors.idDriver}</p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Origen *</label>
+                <Input
+                  value={formData.origin}
+                  onChange={(e) =>
+                    setFormData({ ...formData, origin: e.target.value })
+                  }
+                  aria-invalid={!!errors.origin}
+                />
+                {errors.origin ? (
+                  <p className="text-destructive text-xs">{errors.origin}</p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Destino *</label>
+                <Input
+                  value={formData.destination}
+                  onChange={(e) =>
+                    setFormData({ ...formData, destination: e.target.value })
+                  }
+                  aria-invalid={!!errors.destination}
+                />
+                {errors.destination ? (
+                  <p className="text-destructive text-xs">
+                    {errors.destination}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Fecha de Inicio</label>
+                <Input
+                  type="datetime-local"
+                  value={formData.startDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Distancia (km)</label>
+                <Input
+                  type="number"
+                  value={String(formData.distance)}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      distance: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Notas</label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) =>
+                  setFormData({ ...formData, notes: e.target.value })
+                }
+                rows={2}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpenDialog(false)}
             >
-              <MenuItem value={0}>Seleccionar conductor</MenuItem>
-              {drivers
-                .filter((driver) => driver.isActive !== false)
-                .map((driver) => (
-                  <MenuItem key={driver.id} value={driver.id}>
-                    {driver.name} {driver.dni ? `(${driver.dni})` : ""}
-                  </MenuItem>
-                ))}
-            </TextField>
-
-            <TextField
-              label="Origen *"
-              value={formData.origin}
-              onChange={(e) =>
-                setFormData({ ...formData, origin: e.target.value })
-              }
-              error={!!errors.origin}
-              helperText={errors.origin}
-              fullWidth
-              size="small"
-            />
-
-            <TextField
-              label="Destino *"
-              value={formData.destination}
-              onChange={(e) =>
-                setFormData({ ...formData, destination: e.target.value })
-              }
-              error={!!errors.destination}
-              helperText={errors.destination}
-              fullWidth
-              size="small"
-            />
-
-            <TextField
-              label="Fecha de Inicio"
-              type="datetime-local"
-              value={formData.startDate}
-              onChange={(e) =>
-                setFormData({ ...formData, startDate: e.target.value })
-              }
-              fullWidth
-              size="small"
-            />
-
-            <TextField
-              label="Distancia (km)"
-              type="number"
-              value={formData.distance}
-              onChange={(e) =>
-                setFormData({ ...formData, distance: Number(e.target.value) })
-              }
-              fullWidth
-              size="small"
-            />
-
-            <TextField
-              label="Notas"
-              value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
-              multiline
-              rows={2}
-              fullWidth
-              size="small"
-            />
-          </Box>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {createMutation.isPending || updateMutation.isPending
+                ? "Guardando..."
+                : editingTrip
+                ? "Guardar Cambios"
+                : "Crear"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={createMutation.isPending || updateMutation.isPending}
-          >
-            {createMutation.isPending || updateMutation.isPending
-              ? "Guardando..."
-              : editingTrip
-              ? "Guardar Cambios"
-              : "Crear"}
-          </Button>
-        </DialogActions>
       </Dialog>
     </Card>
   );

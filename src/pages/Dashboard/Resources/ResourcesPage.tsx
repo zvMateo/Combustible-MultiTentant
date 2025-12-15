@@ -1,38 +1,49 @@
 // src/pages/Dashboard/Resources/ResourcesPage.tsx
 import { useState, useMemo } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
-  Box,
-  Button,
-  TextField,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Typography,
-  InputAdornment,
-  Card,
-  CardContent,
-  Chip,
-  IconButton,
-  LinearProgress,
-  Alert,
-  Skeleton,
-  FormControl,
-  InputLabel,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
   Select,
-  MenuItem,
-  Grid,
-  Tabs,
-  Tab,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import PropaneTankIcon from "@mui/icons-material/PropaneTank";
-import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import CategoryIcon from "@mui/icons-material/Category";
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Download,
+  Fuel,
+  Layers,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  Shapes,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
@@ -63,7 +74,7 @@ interface FormErrors {
   [key: string]: string;
 }
 
-type ResourceFilter = "all" | number; // number es el idType
+type ResourceFilter = "all" | string; // string es el idType serializado
 
 export default function ResourcesPage() {
   const { user } = useAuthStore();
@@ -158,16 +169,16 @@ export default function ResourcesPage() {
     // Filtrar por tipo (excluir vehículos que tienen idType: 1)
     // Si filterType es un número, filtrar por ese idType específico
     if (filterType !== "all") {
-      filtered = filtered.filter((r) => r.idType === filterType);
+      filtered = filtered.filter((r) => r.idType === Number(filterType));
     } else {
       // Mostrar todos excepto vehículos
       // Un recurso es vehículo si: idType === 1 Y (no tiene type array O el type no es tanque/surtidor)
       filtered = filtered.filter((r) => {
-        const typeArray = (r as any).type || [];
+        const typeArray = r.type ?? [];
         // Si tiene type array, mostrar si es tanque o surtidor (incluso si idType es 1)
         if (typeArray.length > 0) {
           const isTankOrDispenser = typeArray.some(
-            (t: string) =>
+            (t) =>
               t.toLowerCase().includes("tanque") ||
               t.toLowerCase().includes("surtidor") ||
               t.toLowerCase().includes("dispenser")
@@ -193,7 +204,6 @@ export default function ResourcesPage() {
   }, [
     allResources,
     searchTerm,
-    companyIdFilter,
     isSupervisor,
     isAuditor,
     unidadIdsFilter,
@@ -335,7 +345,7 @@ export default function ResourcesPage() {
       const businessUnit = businessUnits.find(
         (bu) => bu.id === r.idBusinessUnit
       );
-      const typeArray = (r as any).type || [];
+      const typeArray = r.type ?? [];
       const typeName =
         typeArray.join(", ") ||
         resourceTypes.find((rt) => rt.id === r.idType)?.name ||
@@ -430,19 +440,19 @@ export default function ResourcesPage() {
   };
 
   const getResourceIcon = (resource: Resource) => {
-    const typeArray = (resource as any).type || [];
+    const typeArray = resource.type ?? [];
     const typeName = typeArray.join(" ").toLowerCase() || "";
     if (typeName.includes("tanque")) {
-      return <PropaneTankIcon />;
+      return <Package className="size-5" />;
     }
     if (typeName.includes("surtidor") || typeName.includes("dispenser")) {
-      return <LocalGasStationIcon />;
+      return <Fuel className="size-5" />;
     }
-    return <PropaneTankIcon />;
+    return <Package className="size-5" />;
   };
 
   const getResourceTypeName = (resource: Resource) => {
-    const typeArray = (resource as any).type || [];
+    const typeArray = resource.type ?? [];
     if (typeArray.length > 0) {
       return typeArray[0];
     }
@@ -454,638 +464,534 @@ export default function ResourcesPage() {
   // Loading state
   if (isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
-        <LinearProgress sx={{ mb: 2 }} />
-        <Grid container spacing={3}>
+      <div className="p-6">
+        <Card className="border-border">
+          <CardContent className="flex items-center gap-2 pt-6">
+            <Spinner className="size-4" />
+            <span className="text-sm text-muted-foreground">
+              Cargando recursos...
+            </span>
+          </CardContent>
+        </Card>
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            // @ts-expect-error - MUI v7 Grid type incompatibility
-            <Grid xs={12} sm={6} md={4} lg={3} key={i}>
-              <Skeleton variant="rounded" height={200} />
-            </Grid>
+            <Skeleton key={i} className="h-[180px] w-full" />
           ))}
-        </Grid>
-      </Box>
+        </div>
+      </div>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          Error al cargar recursos:{" "}
-          {error instanceof Error ? error.message : "Error desconocido"}
-        </Alert>
-      </Box>
+      <div className="p-6">
+        <Card className="border-border">
+          <CardContent className="pt-6">
+            <Alert variant="destructive">
+              <TriangleAlert className="size-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>
+                Error al cargar recursos:{" "}
+                {error instanceof Error ? error.message : "Error desconocido"}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 1.5,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 700, lineHeight: 1.1, mb: 0.5 }}
-          >
-            Recursos
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
+    <div className="p-6">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Recursos</h1>
+          <p className="text-muted-foreground text-sm">
             {filteredResources.length}{" "}
             {filteredResources.length === 1 ? "recurso" : "recursos"}{" "}
             registrados
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          {showExportButtons && (
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {showExportButtons ? (
             <Button
-              variant="outlined"
-              startIcon={<FileDownloadIcon />}
+              type="button"
+              variant="outline"
               onClick={handleExport}
               disabled={filteredResources.length === 0}
-              sx={{
-                borderColor: "#10b981",
-                color: "#10b981",
-                fontWeight: 600,
-                textTransform: "none",
-                "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
-              }}
+              size="sm"
             >
+              <Download className="size-4" />
               Exportar
             </Button>
-          )}
-          {canManageResources && (
+          ) : null}
+          {canManageResources ? (
             <Button
-              variant="outlined"
-              startIcon={<CategoryIcon />}
+              type="button"
+              variant="outline"
               onClick={handleNewResourceType}
               disabled={isReadOnly}
-              sx={{
-                borderColor: "#3b82f6",
-                color: "#3b82f6",
-                fontWeight: 600,
-                textTransform: "none",
-                "&:hover": { borderColor: "#2563eb", bgcolor: "#3b82f610" },
-              }}
+              size="sm"
             >
+              <Shapes className="size-4" />
               Tipos de Recursos
             </Button>
-          )}
-          {showCreateButtons && canManageResources && (
+          ) : null}
+          {showCreateButtons && canManageResources ? (
             <Button
-              variant="contained"
-              startIcon={<AddIcon />}
+              type="button"
               onClick={handleNew}
               disabled={createMutation.isPending || isReadOnly}
-              sx={{
-                bgcolor: "#1E2C56",
-                fontWeight: 600,
-                textTransform: "none",
-                "&:hover": { bgcolor: "#16213E" },
-              }}
+              size="sm"
             >
+              <Plus className="size-4" />
               Nuevo Recurso
             </Button>
-          )}
-        </Box>
-      </Box>
+          ) : null}
+        </div>
+      </div>
 
       {/* Tabs para filtrar por tipo (dinámicos según tipos de recursos disponibles) */}
-      {availableResourceTypes.length > 0 && (
-        <Box sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}>
-          <Tabs
-            value={filterType}
-            onChange={(_, newValue) =>
-              setFilterType(newValue as ResourceFilter)
-            }
-            sx={{ mb: -1 }}
-            variant="scrollable"
-            scrollButtons="auto"
-          >
-            <Tab label="Todos" value="all" />
+      {availableResourceTypes.length > 0 ? (
+        <Tabs
+          value={filterType}
+          onValueChange={setFilterType}
+          className="w-full"
+        >
+          <TabsList className="mb-4 h-auto w-full flex-wrap justify-start gap-1 rounded-lg border bg-background p-1">
+            <TabsTrigger value="all" className="h-10">
+              Todos
+            </TabsTrigger>
             {availableResourceTypes.map((resourceType) => (
-              <Tab
+              <TabsTrigger
                 key={resourceType.id}
-                label={resourceType.name}
-                value={resourceType.id}
-              />
+                value={String(resourceType.id)}
+                className="h-10"
+              >
+                {resourceType.name}
+              </TabsTrigger>
             ))}
-          </Tabs>
-        </Box>
-      )}
+          </TabsList>
+          <TabsContent value={filterType}>
+            {/* content handled below */}
+          </TabsContent>
+        </Tabs>
+      ) : null}
 
       {/* Filtros */}
-      <Box
-        sx={{
-          mb: 3,
-          background: "white",
-          borderRadius: 2,
-          border: "1px solid #e2e8f0",
-          p: 2,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 2,
-          alignItems: "center",
-        }}
-      >
-        <TextField
-          placeholder="Buscar por nombre o identificador..."
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ flexGrow: 1, minWidth: 220 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: "#9ca3af" }} />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+          <Input
+            placeholder="Buscar por nombre o identificador..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
 
       {/* Grid de recursos */}
-      <Grid container spacing={3}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {filteredResources.map((resource) => {
           const company = companies.find((c) => c.id === resource.idCompany);
           const businessUnit = businessUnits.find(
             (bu) => bu.id === resource.idBusinessUnit
           );
           const typeName = getResourceTypeName(resource);
+
           return (
-            // @ts-expect-error - MUI v7 Grid type incompatibility
-            <Grid xs={12} sm={6} md={4} lg={3} key={resource.id}>
-              <Card
-                elevation={0}
-                sx={{
-                  background: "white",
-                  borderRadius: 3,
-                  border: "1px solid #e2e8f0",
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  transition: "all 0.25s ease",
-                  "&:hover": {
-                    boxShadow: "0 8px 18px rgba(15,23,42,0.10)",
-                    transform: "translateY(-3px)",
-                    borderColor: "#10b981",
-                  },
-                }}
-              >
-                <CardContent
-                  sx={{
-                    p: 2.5,
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  {/* Header */}
-                  <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-                    <Box
-                      sx={{
-                        p: 1.5,
-                        borderRadius: 2,
-                        bgcolor: "#10b98115",
-                        color: "#10b981",
-                      }}
-                    >
-                      {getResourceIcon(resource)}
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="subtitle1" fontWeight={700}>
-                        {resource.name}
-                      </Typography>
-                      <Chip
-                        label={resource.identifier}
-                        size="small"
-                        sx={{
-                          bgcolor: "#f1f5f9",
-                          color: "#475569",
-                          fontWeight: 600,
-                          fontSize: 11,
-                          mt: 0.5,
-                        }}
-                      />
-                    </Box>
-                  </Box>
+            <Card
+              key={resource.id}
+              className="border-border transition-shadow hover:shadow-md"
+            >
+              <CardContent className="flex h-full flex-col gap-3 pt-6">
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
+                    {getResourceIcon(resource)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold">
+                      {resource.name}
+                    </div>
+                    <Badge variant="outline" className="mt-1">
+                      {resource.identifier}
+                    </Badge>
+                  </div>
+                </div>
 
-                  {/* Tipo */}
-                  <Box sx={{ mb: 1 }}>
-                    <Chip
-                      label={typeName}
-                      size="small"
-                      sx={{
-                        bgcolor: "#3b82f615",
-                        color: "#3b82f6",
-                        fontWeight: 600,
-                      }}
-                    />
-                  </Box>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">
+                    <Layers className="size-3" />
+                    {typeName}
+                  </Badge>
+                  {resource.nativeLiters ? (
+                    <Badge variant="secondary">{resource.nativeLiters} L</Badge>
+                  ) : null}
+                </div>
 
-                  {/* Capacidad */}
-                  {resource.nativeLiters && (
-                    <Box sx={{ mb: 1.5 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Capacidad: {resource.nativeLiters} L
-                      </Typography>
-                    </Box>
-                  )}
+                <div className="text-muted-foreground space-y-1 text-xs">
+                  {company ? (
+                    <div className="truncate">{company.name}</div>
+                  ) : null}
+                  {businessUnit ? (
+                    <div className="truncate">{businessUnit.name}</div>
+                  ) : null}
+                </div>
 
-                  {/* Empresa y Unidad */}
-                  {company && (
-                    <Box sx={{ mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        {company.name}
-                      </Typography>
-                    </Box>
-                  )}
+                {!isReadOnly ? (
+                  <div className="mt-auto flex gap-2 pt-2">
+                    {showEditButtons && canManageResources ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => handleEdit(resource)}
+                        disabled={updateMutation.isPending || !canEdit}
+                        aria-label="Editar"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                    ) : null}
 
-                  {businessUnit && (
-                    <Box sx={{ mb: 1.5 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        {businessUnit.name}
-                      </Typography>
-                    </Box>
-                  )}
-
-                  {/* Acciones */}
-                  {!isReadOnly && (
-                    <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}>
-                      {showEditButtons && canManageResources && (
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEdit(resource)}
-                          disabled={updateMutation.isPending || !canEdit}
-                          sx={{
-                            bgcolor: "#f3f4f6",
-                            "&:hover": { bgcolor: "#e5e7eb" },
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                      {showDeleteButtons && canManageResources && (
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteClick(resource)}
-                          disabled={deactivateMutation.isPending || !canDelete}
-                          sx={{
-                            bgcolor: "#fee2e2",
-                            color: "#dc2626",
-                            "&:hover": { bgcolor: "#fecaca" },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
+                    {showDeleteButtons && canManageResources ? (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon-sm"
+                        onClick={() => handleDeleteClick(resource)}
+                        disabled={deactivateMutation.isPending || !canDelete}
+                        aria-label="Desactivar"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
           );
         })}
-      </Grid>
+      </div>
 
       {/* Empty state */}
-      {filteredResources.length === 0 && !isLoading && (
-        <Box sx={{ textAlign: "center", py: 8 }}>
-          <PropaneTankIcon sx={{ fontSize: 64, color: "#ddd", mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
-            No hay recursos registrados
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Haz clic en 'Nuevo Recurso' para agregar uno
-          </Typography>
-        </Box>
-      )}
+      {filteredResources.length === 0 ? (
+        <div className="py-10 text-center">
+          <div className="text-muted-foreground mx-auto flex max-w-md flex-col items-center gap-2">
+            <Package className="size-10" />
+            <div className="text-sm font-medium">
+              No hay recursos registrados
+            </div>
+            <div className="text-xs">
+              Haz clic en "Nuevo Recurso" para agregar uno
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Diálogo de crear/editar */}
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {editingResource ? "Editar Recurso" : "Nuevo Recurso"}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
-            {/* Tipo de Recurso */}
-            <FormControl fullWidth error={!!errors.idType}>
-              <InputLabel>Tipo de Recurso *</InputLabel>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingResource ? "Editar Recurso" : "Nuevo Recurso"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tipo de Recurso *</label>
               <Select
-                value={formData.idType}
-                label="Tipo de Recurso *"
-                onChange={(e) =>
+                value={String(formData.idType)}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, idType: Number(value) })
+                }
+              >
+                <SelectTrigger aria-invalid={!!errors.idType}>
+                  <SelectValue placeholder="Seleccionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {nonVehicleTypes.map((rt) => (
+                    <SelectItem key={rt.id} value={String(rt.id)}>
+                      {rt.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.idType ? (
+                <p className="text-destructive text-xs">{errors.idType}</p>
+              ) : null}
+            </div>
+
+            {/* Empresa (solo si hay múltiples empresas) */}
+            {companies.length > 1 ? (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Empresa *</label>
+                <Select
+                  value={String(formData.idCompany)}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, idCompany: Number(value) })
+                  }
+                >
+                  <SelectTrigger aria-invalid={!!errors.idCompany}>
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.idCompany ? (
+                  <p className="text-destructive text-xs">{errors.idCompany}</p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* Unidad de Negocio */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Unidad de Negocio (opcional)
+              </label>
+              <Select
+                value={
+                  formData.idBusinessUnit
+                    ? String(formData.idBusinessUnit)
+                    : "none"
+                }
+                onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    idType: Number(e.target.value),
+                    idBusinessUnit:
+                      value === "none" ? undefined : Number(value),
                   })
                 }
               >
-                {nonVehicleTypes.map((rt) => (
-                  <MenuItem key={rt.id} value={rt.id}>
-                    {rt.name}
-                  </MenuItem>
-                ))}
-              </Select>
-              {errors.idType && (
-                <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                  {errors.idType}
-                </Typography>
-              )}
-            </FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin asignar</SelectItem>
+                  {(() => {
+                    const companyIdToFilter =
+                      formData.idCompany && formData.idCompany !== 0
+                        ? formData.idCompany
+                        : idCompany || undefined;
 
-            {/* Empresa (solo si hay múltiples empresas) */}
-            {companies.length > 1 && (
-              <FormControl fullWidth error={!!errors.idCompany}>
-                <InputLabel>Empresa *</InputLabel>
-                <Select
-                  value={formData.idCompany}
-                  label="Empresa *"
+                    const filteredUnits = companyIdToFilter
+                      ? businessUnits.filter(
+                          (bu) => bu.idCompany === companyIdToFilter
+                        )
+                      : businessUnits;
+
+                    return filteredUnits.map((bu) => (
+                      <SelectItem key={bu.id} value={String(bu.id)}>
+                        {bu.name}
+                      </SelectItem>
+                    ));
+                  })()}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Nombre del Recurso *
+              </label>
+              <Input
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                aria-invalid={!!errors.name}
+              />
+              {errors.name ? (
+                <p className="text-destructive text-xs">{errors.name}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Identificador *</label>
+              <Input
+                value={formData.identifier}
+                onChange={(e) =>
+                  setFormData({ ...formData, identifier: e.target.value })
+                }
+                aria-invalid={!!errors.identifier}
+              />
+              {errors.identifier ? (
+                <p className="text-destructive text-xs">{errors.identifier}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Capacidad (Litros)</label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  value={formData.nativeLiters ?? ""}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      idCompany: Number(e.target.value),
+                      nativeLiters: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
                     })
                   }
-                >
-                  {companies.map((c) => (
-                    <MenuItem key={c.id} value={c.id}>
-                      {c.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {errors.idCompany && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                    {errors.idCompany}
-                  </Typography>
-                )}
-              </FormControl>
-            )}
+                />
+                <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                  L
+                </div>
+              </div>
+            </div>
+          </div>
 
-            {/* Unidad de Negocio */}
-            <FormControl fullWidth>
-              <InputLabel>Unidad de Negocio (opcional)</InputLabel>
-              <Select
-                value={formData.idBusinessUnit || ""}
-                label="Unidad de Negocio (opcional)"
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    idBusinessUnit: e.target.value
-                      ? Number(e.target.value)
-                      : undefined,
-                  })
-                }
-              >
-                <MenuItem value="">Sin asignar</MenuItem>
-                {(() => {
-                  // Filtrar unidades de negocio por la empresa seleccionada
-                  // Si no hay empresa seleccionada o es 0, mostrar todas (o las de la empresa del usuario)
-                  const companyIdToFilter =
-                    formData.idCompany && formData.idCompany !== 0
-                      ? formData.idCompany
-                      : idCompany || undefined;
-
-                  const filteredUnits = companyIdToFilter
-                    ? businessUnits.filter(
-                        (bu) => bu.idCompany === companyIdToFilter
-                      )
-                    : businessUnits;
-
-                  console.log(
-                    "🔍 [ResourcesPage] Unidades de negocio filtradas:",
-                    {
-                      formDataIdCompany: formData.idCompany,
-                      userIdCompany: idCompany,
-                      companyIdToFilter,
-                      totalBusinessUnits: businessUnits.length,
-                      filteredUnits: filteredUnits.length,
-                      businessUnits: businessUnits,
-                    }
-                  );
-
-                  return filteredUnits.map((bu) => (
-                    <MenuItem key={bu.id} value={bu.id}>
-                      {bu.name}
-                    </MenuItem>
-                  ));
-                })()}
-              </Select>
-            </FormControl>
-
-            <TextField
-              label="Nombre del Recurso"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              error={!!errors.name}
-              helperText={errors.name}
-              required
-              fullWidth
-            />
-
-            <TextField
-              label="Identificador"
-              value={formData.identifier}
-              onChange={(e) =>
-                setFormData({ ...formData, identifier: e.target.value })
-              }
-              error={!!errors.identifier}
-              helperText={errors.identifier}
-              required
-              fullWidth
-            />
-
-            <TextField
-              label="Capacidad (Litros)"
-              type="number"
-              value={formData.nativeLiters || ""}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  nativeLiters: e.target.value
-                    ? Number(e.target.value)
-                    : undefined,
-                })
-              }
-              fullWidth
-              InputProps={{
-                endAdornment: <InputAdornment position="end">L</InputAdornment>,
-              }}
-            />
-          </Box>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpenDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {createMutation.isPending || updateMutation.isPending
+                ? "Guardando..."
+                : editingResource
+                ? "Guardar Cambios"
+                : "Crear Recurso"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={createMutation.isPending || updateMutation.isPending}
-            sx={{ bgcolor: "#1E2C56", "&:hover": { bgcolor: "#16213E" } }}
-          >
-            {createMutation.isPending || updateMutation.isPending
-              ? "Guardando..."
-              : editingResource
-              ? "Guardar Cambios"
-              : "Crear Recurso"}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Confirmación de eliminación */}
-      <Dialog
-        open={openDeleteDialog}
-        onClose={() => setOpenDeleteDialog(false)}
-      >
-        <DialogTitle>Confirmar Desactivación</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¿Estás seguro de desactivar el recurso{" "}
-            <strong>{deleteResource?.name}</strong>?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Esta acción no se puede deshacer.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleDelete}
-            disabled={deactivateMutation.isPending}
-          >
-            {deactivateMutation.isPending ? "Desactivando..." : "Desactivar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <AlertDialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Desactivación</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de desactivar el recurso{" "}
+              <strong>{deleteResource?.name}</strong>? Esta acción no se puede
+              deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deactivateMutation.isPending}
+            >
+              {deactivateMutation.isPending ? "Desactivando..." : "Desactivar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Diálogo de lista de tipos de recursos con opciones de editar/eliminar */}
       <Dialog
         open={openResourceTypeListDialog}
-        onClose={() => setOpenResourceTypeListDialog(false)}
-        maxWidth="md"
-        fullWidth
+        onOpenChange={setOpenResourceTypeListDialog}
       >
-        <DialogTitle>Gestionar Tipos de Recursos</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 2,
-              }}
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Gestionar Tipos de Recursos</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm font-medium">Tipos disponibles</div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => handleOpenResourceTypeForm()}
             >
-              <Typography variant="h6">Tipos disponibles</Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => handleOpenResourceTypeForm()}
-                sx={{
-                  bgcolor: "#1E2C56",
-                  "&:hover": { bgcolor: "#16213E" },
-                }}
-              >
-                Nuevo Tipo
-              </Button>
-            </Box>
-            {resourceTypes.length === 0 ? (
-              <Alert severity="info">
+              <Plus className="size-4" />
+              Nuevo Tipo
+            </Button>
+          </div>
+
+          {resourceTypes.length === 0 ? (
+            <Alert>
+              <TriangleAlert className="size-4" />
+              <AlertTitle>Sin tipos</AlertTitle>
+              <AlertDescription>
                 No hay tipos de recursos registrados. Crea uno nuevo para
                 comenzar.
-              </Alert>
-            ) : (
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                {resourceTypes.map((resourceType) => (
-                  <Card
-                    key={resourceType.id}
-                    sx={{
-                      p: 2,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      border: "1px solid #e2e8f0",
-                      "&:hover": {
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                      },
-                    }}
-                  >
-                    <Typography variant="body1" fontWeight={600}>
-                      {resourceType.name}
-                    </Typography>
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      <IconButton
-                        size="small"
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="mt-2 flex flex-col gap-2">
+              {resourceTypes.map((resourceType) => (
+                <Card key={resourceType.id} className="border-border">
+                  <CardContent className="flex items-center justify-between gap-2 pt-6">
+                    <div className="font-medium">{resourceType.name}</div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
                         onClick={() => handleEditResourceType(resourceType)}
-                        sx={{
-                          bgcolor: "#f3f4f6",
-                          "&:hover": { bgcolor: "#e5e7eb" },
-                        }}
+                        aria-label="Editar"
                       >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon-sm"
                         onClick={() =>
                           handleDeleteResourceTypeClick(resourceType)
                         }
-                        sx={{
-                          bgcolor: "#fee2e2",
-                          color: "#dc2626",
-                          "&:hover": { bgcolor: "#fecaca" },
-                        }}
+                        aria-label="Desactivar"
                       >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </Card>
-                ))}
-              </Box>
-            )}
-          </Box>
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpenResourceTypeListDialog(false)}
+            >
+              Cerrar
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenResourceTypeListDialog(false)}>
-            Cerrar
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Diálogo de formulario de tipos de recursos */}
       <Dialog
         open={openResourceTypeFormDialog}
-        onClose={() => {
-          setOpenResourceTypeFormDialog(false);
-          setOpenResourceTypeListDialog(true);
+        onOpenChange={(open) => {
+          setOpenResourceTypeFormDialog(open);
+          if (!open) setOpenResourceTypeListDialog(true);
         }}
-        maxWidth="sm"
-        fullWidth
       >
-        <DialogTitle>
-          {editingResourceType
-            ? "Editar Tipo de Recurso"
-            : "Nuevo Tipo de Recurso"}
-        </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
-            <TextField
-              label="Nombre del Tipo"
+          <DialogHeader>
+            <DialogTitle>
+              {editingResourceType
+                ? "Editar Tipo de Recurso"
+                : "Nuevo Tipo de Recurso"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Nombre del Tipo *</label>
+            <Input
               value={resourceTypeFormData.name}
               onChange={(e) =>
                 setResourceTypeFormData({
@@ -1093,74 +999,74 @@ export default function ResourcesPage() {
                   name: e.target.value,
                 })
               }
-              error={!!resourceTypeErrors.name}
-              helperText={resourceTypeErrors.name}
-              required
-              fullWidth
+              aria-invalid={!!resourceTypeErrors.name}
               autoFocus
             />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={() => {
-              setOpenResourceTypeFormDialog(false);
-              setOpenResourceTypeListDialog(true);
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSaveResourceType}
-            disabled={
-              createResourceTypeMutation.isPending ||
+            {resourceTypeErrors.name ? (
+              <p className="text-destructive text-xs">
+                {resourceTypeErrors.name}
+              </p>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setOpenResourceTypeFormDialog(false);
+                setOpenResourceTypeListDialog(true);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveResourceType}
+              disabled={
+                createResourceTypeMutation.isPending ||
+                updateResourceTypeMutation.isPending
+              }
+            >
+              {createResourceTypeMutation.isPending ||
               updateResourceTypeMutation.isPending
-            }
-            sx={{ bgcolor: "#1E2C56", "&:hover": { bgcolor: "#16213E" } }}
-          >
-            {createResourceTypeMutation.isPending ||
-            updateResourceTypeMutation.isPending
-              ? "Guardando..."
-              : editingResourceType
-              ? "Guardar Cambios"
-              : "Crear Tipo"}
-          </Button>
-        </DialogActions>
+                ? "Guardando..."
+                : editingResourceType
+                ? "Guardar Cambios"
+                : "Crear Tipo"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       {/* Confirmación de eliminación de tipo de recurso */}
-      <Dialog
+      <AlertDialog
         open={openDeleteResourceTypeDialog}
-        onClose={() => setOpenDeleteResourceTypeDialog(false)}
+        onOpenChange={setOpenDeleteResourceTypeDialog}
       >
-        <DialogTitle>Confirmar Desactivación</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¿Estás seguro de desactivar el tipo de recurso{" "}
-            <strong>{deleteResourceType?.name}</strong>?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Esta acción no se puede deshacer. Los recursos que usen este tipo no
-            se verán afectados.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteResourceTypeDialog(false)}>
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleDeleteResourceType}
-            disabled={deactivateResourceTypeMutation.isPending}
-          >
-            {deactivateResourceTypeMutation.isPending
-              ? "Desactivando..."
-              : "Desactivar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Desactivación</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de desactivar el tipo de recurso{" "}
+              <strong>{deleteResourceType?.name}</strong>? Esta acción no se
+              puede deshacer. Los recursos que usen este tipo no se verán
+              afectados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteResourceType}
+              disabled={deactivateResourceTypeMutation.isPending}
+            >
+              {deactivateResourceTypeMutation.isPending
+                ? "Desactivando..."
+                : "Desactivar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

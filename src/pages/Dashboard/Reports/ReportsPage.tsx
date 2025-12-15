@@ -1,30 +1,38 @@
 // src/pages/Dashboard/Reports/ReportsPage.tsx
 import { useState, useMemo } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Box,
-  Grid,
   Card,
   CardContent,
-  Typography,
-  Button,
-  Tabs,
-  Tab,
-  TableContainer,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Chip,
-  Skeleton,
-  Alert,
-  IconButton,
-  Tooltip,
-  FormControl,
-  InputLabel,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Select,
-  MenuItem,
-} from "@mui/material";
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   BarChart,
   Bar,
@@ -38,14 +46,16 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
-import PersonIcon from "@mui/icons-material/Person";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import WarningIcon from "@mui/icons-material/Warning";
-import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
-import RefreshIcon from "@mui/icons-material/Refresh";
+import {
+  AlertTriangle,
+  Download,
+  Fuel,
+  Landmark,
+  RefreshCcw,
+  Trophy,
+  Truck,
+  User,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -99,21 +109,23 @@ function TableSkeleton({
 }) {
   return (
     <Table>
-      <TableHead sx={{ bgcolor: "#f9fafb" }}>
+      <TableHeader>
         <TableRow>
           {Array.from({ length: cols }).map((_, i) => (
-            <TableCell key={i}>
-              <Skeleton variant="text" width={80} />
-            </TableCell>
+            <TableHead key={i}>
+              <Skeleton className="h-4 w-20" />
+            </TableHead>
           ))}
         </TableRow>
-      </TableHead>
+      </TableHeader>
       <TableBody>
         {Array.from({ length: rows }).map((_, rowIndex) => (
           <TableRow key={rowIndex}>
             {Array.from({ length: cols }).map((_, colIndex) => (
               <TableCell key={colIndex}>
-                <Skeleton variant="text" width={colIndex === 0 ? 120 : 60} />
+                <Skeleton
+                  className={colIndex === 0 ? "h-4 w-28" : "h-4 w-16"}
+                />
               </TableCell>
             ))}
           </TableRow>
@@ -143,12 +155,12 @@ export default function ReportsPage() {
     useBusinessUnits();
 
   // Extraer datos
-  const loads = loadsData || [];
-  const vehicles = vehiclesData || [];
-  const drivers = driversData || [];
-  const trips = tripsData || [];
-  const allResources = resourcesData || [];
-  const businessUnits = businessUnitsData || [];
+  const loads = loadsData;
+  const vehicles = vehiclesData;
+  const drivers = driversData;
+  const trips = tripsData;
+  const allResources = resourcesData;
+  const businessUnits = businessUnitsData;
 
   // 1. Calcular Consumo por Vehículo (L/100km, L/hora)
   const consumoVehiculos = useMemo((): ConsumoVehiculoData[] => {
@@ -174,7 +186,7 @@ export default function ReportsPage() {
       const eficienciaKmPorLitro =
         totalKm > 0 && litrosTotales > 0 ? totalKm / litrosTotales : undefined;
 
-      const typeArray = (vehicle as any).type || [];
+      const typeArray = vehicle.type ?? [];
       const vehicleTypeName = typeArray.length > 0 ? typeArray[0] : "Vehículo";
 
       consumoMap.set(vehicle.id, {
@@ -199,7 +211,7 @@ export default function ReportsPage() {
   // 2. Calcular Litros por Surtidor/Tanque
   const litrosPorSurtidor = useMemo((): LitrosSurtidorData[] => {
     const surtidores = allResources.filter((r) => {
-      const typeArray = (r as any).type || [];
+      const typeArray = r.type ?? [];
       const typeName = typeArray.length > 0 ? typeArray[0] : "";
       return (
         typeName.toLowerCase().includes("surtidor") ||
@@ -482,367 +494,276 @@ export default function ReportsPage() {
   );
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 1.5,
-          mt: -3,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 700, lineHeight: 1.1, mb: 0.5 }}
-          >
+    <div className="p-6">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
             Sistema de Reportes
-          </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              flexWrap: "wrap",
-            }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              Análisis completo de consumo, costos, eficiencia y desvíos
-            </Typography>
-            <FormControl size="small" sx={{ minWidth: 200, ml: 2 }}>
-              <InputLabel>Período</InputLabel>
-              <Select
-                value={periodoReporte}
-                label="Período"
-                onChange={(e) =>
-                  setPeriodoReporte(e.target.value as PeriodoReporte)
-                }
-              >
-                {PERIODOS_REPORTE.map((p) => (
-                  <MenuItem key={p.value} value={p.value}>
-                    {p.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Tooltip title="Actualizar datos">
-            <IconButton
-              size="small"
-              onClick={handleRefresh}
-              disabled={isLoading}
-              sx={{ bgcolor: "white", boxShadow: "0 2px 6px rgba(0,0,0,0.08)" }}
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Análisis completo de consumo, costos, eficiencia y desvíos
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-sm">Período</span>
+            <Select
+              value={periodoReporte}
+              onValueChange={(v) => setPeriodoReporte(v as PeriodoReporte)}
             >
-              <RefreshIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Tooltip>
-          {showExportButtons && (
+              <SelectTrigger className="h-9 w-[220px]">
+                <SelectValue placeholder="Seleccionar" />
+              </SelectTrigger>
+              <SelectContent>
+                {PERIODOS_REPORTE.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                  aria-label="Actualizar datos"
+                >
+                  <RefreshCcw className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Actualizar datos</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          {showExportButtons ? (
             <Button
-              variant="contained"
-              startIcon={<FileDownloadIcon />}
+              type="button"
               onClick={handleExport}
               disabled={isLoading || loads.length === 0 || !canExport}
-              sx={{
-                bgcolor: "#10b981",
-                fontWeight: 600,
-                textTransform: "none",
-                "&:hover": { bgcolor: "#059669" },
-              }}
             >
+              <Download className="size-4" />
               Exportar a Excel
             </Button>
-          )}
-        </Box>
-      </Box>
+          ) : null}
+        </div>
+      </div>
 
-      {/* Mensaje si no hay datos */}
-      {!isLoading && loads.length === 0 && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          No hay cargas de combustible registradas. Los reportes se actualizarán
-          automáticamente cuando se registren cargas.
+      {!isLoading && loads.length === 0 ? (
+        <Alert className="mb-4">
+          <AlertTriangle className="size-4" />
+          <AlertTitle>Sin datos</AlertTitle>
+          <AlertDescription>
+            No hay cargas de combustible registradas. Los reportes se
+            actualizarán automáticamente cuando se registren cargas.
+          </AlertDescription>
         </Alert>
-      )}
+      ) : null}
 
-      {/* Tabs */}
       <Tabs
         value={tipoReporte}
-        onChange={(_, newValue) => setTipoReporte(newValue)}
-        variant="scrollable"
-        scrollButtons="auto"
-        sx={{
-          mb: 3,
-          bgcolor: "white",
-          borderRadius: 2,
-          border: "1px solid #e2e8f0",
-          "& .MuiTab-root": {
-            textTransform: "none",
-            fontWeight: 600,
-            minHeight: 64,
-          },
-        }}
+        onValueChange={(v) => setTipoReporte(v as TipoReporte)}
+        className="w-full"
       >
-        <Tab
-          value="consumo-vehiculos"
-          icon={<LocalShippingIcon />}
-          iconPosition="start"
-          label="Consumo por Vehículo"
-        />
-        <Tab
-          value="litros-surtidor"
-          icon={<LocalGasStationIcon />}
-          iconPosition="start"
-          label="Litros por Surtidor"
-        />
-        <Tab
-          value="litros-operador"
-          icon={<PersonIcon />}
-          iconPosition="start"
-          label="Litros por Operador"
-        />
-        <Tab
-          value="costo-centro"
-          icon={<AccountBalanceIcon />}
-          iconPosition="start"
-          label="Costos por Centro"
-        />
-        <Tab
-          value="desvios"
-          icon={<WarningIcon />}
-          iconPosition="start"
-          label="Análisis de Desvíos"
-        />
-        <Tab
-          value="ranking-eficiencia"
-          icon={<EmojiEventsIcon />}
-          iconPosition="start"
-          label="Ranking Eficiencia"
-        />
+        <TabsList className="mb-4 h-auto w-full flex-wrap justify-start gap-1 rounded-lg border bg-background p-1">
+          <TabsTrigger value="consumo-vehiculos" className="h-10">
+            <Truck className="size-4" />
+            Consumo por Vehículo
+          </TabsTrigger>
+          <TabsTrigger value="litros-surtidor" className="h-10">
+            <Fuel className="size-4" />
+            Litros por Surtidor
+          </TabsTrigger>
+          <TabsTrigger value="litros-operador" className="h-10">
+            <User className="size-4" />
+            Litros por Operador
+          </TabsTrigger>
+          <TabsTrigger value="costo-centro" className="h-10">
+            <Landmark className="size-4" />
+            Costos por Centro
+          </TabsTrigger>
+          <TabsTrigger value="desvios" className="h-10">
+            <AlertTriangle className="size-4" />
+            Análisis de Desvíos
+          </TabsTrigger>
+          <TabsTrigger value="ranking-eficiencia" className="h-10">
+            <Trophy className="size-4" />
+            Ranking Eficiencia
+          </TabsTrigger>
+        </TabsList>
       </Tabs>
 
-      {/* Reporte 1: Consumo por Vehículo */}
-      {tipoReporte === "consumo-vehiculos" && (
-        <Grid container spacing={3}>
-          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-          <Grid item xs={12} md={8}>
-            <Card
-              elevation={0}
-              sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
-            >
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
-                  Total de Litros por Vehículo
-                </Typography>
-                {isLoading ? (
-                  <Skeleton
-                    variant="rectangular"
-                    height={400}
-                    sx={{ borderRadius: 2 }}
-                  />
-                ) : consumoVehiculos.length === 0 ? (
-                  <Box sx={{ textAlign: "center", py: 8, color: "#9ca3af" }}>
-                    <LocalShippingIcon
-                      sx={{ fontSize: 48, mb: 1, opacity: 0.5 }}
-                    />
-                    <Typography>Sin datos de consumo</Typography>
-                  </Box>
-                ) : (
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={consumoVehiculos.slice(0, 10)}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="vehiculoPatente" stroke="#64748b" />
-                      <YAxis stroke="#64748b" />
-                      <RechartsTooltip
-                        contentStyle={{
-                          borderRadius: 8,
-                          border: "1px solid #e2e8f0",
-                        }}
-                        formatter={(value) => [`${value} L`, "Litros"]}
-                      />
-                      <Bar
-                        dataKey="litrosTotales"
-                        fill="#1E2C56"
-                        radius={[8, 8, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
+      <div className="space-y-6">
+        {/* Reporte 1: Consumo por Vehículo */}
+        {tipoReporte === "consumo-vehiculos" && (
+          <>
+            <div className="grid gap-4 lg:grid-cols-3">
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Total de Litros por Vehículo</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <Skeleton className="h-[400px] w-full" />
+                  ) : consumoVehiculos.length === 0 ? (
+                    <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-10">
+                      <Truck className="size-10" />
+                      <div className="text-sm">Sin datos de consumo</div>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={consumoVehiculos.slice(0, 10)}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="vehiculoPatente" stroke="#64748b" />
+                        <YAxis stroke="#64748b" />
+                        <RechartsTooltip
+                          contentStyle={{
+                            borderRadius: 8,
+                            border: "1px solid #e2e8f0",
+                          }}
+                          formatter={(value) => [`${value} L`, "Litros"]}
+                        />
+                        <Bar
+                          dataKey="litrosTotales"
+                          fill="#1E2C56"
+                          radius={[8, 8, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
 
-          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-          <Grid item xs={12} md={4}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Card
-                elevation={0}
-                sx={{
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 2,
-                  bgcolor: "#1E2C5608",
-                }}
-              >
-                <CardContent>
-                  <Typography variant="caption" color="text.secondary">
-                    Total Litros
-                  </Typography>
-                  <Typography variant="h4" fontWeight={700} color="#1E2C56">
-                    {isLoading ? (
-                      <Skeleton width={120} />
-                    ) : (
-                      `${totales.litros.toLocaleString()} L`
-                    )}
-                  </Typography>
-                </CardContent>
-              </Card>
-              <Card
-                elevation={0}
-                sx={{
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 2,
-                  bgcolor: "#10b98108",
-                }}
-              >
-                <CardContent>
-                  <Typography variant="caption" color="text.secondary">
-                    Costo Total
-                  </Typography>
-                  <Typography variant="h4" fontWeight={700} color="#10b981">
-                    {isLoading ? (
-                      <Skeleton width={120} />
-                    ) : (
-                      `$${totales.costo.toLocaleString()}`
-                    )}
-                  </Typography>
-                </CardContent>
-              </Card>
-              <Card
-                elevation={0}
-                sx={{
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 2,
-                  bgcolor: "#3b82f608",
-                }}
-              >
-                <CardContent>
-                  <Typography variant="caption" color="text.secondary">
-                    Total Eventos
-                  </Typography>
-                  <Typography variant="h4" fontWeight={700} color="#3b82f6">
-                    {isLoading ? <Skeleton width={80} /> : totales.eventos}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Box>
-          </Grid>
-
-          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-          <Grid item xs={12}>
-            <Card
-              elevation={0}
-              sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
-            >
-              <TableContainer>
-                {isLoading ? (
-                  <TableSkeleton rows={5} cols={6} />
-                ) : (
-                  <Table>
-                    <TableHead sx={{ bgcolor: "#f9fafb" }}>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 700 }}>Vehículo</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="right">
-                          Total Litros
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="right">
-                          Eventos
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="right">
-                          Eficiencia (km/L)
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="right">
-                          Promedio/Evento
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {consumoVehiculos.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} align="center">
-                            No hay datos disponibles
-                          </TableCell>
-                        </TableRow>
+              <div className="grid gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardDescription>Total Litros</CardDescription>
+                    <CardTitle className="text-xl">
+                      {isLoading ? (
+                        <Skeleton className="h-7 w-32" />
                       ) : (
-                        consumoVehiculos.map((item) => (
-                          <TableRow key={item.vehiculoId} hover>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
-                                {item.vehiculoPatente}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                {item.vehiculoTipo}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="right">
-                              {item.litrosTotales.toFixed(2)} L
-                            </TableCell>
-                            <TableCell align="right">
-                              {item.numeroEventos}
-                            </TableCell>
-                            <TableCell align="right">
-                              {item.eficienciaKmPorLitro
-                                ? item.eficienciaKmPorLitro.toFixed(2)
-                                : "N/A"}
-                            </TableCell>
-                            <TableCell align="right">
-                              {item.consumoPromedioPorEvento.toFixed(2)} L
+                        `${totales.litros.toLocaleString()} L`
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardDescription>Costo Total</CardDescription>
+                    <CardTitle className="text-xl">
+                      {isLoading ? (
+                        <Skeleton className="h-7 w-32" />
+                      ) : (
+                        `$${totales.costo.toLocaleString()}`
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardDescription>Total Eventos</CardDescription>
+                    <CardTitle className="text-xl">
+                      {isLoading ? (
+                        <Skeleton className="h-7 w-20" />
+                      ) : (
+                        totales.eventos
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+              </div>
+            </div>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="overflow-x-auto">
+                  {isLoading ? (
+                    <TableSkeleton rows={5} cols={6} />
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Vehículo</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead className="text-right">
+                            Total Litros
+                          </TableHead>
+                          <TableHead className="text-right">Eventos</TableHead>
+                          <TableHead className="text-right">
+                            Eficiencia (km/L)
+                          </TableHead>
+                          <TableHead className="text-right">
+                            Promedio/Evento
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {consumoVehiculos.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center">
+                              No hay datos disponibles
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </TableContainer>
+                        ) : (
+                          consumoVehiculos.map((item) => (
+                            <TableRow
+                              key={item.vehiculoId}
+                              className="hover:bg-muted/50"
+                            >
+                              <TableCell className="font-medium">
+                                {item.vehiculoPatente}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs">
+                                {item.vehiculoTipo}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item.litrosTotales.toFixed(2)} L
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item.numeroEventos}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item.eficienciaKmPorLitro
+                                  ? item.eficienciaKmPorLitro.toFixed(2)
+                                  : "N/A"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item.consumoPromedioPorEvento.toFixed(2)} L
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </CardContent>
             </Card>
-          </Grid>
-        </Grid>
-      )}
+          </>
+        )}
 
-      {/* Reporte 2: Litros por Surtidor */}
-      {tipoReporte === "litros-surtidor" && (
-        <Grid container spacing={3}>
-          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-          <Grid item xs={12} md={6}>
-            <Card
-              elevation={0}
-              sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
-            >
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
-                  Distribución por Surtidor
-                </Typography>
+        {/* Reporte 2: Litros por Surtidor */}
+        {tipoReporte === "litros-surtidor" && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Distribución por Surtidor</CardTitle>
+              </CardHeader>
+              <CardContent>
                 {isLoading ? (
-                  <Skeleton
-                    variant="rectangular"
-                    height={300}
-                    sx={{ borderRadius: 2 }}
-                  />
+                  <Skeleton className="h-[300px] w-full" />
                 ) : litrosPorSurtidor.length === 0 ? (
-                  <Box sx={{ textAlign: "center", py: 8, color: "#9ca3af" }}>
-                    <LocalGasStationIcon
-                      sx={{ fontSize: 48, mb: 1, opacity: 0.5 }}
-                    />
-                    <Typography>Sin datos de surtidores</Typography>
-                  </Box>
+                  <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-10">
+                    <Fuel className="size-10" />
+                    <div className="text-sm">Sin datos de surtidores</div>
+                  </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
@@ -869,93 +790,80 @@ export default function ReportsPage() {
                 )}
               </CardContent>
             </Card>
-          </Grid>
 
-          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-          <Grid item xs={12} md={6}>
-            <Card
-              elevation={0}
-              sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
-            >
-              <TableContainer>
-                {isLoading ? (
-                  <TableSkeleton rows={4} cols={5} />
-                ) : (
-                  <Table>
-                    <TableHead sx={{ bgcolor: "#f9fafb" }}>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 700 }}>Surtidor</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>
-                          Ubicación
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="right">
-                          Litros Totales
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="right">
-                          Eventos
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="right">
-                          % del Total
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {litrosPorSurtidor.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="overflow-x-auto">
+                  {isLoading ? (
+                    <TableSkeleton rows={4} cols={5} />
+                  ) : (
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={5} align="center">
-                            No hay datos disponibles
-                          </TableCell>
+                          <TableHead>Surtidor</TableHead>
+                          <TableHead>Ubicación</TableHead>
+                          <TableHead className="text-right">
+                            Litros Totales
+                          </TableHead>
+                          <TableHead className="text-right">Eventos</TableHead>
+                          <TableHead className="text-right">
+                            % del Total
+                          </TableHead>
                         </TableRow>
-                      ) : (
-                        litrosPorSurtidor.map((item) => (
-                          <TableRow key={item.surtidorId} hover>
-                            <TableCell>{item.surtidorNombre}</TableCell>
-                            <TableCell>{item.surtidorUbicacion}</TableCell>
-                            <TableCell align="right">
-                              {item.litrosTotales.toFixed(2)} L
-                            </TableCell>
-                            <TableCell align="right">
-                              {item.numeroEventos}
-                            </TableCell>
-                            <TableCell align="right">
-                              {item.porcentajeTotal.toFixed(2)}%
+                      </TableHeader>
+                      <TableBody>
+                        {litrosPorSurtidor.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center">
+                              No hay datos disponibles
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </TableContainer>
+                        ) : (
+                          litrosPorSurtidor.map((item) => (
+                            <TableRow
+                              key={item.surtidorId}
+                              className="hover:bg-muted/50"
+                            >
+                              <TableCell className="font-medium">
+                                {item.surtidorNombre}
+                              </TableCell>
+                              <TableCell>{item.surtidorUbicacion}</TableCell>
+                              <TableCell className="text-right">
+                                {item.litrosTotales.toFixed(2)} L
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item.numeroEventos}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item.porcentajeTotal.toFixed(2)}%
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </CardContent>
             </Card>
-          </Grid>
-        </Grid>
-      )}
+          </div>
+        )}
 
-      {/* Reporte 3: Litros por Operador */}
-      {tipoReporte === "litros-operador" && (
-        <Grid container spacing={3}>
-          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-          <Grid item xs={12}>
-            <Card
-              elevation={0}
-              sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
-            >
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
-                  Consumo por Operador
-                </Typography>
+        {/* Reporte 3: Litros por Operador */}
+        {tipoReporte === "litros-operador" && (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>Consumo por Operador</CardTitle>
+              </CardHeader>
+              <CardContent>
                 {isLoading ? (
-                  <Skeleton
-                    variant="rectangular"
-                    height={400}
-                    sx={{ borderRadius: 2 }}
-                  />
+                  <Skeleton className="h-[400px] w-full" />
                 ) : litrosPorOperador.length === 0 ? (
-                  <Box sx={{ textAlign: "center", py: 8, color: "#9ca3af" }}>
-                    <PersonIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
-                    <Typography>Sin datos de operadores</Typography>
-                  </Box>
+                  <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-10">
+                    <User className="size-10" />
+                    <div className="text-sm">Sin datos de operadores</div>
+                  </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={400}>
                     <BarChart data={litrosPorOperador.slice(0, 10)}>
@@ -975,171 +883,70 @@ export default function ReportsPage() {
                 )}
               </CardContent>
             </Card>
-          </Grid>
 
-          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-          <Grid item xs={12}>
-            <Card
-              elevation={0}
-              sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
-            >
-              <TableContainer>
-                {isLoading ? (
-                  <TableSkeleton rows={5} cols={4} />
-                ) : (
-                  <Table>
-                    <TableHead sx={{ bgcolor: "#f9fafb" }}>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 700 }}>Operador</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="right">
-                          Total Litros
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="right">
-                          Eventos
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>
-                          Vehículos Usados
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {litrosPorOperador.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} align="center">
-                            No hay datos disponibles
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        litrosPorOperador
-                          .sort((a, b) => b.litrosTotales - a.litrosTotales)
-                          .map((item) => (
-                            <TableRow key={item.choferId} hover>
-                              <TableCell>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {item.choferNombre} {item.choferApellido}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="right">
-                                {item.litrosTotales.toFixed(2)} L
-                              </TableCell>
-                              <TableCell align="right">
-                                {item.numeroEventos}
-                              </TableCell>
-                              <TableCell>
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    gap: 0.5,
-                                    flexWrap: "wrap",
-                                  }}
-                                >
-                                  {item.vehiculosMasUsados
-                                    .slice(0, 3)
-                                    .map((v) => (
-                                      <Chip
-                                        key={v}
-                                        label={v}
-                                        size="small"
-                                        sx={{ bgcolor: "#e2e8f0" }}
-                                      />
-                                    ))}
-                                  {item.vehiculosMasUsados.length > 3 && (
-                                    <Chip
-                                      label={`+${
-                                        item.vehiculosMasUsados.length - 3
-                                      }`}
-                                      size="small"
-                                    />
-                                  )}
-                                </Box>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </TableContainer>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
-
-      {/* Reporte 4: Costos por Centro de Costos */}
-      {tipoReporte === "costo-centro" && (
-        <Grid container spacing={3}>
-          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-          <Grid item xs={12}>
-            <Card
-              elevation={0}
-              sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
-            >
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
-                  Costos por Centro de Costos / Unidad de Negocio
-                </Typography>
-                <TableContainer>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="overflow-x-auto">
                   {isLoading ? (
-                    <TableSkeleton rows={5} cols={7} />
+                    <TableSkeleton rows={5} cols={4} />
                   ) : (
                     <Table>
-                      <TableHead sx={{ bgcolor: "#f9fafb" }}>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 700 }}>
-                            Centro de Costo
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Código</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }} align="right">
+                          <TableHead>Operador</TableHead>
+                          <TableHead className="text-right">
                             Total Litros
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 700 }} align="right">
-                            Costo Total
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 700 }} align="right">
-                            Eventos
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 700 }} align="right">
-                            Vehículos
-                          </TableCell>
+                          </TableHead>
+                          <TableHead className="text-right">Eventos</TableHead>
+                          <TableHead>Vehículos Usados</TableHead>
                         </TableRow>
-                      </TableHead>
+                      </TableHeader>
                       <TableBody>
-                        {costosPorCentroCosto.length === 0 ? (
+                        {litrosPorOperador.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={7} align="center">
+                            <TableCell colSpan={4} className="text-center">
                               No hay datos disponibles
                             </TableCell>
                           </TableRow>
                         ) : (
-                          costosPorCentroCosto
+                          litrosPorOperador
                             .sort((a, b) => b.litrosTotales - a.litrosTotales)
                             .map((item) => (
-                              <TableRow key={item.centroCostoId} hover>
-                                <TableCell>
-                                  <Typography variant="body2" fontWeight={600}>
-                                    {item.centroCostoNombre}
-                                  </Typography>
+                              <TableRow
+                                key={item.choferId}
+                                className="hover:bg-muted/50"
+                              >
+                                <TableCell className="font-medium">
+                                  {item.choferNombre} {item.choferApellido}
                                 </TableCell>
-                                <TableCell>
-                                  <Chip
-                                    label={item.centroCostoCodigo}
-                                    size="small"
-                                    sx={{ bgcolor: "#e2e8f0" }}
-                                  />
-                                </TableCell>
-                                <TableCell>{item.centroCostoTipo}</TableCell>
-                                <TableCell align="right">
+                                <TableCell className="text-right">
                                   {item.litrosTotales.toFixed(2)} L
                                 </TableCell>
-                                <TableCell align="right">
-                                  ${item.costoTotal.toLocaleString()}
-                                </TableCell>
-                                <TableCell align="right">
+                                <TableCell className="text-right">
                                   {item.numeroEventos}
                                 </TableCell>
-                                <TableCell align="right">
-                                  {item.vehiculosAsignados}
+                                <TableCell>
+                                  <div className="flex flex-wrap gap-1">
+                                    {item.vehiculosMasUsados
+                                      .slice(0, 3)
+                                      .map((v) => (
+                                        <Badge
+                                          key={v}
+                                          variant="secondary"
+                                          className="text-xs"
+                                        >
+                                          {v}
+                                        </Badge>
+                                      ))}
+                                    {item.vehiculosMasUsados.length > 3 ? (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        +{item.vehiculosMasUsados.length - 3}
+                                      </Badge>
+                                    ) : null}
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))
@@ -1147,237 +954,269 @@ export default function ReportsPage() {
                       </TableBody>
                     </Table>
                   )}
-                </TableContainer>
+                </div>
               </CardContent>
             </Card>
-          </Grid>
-        </Grid>
-      )}
+          </>
+        )}
 
-      {/* Reporte 5: Análisis de Desvíos */}
-      {tipoReporte === "desvios" && (
-        <Grid container spacing={3}>
-          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-          <Grid item xs={12}>
-            {desvios.length === 0 && !isLoading ? (
-              <Card
-                elevation={0}
-                sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
-              >
-                <CardContent sx={{ textAlign: "center", py: 8 }}>
-                  <WarningIcon sx={{ fontSize: 64, color: "#10b981", mb: 2 }} />
-                  <Typography variant="h6" fontWeight={700} color="#10b981">
-                    ¡Sin desvíos detectados!
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    No se encontraron eventos con anomalías o pendientes de
-                    validación
-                  </Typography>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card
-                elevation={0}
-                sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
-              >
-                <TableContainer>
-                  {isLoading ? (
-                    <TableSkeleton rows={5} cols={7} />
-                  ) : (
-                    <Table>
-                      <TableHead sx={{ bgcolor: "#f9fafb" }}>
+        {/* Reporte 4: Costos por Centro de Costos */}
+        {tipoReporte === "costo-centro" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                Costos por Centro de Costos / Unidad de Negocio
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                {isLoading ? (
+                  <TableSkeleton rows={5} cols={7} />
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Centro de Costo</TableHead>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead className="text-right">
+                          Total Litros
+                        </TableHead>
+                        <TableHead className="text-right">
+                          Costo Total
+                        </TableHead>
+                        <TableHead className="text-right">Eventos</TableHead>
+                        <TableHead className="text-right">Vehículos</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {costosPorCentroCosto.length === 0 ? (
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 700 }}>Fecha</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>
-                            Vehículo
+                          <TableCell colSpan={7} className="text-center">
+                            No hay datos disponibles
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }} align="right">
-                            Litros
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>
-                            Severidad
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>
-                            Descripción
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Estado</TableCell>
                         </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {desvios.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={7} align="center">
-                              No se encontraron desvíos
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          desvios.map((item) => (
-                            <TableRow key={item.eventoId} hover>
-                              <TableCell>
-                                {new Date(item.fecha).toLocaleDateString(
-                                  "es-AR"
-                                )}
-                              </TableCell>
-                              <TableCell>{item.vehiculoPatente}</TableCell>
-                              <TableCell>{item.tipoDesvio}</TableCell>
-                              <TableCell align="right">
-                                {item.litros.toFixed(2)} L
+                      ) : (
+                        costosPorCentroCosto
+                          .sort((a, b) => b.litrosTotales - a.litrosTotales)
+                          .map((item) => (
+                            <TableRow
+                              key={item.centroCostoId}
+                              className="hover:bg-muted/50"
+                            >
+                              <TableCell className="font-medium">
+                                {item.centroCostoNombre}
                               </TableCell>
                               <TableCell>
-                                <Chip
-                                  label={item.severidad}
-                                  size="small"
-                                  sx={{
-                                    bgcolor:
-                                      item.severidad === "alta"
-                                        ? "#dc2626"
-                                        : item.severidad === "media"
-                                        ? "#f59e0b"
-                                        : "#10b981",
-                                    color: "white",
-                                    fontWeight: 600,
-                                  }}
-                                />
+                                <Badge variant="secondary" className="text-xs">
+                                  {item.centroCostoCodigo}
+                                </Badge>
                               </TableCell>
-                              <TableCell>{item.descripcion}</TableCell>
-                              <TableCell>
-                                <Chip
-                                  label={
-                                    item.resuelto ? "Resuelto" : "Pendiente"
-                                  }
-                                  size="small"
-                                  sx={{
-                                    bgcolor: item.resuelto
-                                      ? "#10b981"
-                                      : "#f59e0b",
-                                    color: "white",
-                                    fontWeight: 600,
-                                  }}
-                                />
+                              <TableCell>{item.centroCostoTipo}</TableCell>
+                              <TableCell className="text-right">
+                                {item.litrosTotales.toFixed(2)} L
+                              </TableCell>
+                              <TableCell className="text-right">
+                                ${item.costoTotal.toLocaleString()}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item.numeroEventos}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item.vehiculosAsignados}
                               </TableCell>
                             </TableRow>
                           ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  )}
-                </TableContainer>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Reporte 5: Análisis de Desvíos */}
+        {tipoReporte === "desvios" && (
+          <>
+            {desvios.length === 0 && !isLoading ? (
+              <Card>
+                <CardContent className="py-10 text-center">
+                  <div className="text-muted-foreground mx-auto flex max-w-md flex-col items-center gap-2">
+                    <AlertTriangle className="size-12 text-emerald-600" />
+                    <div className="text-base font-semibold text-emerald-700">
+                      ¡Sin desvíos detectados!
+                    </div>
+                    <div className="text-sm">
+                      No se encontraron eventos con anomalías o pendientes de
+                      validación
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="overflow-x-auto">
+                    {isLoading ? (
+                      <TableSkeleton rows={5} cols={7} />
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Fecha</TableHead>
+                            <TableHead>Vehículo</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead className="text-right">Litros</TableHead>
+                            <TableHead>Severidad</TableHead>
+                            <TableHead>Descripción</TableHead>
+                            <TableHead>Estado</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {desvios.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center">
+                                No se encontraron desvíos
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            desvios.map((item) => (
+                              <TableRow
+                                key={item.eventoId}
+                                className="hover:bg-muted/50"
+                              >
+                                <TableCell>
+                                  {new Date(item.fecha).toLocaleDateString(
+                                    "es-AR"
+                                  )}
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  {item.vehiculoPatente}
+                                </TableCell>
+                                <TableCell>{item.tipoDesvio}</TableCell>
+                                <TableCell className="text-right">
+                                  {item.litros.toFixed(2)} L
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    className={
+                                      item.severidad === "alta"
+                                        ? "bg-red-600 text-white"
+                                        : item.severidad === "media"
+                                        ? "bg-amber-500 text-white"
+                                        : "bg-emerald-600 text-white"
+                                    }
+                                  >
+                                    {item.severidad}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>{item.descripcion}</TableCell>
+                                <TableCell>
+                                  <Badge
+                                    className={
+                                      item.resuelto
+                                        ? "bg-emerald-600 text-white"
+                                        : "bg-amber-500 text-white"
+                                    }
+                                  >
+                                    {item.resuelto ? "Resuelto" : "Pendiente"}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </div>
+                </CardContent>
               </Card>
             )}
-          </Grid>
-        </Grid>
-      )}
+          </>
+        )}
 
-      {/* Reporte 6: Ranking de Eficiencia */}
-      {tipoReporte === "ranking-eficiencia" && (
-        <Grid container spacing={3}>
-          {/* @ts-expect-error - MUI v7 Grid type incompatibility */}
-          <Grid item xs={12}>
-            <Card
-              elevation={0}
-              sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}
-            >
-              <CardContent sx={{ p: 3, pb: 1 }}>
-                <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
-                  🏆 Ranking de Eficiencia (Menor consumo promedio por carga)
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 2 }}
-                >
-                  Los vehículos con menor consumo promedio por carga se
-                  consideran más eficientes
-                </Typography>
-              </CardContent>
-              <TableContainer>
+        {/* Reporte 6: Ranking de Eficiencia */}
+        {tipoReporte === "ranking-eficiencia" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                Ranking de Eficiencia (Menor consumo promedio por carga)
+              </CardTitle>
+              <CardDescription>
+                Los vehículos con menor consumo promedio por carga se consideran
+                más eficientes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
                 {isLoading ? (
                   <TableSkeleton rows={5} cols={6} />
                 ) : rankingEficiencia.length === 0 ? (
-                  <Box sx={{ textAlign: "center", py: 8, color: "#9ca3af" }}>
-                    <EmojiEventsIcon
-                      sx={{ fontSize: 48, mb: 1, opacity: 0.5 }}
-                    />
-                    <Typography>Sin datos suficientes para ranking</Typography>
-                  </Box>
+                  <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-10">
+                    <Trophy className="size-10" />
+                    <div className="text-sm">
+                      Sin datos suficientes para ranking
+                    </div>
+                  </div>
                 ) : (
                   <Table>
-                    <TableHead sx={{ bgcolor: "#f9fafb" }}>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 700 }}>Posición</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Vehículo</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="right">
+                        <TableHead>Posición</TableHead>
+                        <TableHead>Vehículo</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead className="text-right">
                           Eficiencia (km/L)
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="right">
+                        </TableHead>
+                        <TableHead className="text-right">
                           Total Litros
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>
-                          Tendencia
-                        </TableCell>
+                        </TableHead>
+                        <TableHead>Tendencia</TableHead>
                       </TableRow>
-                    </TableHead>
+                    </TableHeader>
                     <TableBody>
                       {rankingEficiencia.map((item) => (
-                        <TableRow key={item.vehiculoId} hover>
+                        <TableRow
+                          key={item.vehiculoId}
+                          className="hover:bg-muted/50"
+                        >
                           <TableCell>
-                            <Chip
-                              label={`#${item.posicion}`}
-                              size="small"
-                              sx={{
-                                bgcolor:
-                                  item.posicion <= 3 ? "#10b981" : "#64748b",
-                                color: "white",
-                                fontWeight: 700,
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={600}>
-                              {item.vehiculoPatente}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
+                            <Badge
+                              className={
+                                item.posicion <= 3
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-slate-500 text-white"
+                              }
                             >
-                              {item.vehiculoTipo}
-                            </Typography>
+                              #{item.posicion}
+                            </Badge>
                           </TableCell>
-                          <TableCell align="right">
-                            <Typography
-                              variant="body2"
-                              fontWeight={700}
-                              color="#10b981"
-                            >
-                              {item.eficiencia.toFixed(2)} km/L
-                            </Typography>
+                          <TableCell className="font-medium">
+                            {item.vehiculoPatente}
                           </TableCell>
-                          <TableCell align="right">
+                          <TableCell className="text-muted-foreground text-xs">
+                            {item.vehiculoTipo}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-emerald-600">
+                            {item.eficiencia.toFixed(2)} km/L
+                          </TableCell>
+                          <TableCell className="text-right">
                             {item.litrosTotales.toFixed(2)} L
                           </TableCell>
                           <TableCell>
-                            <Chip
-                              label={item.tendencia}
-                              size="small"
-                              sx={{
-                                bgcolor: "#f1f5f9",
-                                fontWeight: 600,
-                              }}
-                            />
+                            <Badge variant="secondary">{item.tendencia}</Badge>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 )}
-              </TableContainer>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
-    </Box>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
   );
 }

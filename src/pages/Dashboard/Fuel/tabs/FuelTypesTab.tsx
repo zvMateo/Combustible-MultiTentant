@@ -1,31 +1,40 @@
 // src/pages/Dashboard/Fuel/tabs/FuelTypesTab.tsx
 import { useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Box,
-  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Typography,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  IconButton,
-  Card,
-  TextField,
-  Chip,
-  LinearProgress,
-  Alert,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
-import ToggleOffIcon from "@mui/icons-material/ToggleOff";
-import ToggleOnIcon from "@mui/icons-material/ToggleOn";
-import CategoryIcon from "@mui/icons-material/Category";
+} from "@/components/ui/table";
+import {
+  Layers,
+  Pencil,
+  Plus,
+  ToggleLeft,
+  ToggleRight,
+  TriangleAlert,
+} from "lucide-react";
 import {
   useFuelTypes,
   useCreateFuelType,
@@ -80,8 +89,6 @@ export default function FuelTypesTab() {
   const handleSave = async () => {
     if (!validate()) return;
 
-    console.log("📤 Enviando datos:", formData); // Debug
-
     try {
       if (editingType) {
         const updateData: UpdateFuelTypeRequest = {
@@ -93,8 +100,8 @@ export default function FuelTypesTab() {
         await createMutation.mutateAsync(formData);
       }
       setOpenDialog(false);
-    } catch (err) {
-      console.error("❌ Error al guardar:", err);
+    } catch {
+      // Error manejado por el mutation
     }
   };
 
@@ -108,180 +115,179 @@ export default function FuelTypesTab() {
 
   if (isLoading) {
     return (
-      <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-        <Box sx={{ p: 3 }}>
-          <LinearProgress sx={{ mb: 2 }} />
-          <Typography>Cargando tipos de combustible...</Typography>
-        </Box>
+      <Card className="border-border">
+        <CardContent className="flex items-center gap-2 pt-6">
+          <Spinner className="size-4" />
+          <span className="text-sm text-muted-foreground">
+            Cargando tipos de combustible...
+          </span>
+        </CardContent>
       </Card>
     );
   }
 
   if (error) {
     return (
-      <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-        <Box sx={{ p: 3 }}>
-          <Alert severity="error">
-            Error al cargar tipos de combustible:{" "}
-            {error instanceof Error ? error.message : "Error desconocido"}
+      <Card className="border-border">
+        <CardContent className="pt-6">
+          <Alert variant="destructive">
+            <TriangleAlert className="size-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              Error al cargar tipos de combustible:{" "}
+              {error instanceof Error ? error.message : "Error desconocido"}
+            </AlertDescription>
           </Alert>
-        </Box>
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-      <Box sx={{ p: 3 }}>
-        {/* Header */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
+    <Card className="border-border">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+        <div>
+          <CardTitle>Tipos de Combustible</CardTitle>
+          <CardDescription>
+            Maestro de tipos de combustible disponibles
+          </CardDescription>
+        </div>
+        <Button
+          onClick={handleNew}
+          disabled={createMutation.isPending}
+          size="sm"
         >
-          <Box>
-            <Typography variant="h6" fontWeight={700}>
-              Tipos de Combustible
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Maestro de tipos de combustible disponibles
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleNew}
-            disabled={createMutation.isPending}
-            size="small"
-          >
-            Nuevo Tipo
-          </Button>
-        </Box>
-
-        {/* Tabla */}
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
+          <Plus className="size-4" />
+          Nuevo Tipo
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>ID</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Nombre</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Estado</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Acciones</TableCell>
+                <TableHead className="w-[80px]">ID</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead className="w-[120px]">Estado</TableHead>
+                <TableHead className="w-[140px] text-right">Acciones</TableHead>
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {fuelTypes.map((type) => (
-                <TableRow key={type.id} hover>
-                  <TableCell>{type.id}</TableCell>
+                <TableRow key={type.id}>
+                  <TableCell className="font-mono text-xs">{type.id}</TableCell>
                   <TableCell>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <CategoryIcon sx={{ fontSize: 20, color: "#f59e0b" }} />
-                      <Typography fontWeight={600}>{type.name}</Typography>
-                    </Box>
+                    <div className="flex items-center gap-2">
+                      <Layers className="size-4 text-amber-500" />
+                      <span className="font-medium">{type.name}</span>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={type.active ? "Activo" : "Inactivo"}
-                      size="small"
-                      sx={{
-                        bgcolor: type.active ? "#10b98115" : "#f3f4f6",
-                        color: type.active ? "#10b981" : "#6b7280",
-                        fontWeight: 600,
-                      }}
-                    />
+                    <Badge
+                      variant={
+                        type.isActive !== false ? "secondary" : "outline"
+                      }
+                    >
+                      {type.isActive !== false ? "Activo" : "Inactivo"}
+                    </Badge>
                   </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      <IconButton
-                        size="small"
+                  <TableCell className="text-right">
+                    <div className="inline-flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
                         onClick={() => handleEdit(type)}
                         disabled={updateMutation.isPending}
-                        sx={{
-                          bgcolor: "#f3f4f6",
-                          "&:hover": { bgcolor: "#e5e7eb" },
-                        }}
+                        aria-label="Editar"
                       >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={
+                          type.isActive !== false ? "destructive" : "secondary"
+                        }
+                        size="icon-sm"
                         onClick={() => handleToggleActive(type.id)}
                         disabled={deactivateMutation.isPending}
-                        sx={{
-                          bgcolor: type.active ? "#fee2e2" : "#dcfce7",
-                          color: type.active ? "#dc2626" : "#10b981",
-                          "&:hover": {
-                            bgcolor: type.active ? "#fecaca" : "#bbf7d0",
-                          },
-                        }}
+                        aria-label={
+                          type.isActive !== false ? "Desactivar" : "Activar"
+                        }
                       >
-                        {type.active ? (
-                          <ToggleOffIcon fontSize="small" />
+                        {type.isActive !== false ? (
+                          <ToggleLeft className="size-4" />
                         ) : (
-                          <ToggleOnIcon fontSize="small" />
+                          <ToggleRight className="size-4" />
                         )}
-                      </IconButton>
-                    </Box>
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
+
+              {fuelTypes.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="py-10 text-center">
+                    <div className="text-muted-foreground flex flex-col items-center gap-2">
+                      <Layers className="size-8" />
+                      <span>No hay tipos de combustible configurados</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
-        </TableContainer>
+        </div>
+      </CardContent>
 
-        {fuelTypes.length === 0 && (
-          <Box sx={{ textAlign: "center", py: 8 }}>
-            <CategoryIcon sx={{ fontSize: 64, color: "#ddd", mb: 2 }} />
-            <Typography variant="h6" color="text.secondary">
-              No hay tipos de combustible configurados
-            </Typography>
-          </Box>
-        )}
-      </Box>
-
-      {/* Dialog Crear/Editar */}
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="xs"
-        fullWidth
-        disableEnforceFocus
-      >
-        <DialogTitle>
-          {editingType ? "Editar Tipo de Combustible" : "Nuevo Tipo de Combustible"}
-        </DialogTitle>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <TextField
-              label="Nombre *"
-              value={formData.name}
-              onChange={(e) => setFormData({ name: e.target.value })}
-              error={!!errors.name}
-              helperText={errors.name}
-              fullWidth
-              size="small"
-              placeholder="Ej: Nafta Super, Diesel Premium"
-              autoFocus
-            />
-          </Box>
+          <DialogHeader>
+            <DialogTitle>
+              {editingType
+                ? "Editar Tipo de Combustible"
+                : "Nuevo Tipo de Combustible"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nombre *</label>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ name: e.target.value })}
+                placeholder="Ej: Nafta Super, Diesel Premium"
+                autoFocus
+                aria-invalid={!!errors.name}
+              />
+              {errors.name ? (
+                <p className="text-destructive text-xs">{errors.name}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpenDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {createMutation.isPending || updateMutation.isPending
+                ? "Guardando..."
+                : editingType
+                ? "Guardar Cambios"
+                : "Crear"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={createMutation.isPending || updateMutation.isPending}
-          >
-            {createMutation.isPending || updateMutation.isPending
-              ? "Guardando..."
-              : editingType
-              ? "Guardar Cambios"
-              : "Crear"}
-          </Button>
-        </DialogActions>
       </Dialog>
     </Card>
   );

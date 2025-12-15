@@ -1,16 +1,7 @@
 // src/pages/Dashboard/Fuel/FuelManagementPage.tsx
 import { useState } from "react";
-import {
-  Box,
-  Typography,
-  Tabs,
-  Tab,
-} from "@mui/material";
-import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
-import MoveUpIcon from "@mui/icons-material/MoveUp";
-import CategoryIcon from "@mui/icons-material/Category";
-import SwapVertIcon from "@mui/icons-material/SwapVert";
-import DirectionsCarIcon from "@mui/icons-material/DirectionsCar"; // ✅ NUEVO
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowUpDown, Droplet, Layers, Shuffle, Car } from "lucide-react";
 
 // Importar los componentes de cada tab
 import StockMovementsTab from "../Fuel/tabs/StockMovementsTab";
@@ -20,71 +11,60 @@ import MovementTypesTab from "../Fuel/tabs/MovementTypesTab";
 import TripsTab from "../Fuel/tabs/TripsTab"; // ✅ NUEVO
 
 export default function FuelManagementPage() {
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useState("stock");
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3, mt: -3 }}>
-        <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
+    <div className="p-6">
+      <div className="mb-6 -mt-6">
+        <h1 className="text-2xl font-bold tracking-tight">
           Gestión de Combustible
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Administración completa de stock, cargas, tipos de combustible, movimientos y viajes
-        </Typography>
-      </Box>
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          Administración completa de stock, cargas, tipos de combustible,
+          movimientos y viajes
+        </p>
+      </div>
 
-      {/* Tabs Navigation */}
-      <Tabs
-        value={tab}
-        onChange={(_, newValue) => setTab(newValue)}
-        variant="scrollable"
-        scrollButtons="auto"
-        sx={{
-          mb: 3,
-          bgcolor: "white",
-          borderRadius: 2,
-          border: "1px solid #e2e8f0",
-          "& .MuiTab-root": {
-            textTransform: "none",
-            fontWeight: 600,
-            minHeight: 64,
-          },
-        }}
-      >
-        <Tab
-          icon={<MoveUpIcon />}
-          iconPosition="start"
-          label="Movimientos de Stock"
-        />
-        <Tab
-          icon={<LocalGasStationIcon />}
-          iconPosition="start"
-          label="Cargas de Litros"
-        />
-        <Tab
-          icon={<CategoryIcon />}
-          iconPosition="start"
-          label="Tipos de Combustible"
-        />
-        <Tab
-          icon={<SwapVertIcon />}
-          iconPosition="start"
-          label="Tipos de Movimiento"
-        />
-        <Tab
-          icon={<DirectionsCarIcon />}
-          iconPosition="start"
-          label="Viajes"
-        /> 
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <TabsList className="mb-6 h-auto w-full flex-wrap justify-start gap-1 rounded-lg border bg-background p-1">
+          <TabsTrigger value="stock" className="h-10">
+            <ArrowUpDown className="size-4" />
+            Movimientos de Stock
+          </TabsTrigger>
+          <TabsTrigger value="loads" className="h-10">
+            <Droplet className="size-4" />
+            Cargas de Litros
+          </TabsTrigger>
+          <TabsTrigger value="fuelTypes" className="h-10">
+            <Layers className="size-4" />
+            Tipos de Combustible
+          </TabsTrigger>
+          <TabsTrigger value="movementTypes" className="h-10">
+            <Shuffle className="size-4" />
+            Tipos de Movimiento
+          </TabsTrigger>
+          <TabsTrigger value="trips" className="h-10">
+            <Car className="size-4" />
+            Viajes
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="stock">
+          <StockMovementsTab />
+        </TabsContent>
+        <TabsContent value="loads">
+          <LoadLitersTab />
+        </TabsContent>
+        <TabsContent value="fuelTypes">
+          <FuelTypesTab />
+        </TabsContent>
+        <TabsContent value="movementTypes">
+          <MovementTypesTab />
+        </TabsContent>
+        <TabsContent value="trips">
+          <TripsTab />
+        </TabsContent>
       </Tabs>
-
-      {/* Tab Content */}
-      {tab === 0 && <StockMovementsTab />}
-      {tab === 1 && <LoadLitersTab />}
-      {tab === 2 && <FuelTypesTab />}
-      {tab === 3 && <MovementTypesTab />}
-      {tab === 4 && <TripsTab />} 
-    </Box>
+    </div>
   );
 }

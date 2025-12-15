@@ -1,32 +1,39 @@
 // src/pages/Dashboard/Settings/SettingsPage.tsx
 import { useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import {
-  Box,
-  Typography,
-  Tabs,
-  Tab,
-  Card,
-  Alert,
-  Grid,
-  TextField,
-  Button,
-  CardContent,
-  Switch,
-  FormControlLabel,
-  Divider,
-  Chip,
-  InputAdornment,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  IconButton,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import PhoneIcon from "@mui/icons-material/Phone";
-import ContactPhoneIcon from "@mui/icons-material/ContactPhone";
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Bell,
+  Camera,
+  Car,
+  Fuel,
+  MapPin,
+  Mic,
+  Pencil,
+  Phone,
+  Plus,
+  Receipt,
+  Save,
+  Shield,
+  TriangleAlert,
+  Users,
+  Palette,
+} from "lucide-react";
 
 import {
   useIaWhiteList,
@@ -36,25 +43,10 @@ import {
   useDesactivateIaWhiteListContact,
 } from "@/hooks/queries/useIaWhiteList";
 import type { IaWhiteListContact } from "@/services/api/ia-whitelist.api";
-import CircularProgress from "@mui/material/CircularProgress";
-
-import PolicyIcon from "@mui/icons-material/Policy";
-import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
-import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import PaletteIcon from "@mui/icons-material/Palette";
-import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
-import LocationOnIcon from "@mui/icons-material/LocationOn";
-import MicIcon from "@mui/icons-material/Mic";
-import ReceiptIcon from "@mui/icons-material/Receipt";
-import EditIcon from "@mui/icons-material/Edit";
-import SaveIcon from "@mui/icons-material/Save";
-import WarningIcon from "@mui/icons-material/Warning";
 import { toast } from "sonner";
 import { useTheme } from "@/components/providers/theme/use-theme";
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
-import { mt } from "date-fns/locale";
 
 // ==================== PERSONALIZACIÓN ====================
 function PersonalizacionTab() {
@@ -155,282 +147,185 @@ function PersonalizacionTab() {
   ];
 
   return (
-    <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
-          Personalización del Tema
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Configure los colores y estilo de su empresa. Los cambios se aplicarán
-          inmediatamente.
-        </Typography>
+    <Card className="border-border">
+      <CardContent className="pt-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">Personalización del Tema</h2>
+          <p className="text-muted-foreground text-sm">
+            Configure los colores y estilo de su empresa. Los cambios se
+            aplicarán inmediatamente.
+          </p>
+        </div>
 
-        {saved && (
-          <Alert severity="success" sx={{ mb: 3 }}>
-            Tema guardado exitosamente
+        {saved ? (
+          <Alert className="mt-4">
+            <AlertTitle>Guardado</AlertTitle>
+            <AlertDescription>Tema guardado exitosamente</AlertDescription>
           </Alert>
-        )}
+        ) : null}
 
-        {/* Presets */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2 }}>
-            Temas Predefinidos
-          </Typography>
-          <Grid container spacing={2}>
+        <div className="mt-6 space-y-2">
+          <div className="text-sm font-semibold">Temas Predefinidos</div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {presets.map((preset) => (
-              <Grid item xs={6} sm={3} key={preset.name}>
-                <Box
-                  onClick={() => setLocalConfig(preset.colors)}
-                  sx={{
-                    p: 2,
-                    border: "2px solid #e2e8f0",
-                    borderRadius: 2,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    "&:hover": {
-                      borderColor: preset.colors.primaryColor,
-                      transform: "translateY(-2px)",
-                    },
-                  }}
-                >
-                  <Box sx={{ display: "flex", gap: 0.5, mb: 1 }}>
-                    <Box
-                      sx={{
-                        width: 20,
-                        height: 20,
-                        bgcolor: preset.colors.primaryColor,
-                        borderRadius: 1,
-                      }}
-                    />
-                    <Box
-                      sx={{
-                        width: 20,
-                        height: 20,
-                        bgcolor: preset.colors.secondaryColor,
-                        borderRadius: 1,
-                      }}
-                    />
-                    <Box
-                      sx={{
-                        width: 20,
-                        height: 20,
-                        bgcolor: preset.colors.accentColor,
-                        borderRadius: 1,
-                      }}
-                    />
-                  </Box>
-                  <Typography variant="caption" fontWeight={600}>
-                    {preset.name}
-                  </Typography>
-                </Box>
-              </Grid>
+              <button
+                key={preset.name}
+                type="button"
+                onClick={() => setLocalConfig(preset.colors)}
+                className="border-border hover:border-primary rounded-lg border p-3 text-left transition"
+              >
+                <div className="mb-2 flex gap-1">
+                  <div
+                    className="h-5 w-5 rounded"
+                    style={{ backgroundColor: preset.colors.primaryColor }}
+                  />
+                  <div
+                    className="h-5 w-5 rounded"
+                    style={{ backgroundColor: preset.colors.secondaryColor }}
+                  />
+                  <div
+                    className="h-5 w-5 rounded"
+                    style={{ backgroundColor: preset.colors.accentColor }}
+                  />
+                </div>
+                <div className="text-xs font-semibold">{preset.name}</div>
+              </button>
             ))}
-          </Grid>
-        </Box>
+          </div>
+        </div>
 
-        {/* Color Pickers */}
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
-              Color Primario
-            </Typography>
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              <TextField
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">Color Primario</div>
+            <div className="flex items-center gap-2">
+              <Input
                 type="color"
                 value={localConfig.primaryColor}
                 onChange={(e) =>
                   handleColorChange("primaryColor", e.target.value)
                 }
-                sx={{ width: 80 }}
+                className="h-9 w-16 p-1"
               />
-              <TextField
+              <Input
                 value={localConfig.primaryColor}
                 onChange={(e) =>
                   handleColorChange("primaryColor", e.target.value)
                 }
-                fullWidth
-                size="small"
               />
-            </Box>
-          </Grid>
+            </div>
+          </div>
 
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
-              Color Secundario
-            </Typography>
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              <TextField
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">Color Secundario</div>
+            <div className="flex items-center gap-2">
+              <Input
                 type="color"
                 value={localConfig.secondaryColor}
                 onChange={(e) =>
                   handleColorChange("secondaryColor", e.target.value)
                 }
-                sx={{ width: 80 }}
+                className="h-9 w-16 p-1"
               />
-              <TextField
+              <Input
                 value={localConfig.secondaryColor}
                 onChange={(e) =>
                   handleColorChange("secondaryColor", e.target.value)
                 }
-                fullWidth
-                size="small"
               />
-            </Box>
-          </Grid>
+            </div>
+          </div>
 
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
-              Fondo del Sidebar
-            </Typography>
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              <TextField
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">Fondo del Sidebar</div>
+            <div className="flex items-center gap-2">
+              <Input
                 type="color"
                 value={localConfig.sidebarBg}
                 onChange={(e) => handleColorChange("sidebarBg", e.target.value)}
-                sx={{ width: 80 }}
+                className="h-9 w-16 p-1"
               />
-              <TextField
+              <Input
                 value={localConfig.sidebarBg}
                 onChange={(e) => handleColorChange("sidebarBg", e.target.value)}
-                fullWidth
-                size="small"
               />
-            </Box>
-          </Grid>
+            </div>
+          </div>
 
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
-              Color de Acento
-            </Typography>
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              <TextField
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">Color de Acento</div>
+            <div className="flex items-center gap-2">
+              <Input
                 type="color"
                 value={localConfig.accentColor}
                 onChange={(e) =>
                   handleColorChange("accentColor", e.target.value)
                 }
-                sx={{ width: 80 }}
+                className="h-9 w-16 p-1"
               />
-              <TextField
+              <Input
                 value={localConfig.accentColor}
                 onChange={(e) =>
                   handleColorChange("accentColor", e.target.value)
                 }
-                fullWidth
-                size="small"
               />
-            </Box>
-          </Grid>
-        </Grid>
+            </div>
+          </div>
+        </div>
 
-        {/* Vista Previa */}
-        <Box
-          sx={{
-            mt: 4,
-            p: 3,
-            border: "2px solid #e2e8f0",
-            borderRadius: 2,
-            bgcolor: "#f9fafb",
-          }}
-        >
-          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2 }}>
-            Vista Previa
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={6} sm={3}>
-              <Button
-                variant="contained"
-                fullWidth
-                size="small"
-                style={{
-                  backgroundColor: localConfig.primaryColor,
-                }}
-                sx={{
-                  "&:hover": {
-                    filter: "brightness(0.9)",
-                  },
-                }}
-              >
-                PRIMARIO
-              </Button>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <Box
-                sx={{
-                  height: 36,
-                  bgcolor: localConfig.sidebarBg,
-                  color: localConfig.sidebarText,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 1,
-                  fontSize: "0.875rem",
-                }}
-              >
-                Sidebar
-              </Box>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <Box
-                sx={{
-                  height: 36,
-                  bgcolor: localConfig.accentColor,
-                  color: "white",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 1,
-                  fontSize: "0.875rem",
-                }}
-              >
-                Acento
-              </Box>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <Button
-                variant="outlined"
-                fullWidth
-                size="small"
-                style={{
-                  borderColor: localConfig.secondaryColor,
-                  color: localConfig.secondaryColor,
-                }}
-                sx={{
-                  "&:hover": {
-                    borderColor: localConfig.secondaryColor,
-                    bgcolor: `${localConfig.secondaryColor}10`,
-                  },
-                }}
-              >
-                SECUNDARIO
-              </Button>
-            </Grid>
-          </Grid>
-        </Box>
+        <div className="mt-6 rounded-lg border bg-muted/30 p-4">
+          <div className="mb-3 text-sm font-semibold">Vista Previa</div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Button
+              type="button"
+              size="sm"
+              style={{ backgroundColor: localConfig.primaryColor }}
+              className="text-white"
+            >
+              PRIMARIO
+            </Button>
+            <div
+              className="flex h-9 items-center justify-center rounded-md text-sm"
+              style={{
+                backgroundColor: localConfig.sidebarBg,
+                color: localConfig.sidebarText,
+              }}
+            >
+              Sidebar
+            </div>
+            <div
+              className="flex h-9 items-center justify-center rounded-md text-sm text-white"
+              style={{ backgroundColor: localConfig.accentColor }}
+            >
+              Acento
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              style={{
+                borderColor: localConfig.secondaryColor,
+                color: localConfig.secondaryColor,
+              }}
+            >
+              SECUNDARIO
+            </Button>
+          </div>
+        </div>
 
-        {/* Botones de acción */}
-        <Box
-          sx={{ display: "flex", gap: 2, mt: 3, justifyContent: "flex-end" }}
-        >
-          <Button variant="outlined" onClick={handleReset}>
-            RESTABLECER
+        <div className="mt-6 flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleReset}>
+            Restablecer
           </Button>
           <Button
-            variant="contained"
+            type="button"
             onClick={handleSave}
-            startIcon={<SaveIcon />}
-            style={{
-              backgroundColor: localConfig.primaryColor,
-            }}
-            sx={{
-              "&:hover": {
-                filter: "brightness(0.9)",
-              },
-            }}
+            style={{ backgroundColor: localConfig.primaryColor }}
+            className="text-white"
           >
-            GUARDAR CAMBIOS
+            <Save className="size-4" />
+            Guardar Cambios
           </Button>
-        </Box>
+        </div>
       </CardContent>
     </Card>
   );
@@ -468,321 +363,287 @@ function PoliticasTab() {
   };
 
   return (
-    <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
-          📋 Políticas de Evidencias
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Configure qué evidencias son obligatorias para las cargas de
-          combustible
-        </Typography>
+    <Card className="border-border">
+      <CardContent className="pt-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">Políticas de Evidencias</h2>
+          <p className="text-muted-foreground text-sm">
+            Configure qué evidencias son obligatorias para las cargas de
+            combustible.
+          </p>
+        </div>
 
-        {saved && (
-          <Alert severity="success" sx={{ mb: 3 }}>
-            ✅ Políticas guardadas exitosamente
+        {saved ? (
+          <Alert className="mt-4">
+            <AlertTitle>Guardado</AlertTitle>
+            <AlertDescription>
+              Políticas guardadas exitosamente
+            </AlertDescription>
           </Alert>
-        )}
+        ) : null}
 
-        <Grid container spacing={4}>
-          {/* Evidencias Obligatorias */}
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
-              Evidencias Obligatorias
-            </Typography>
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <div className="space-y-3">
+            <div className="text-sm font-semibold">Evidencias Obligatorias</div>
 
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Card variant="outlined" sx={{ p: 2 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <PhotoCameraIcon
-                      sx={{
-                        color: policies.requiredPhotos ? "#10b981" : "#9ca3af",
-                      }}
+            <Card className="border-border">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <Camera
+                      className={
+                        policies.requiredPhotos
+                          ? "text-emerald-600"
+                          : "text-muted-foreground"
+                      }
                     />
-                    <Box>
-                      <Typography fontWeight={600}>Fotografías</Typography>
-                      <Typography variant="caption" color="text.secondary">
+                    <div>
+                      <div className="font-medium">Fotografías</div>
+                      <div className="text-muted-foreground text-xs">
                         Fotos del surtidor, cuenta-litros y odómetro
-                      </Typography>
-                    </Box>
-                  </Box>
+                      </div>
+                    </div>
+                  </div>
                   <Switch
                     checked={policies.requiredPhotos}
-                    onChange={() => handleToggle("requiredPhotos")}
-                    color="success"
+                    onCheckedChange={() => handleToggle("requiredPhotos")}
                   />
-                </Box>
-                {policies.requiredPhotos && (
-                  <Box sx={{ mt: 2, display: "flex", gap: 2 }}>
-                    <TextField
-                      label="Mínimo"
-                      type="number"
-                      size="small"
-                      value={policies.minPhotos}
-                      onChange={(e) =>
-                        handleChange("minPhotos", parseInt(e.target.value) || 1)
-                      }
-                      sx={{ width: 100 }}
-                      InputProps={{ inputProps: { min: 1, max: 10 } }}
-                    />
-                    <TextField
-                      label="Máximo"
-                      type="number"
-                      size="small"
-                      value={policies.maxPhotos}
-                      onChange={(e) =>
-                        handleChange("maxPhotos", parseInt(e.target.value) || 5)
-                      }
-                      sx={{ width: 100 }}
-                      InputProps={{ inputProps: { min: 1, max: 10 } }}
-                    />
-                  </Box>
-                )}
-              </Card>
+                </div>
 
-              <Card variant="outlined" sx={{ p: 2 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <LocationOnIcon
-                      sx={{
-                        color: policies.requiredLocation
-                          ? "#10b981"
-                          : "#9ca3af",
-                      }}
+                {policies.requiredPhotos ? (
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <div className="text-muted-foreground text-xs">
+                        Mínimo
+                      </div>
+                      <Input
+                        type="number"
+                        value={String(policies.minPhotos)}
+                        onChange={(e) =>
+                          handleChange("minPhotos", Number(e.target.value) || 1)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-muted-foreground text-xs">
+                        Máximo
+                      </div>
+                      <Input
+                        type="number"
+                        value={String(policies.maxPhotos)}
+                        onChange={(e) =>
+                          handleChange("maxPhotos", Number(e.target.value) || 5)
+                        }
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <MapPin
+                      className={
+                        policies.requiredLocation
+                          ? "text-emerald-600"
+                          : "text-muted-foreground"
+                      }
                     />
-                    <Box>
-                      <Typography fontWeight={600}>Geolocalización</Typography>
-                      <Typography variant="caption" color="text.secondary">
+                    <div>
+                      <div className="font-medium">Geolocalización</div>
+                      <div className="text-muted-foreground text-xs">
                         Ubicación GPS del evento de carga
-                      </Typography>
-                    </Box>
-                  </Box>
+                      </div>
+                    </div>
+                  </div>
                   <Switch
                     checked={policies.requiredLocation}
-                    onChange={() => handleToggle("requiredLocation")}
-                    color="success"
+                    onCheckedChange={() => handleToggle("requiredLocation")}
                   />
-                </Box>
-                {policies.requiredLocation && (
-                  <Box sx={{ mt: 2 }}>
-                    <TextField
-                      label="Radio máximo (metros)"
-                      type="number"
-                      size="small"
-                      value={policies.locationRadius}
-                      onChange={(e) =>
-                        handleChange(
-                          "locationRadius",
-                          parseInt(e.target.value) || 500
-                        )
-                      }
-                      sx={{ width: 180 }}
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">m</InputAdornment>
-                        ),
-                      }}
-                      helperText="Distancia máxima al surtidor registrado"
-                    />
-                  </Box>
-                )}
-              </Card>
+                </div>
 
-              <Card variant="outlined" sx={{ p: 2 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <MicIcon
-                      sx={{
-                        color: policies.requiredAudio ? "#10b981" : "#9ca3af",
-                      }}
+                {policies.requiredLocation ? (
+                  <div className="mt-4 space-y-1">
+                    <div className="text-muted-foreground text-xs">
+                      Radio máximo (metros)
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        value={String(policies.locationRadius)}
+                        onChange={(e) =>
+                          handleChange(
+                            "locationRadius",
+                            Number(e.target.value) || 500
+                          )
+                        }
+                      />
+                      <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs">
+                        m
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      Distancia máxima al surtidor registrado
+                    </p>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <Mic
+                      className={
+                        policies.requiredAudio
+                          ? "text-emerald-600"
+                          : "text-muted-foreground"
+                      }
                     />
-                    <Box>
-                      <Typography fontWeight={600}>
-                        Audio/Nota de Voz
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                    <div>
+                      <div className="font-medium">Audio/Nota de Voz</div>
+                      <div className="text-muted-foreground text-xs">
                         Grabación de audio explicativa
-                      </Typography>
-                    </Box>
-                  </Box>
+                      </div>
+                    </div>
+                  </div>
                   <Switch
                     checked={policies.requiredAudio}
-                    onChange={() => handleToggle("requiredAudio")}
-                    color="success"
+                    onCheckedChange={() => handleToggle("requiredAudio")}
                   />
-                </Box>
-              </Card>
+                </div>
+              </CardContent>
+            </Card>
 
-              <Card variant="outlined" sx={{ p: 2 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <ReceiptIcon
-                      sx={{
-                        color: policies.requiredTicket ? "#10b981" : "#9ca3af",
-                      }}
+            <Card className="border-border">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <Receipt
+                      className={
+                        policies.requiredTicket
+                          ? "text-emerald-600"
+                          : "text-muted-foreground"
+                      }
                     />
-                    <Box>
-                      <Typography fontWeight={600}>
-                        Ticket/Comprobante
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                    <div>
+                      <div className="font-medium">Ticket/Comprobante</div>
+                      <div className="text-muted-foreground text-xs">
                         Foto del ticket de la estación
-                      </Typography>
-                    </Box>
-                  </Box>
+                      </div>
+                    </div>
+                  </div>
                   <Switch
                     checked={policies.requiredTicket}
-                    onChange={() => handleToggle("requiredTicket")}
-                    color="success"
+                    onCheckedChange={() => handleToggle("requiredTicket")}
                   />
-                </Box>
-              </Card>
-            </Box>
-          </Grid>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* Configuración de Validación */}
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
-              Validación de Eventos
-            </Typography>
+          <div className="space-y-3">
+            <div className="text-sm font-semibold">Validación de Eventos</div>
 
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Card variant="outlined" sx={{ p: 2 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={policies.requireValidation}
-                      onChange={() => handleToggle("requireValidation")}
-                      color="success"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography fontWeight={600}>
-                        Requiere Validación
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Los eventos deben ser validados por un supervisor
-                      </Typography>
-                    </Box>
-                  }
-                />
-                {policies.requireValidation && (
-                  <Box sx={{ mt: 2 }}>
-                    <TextField
-                      label="Plazo de validación"
-                      type="number"
-                      size="small"
-                      value={policies.validationDeadline}
-                      onChange={(e) =>
-                        handleChange(
-                          "validationDeadline",
-                          parseInt(e.target.value) || 24
-                        )
-                      }
-                      sx={{ width: 180 }}
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">horas</InputAdornment>
-                        ),
-                      }}
-                      helperText="Tiempo máximo para validar un evento"
-                    />
-                  </Box>
-                )}
-              </Card>
+            <Card className="border-border">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium">Requiere Validación</div>
+                    <div className="text-muted-foreground text-xs">
+                      Los eventos deben ser validados por un supervisor
+                    </div>
+                  </div>
+                  <Switch
+                    checked={policies.requireValidation}
+                    onCheckedChange={() => handleToggle("requireValidation")}
+                  />
+                </div>
 
-              <Card variant="outlined" sx={{ p: 2 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={policies.allowManualEntry}
-                      onChange={() => handleToggle("allowManualEntry")}
-                      color="success"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography fontWeight={600}>
-                        Permitir Carga Manual
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Permite cargar eventos desde el panel web
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </Card>
+                {policies.requireValidation ? (
+                  <div className="mt-4 space-y-1">
+                    <div className="text-muted-foreground text-xs">
+                      Plazo de validación
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        value={String(policies.validationDeadline)}
+                        onChange={(e) =>
+                          handleChange(
+                            "validationDeadline",
+                            Number(e.target.value) || 24
+                          )
+                        }
+                      />
+                      <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs">
+                        horas
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      Tiempo máximo para validar un evento
+                    </p>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
 
-              {/* Resumen */}
-              <Alert severity="info" sx={{ mt: 2 }}>
-                <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                  Resumen de Configuración
-                </Typography>
-                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                  {policies.requiredPhotos && (
-                    <Chip
-                      label={`${policies.minPhotos}-${policies.maxPhotos} fotos`}
-                      size="small"
-                    />
-                  )}
-                  {policies.requiredLocation && (
-                    <Chip label="GPS" size="small" />
-                  )}
-                  {policies.requiredAudio && (
-                    <Chip label="Audio" size="small" />
-                  )}
-                  {policies.requiredTicket && (
-                    <Chip label="Ticket" size="small" />
-                  )}
-                  {policies.requireValidation && (
-                    <Chip
-                      label={`Validar en ${policies.validationDeadline}h`}
-                      size="small"
-                    />
-                  )}
-                </Box>
-              </Alert>
-            </Box>
-          </Grid>
-        </Grid>
+            <Card className="border-border">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium">Permitir Carga Manual</div>
+                    <div className="text-muted-foreground text-xs">
+                      Permite cargar eventos desde el panel web
+                    </div>
+                  </div>
+                  <Switch
+                    checked={policies.allowManualEntry}
+                    onCheckedChange={() => handleToggle("allowManualEntry")}
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-        <Box
-          sx={{ display: "flex", gap: 2, mt: 4, justifyContent: "flex-end" }}
-        >
-          <Button
-            variant="contained"
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
-          >
+            <Alert className="border-border">
+              <AlertTitle>Resumen de Configuración</AlertTitle>
+              <AlertDescription>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {policies.requiredPhotos ? (
+                    <Badge variant="secondary">
+                      {policies.minPhotos}-{policies.maxPhotos} fotos
+                    </Badge>
+                  ) : null}
+                  {policies.requiredLocation ? (
+                    <Badge variant="secondary">GPS</Badge>
+                  ) : null}
+                  {policies.requiredAudio ? (
+                    <Badge variant="secondary">Audio</Badge>
+                  ) : null}
+                  {policies.requiredTicket ? (
+                    <Badge variant="secondary">Ticket</Badge>
+                  ) : null}
+                  {policies.requireValidation ? (
+                    <Badge variant="secondary">
+                      Validar en {policies.validationDeadline}h
+                    </Badge>
+                  ) : null}
+                </div>
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <Button type="button" onClick={handleSave}>
+            <Save className="size-4" />
             Guardar Políticas
           </Button>
-        </Box>
+        </div>
       </CardContent>
     </Card>
   );
@@ -855,145 +716,146 @@ function PreciosTab() {
   };
 
   return (
-    <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
-          ⛽ Precios de Combustible
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Configure los precios por tipo de combustible para el cálculo de
-          costos
-        </Typography>
+    <Card className="border-border">
+      <CardContent className="pt-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">Precios de Combustible</h2>
+          <p className="text-muted-foreground text-sm">
+            Configure los precios por tipo de combustible para el cálculo de
+            costos.
+          </p>
+        </div>
 
-        <Alert severity="info" sx={{ mb: 3 }}>
-          Los precios se utilizan para calcular el costo total de cada carga.
-          Actualice los precios cuando cambien en sus proveedores.
+        <Alert className="mt-4">
+          <AlertTitle>Info</AlertTitle>
+          <AlertDescription>
+            Los precios se utilizan para calcular el costo total de cada carga.
+            Actualice los precios cuando cambien en sus proveedores.
+          </AlertDescription>
         </Alert>
 
-        <TableContainer>
+        <div className="mt-4 overflow-x-auto">
           <Table>
-            <TableHead sx={{ bgcolor: "#f9fafb" }}>
+            <TableHeader>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>
-                  Tipo de Combustible
-                </TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="right">
-                  Precio por Litro
-                </TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Vigencia Desde</TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="center">
-                  Estado
-                </TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="center">
-                  Acciones
-                </TableCell>
+                <TableHead>Tipo de Combustible</TableHead>
+                <TableHead className="text-right">Precio por Litro</TableHead>
+                <TableHead>Vigencia Desde</TableHead>
+                <TableHead className="text-center">Estado</TableHead>
+                <TableHead className="text-center">Acciones</TableHead>
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {precios.map((precio) => (
-                <TableRow key={precio.id} hover>
+                <TableRow key={precio.id} className="hover:bg-muted/50">
                   <TableCell>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <LocalGasStationIcon
-                        sx={{ color: precio.activo ? "#10b981" : "#9ca3af" }}
-                      />
-                      <Typography fontWeight={600}>{precio.tipo}</Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell align="right">
-                    {editingId === precio.id ? (
-                      <TextField
-                        size="small"
-                        type="number"
-                        value={editValue}
-                        onChange={(e) =>
-                          setEditValue(parseFloat(e.target.value) || 0)
+                    <div className="flex items-center gap-2">
+                      <Fuel
+                        className={
+                          precio.activo
+                            ? "text-emerald-600"
+                            : "text-muted-foreground"
                         }
-                        sx={{ width: 120 }}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">$</InputAdornment>
-                          ),
-                        }}
-                        autoFocus
+                        size={16}
                       />
+                      <span className="font-medium">{precio.tipo}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {editingId === precio.id ? (
+                      <div className="relative ml-auto w-[140px]">
+                        <span className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm">
+                          $
+                        </span>
+                        <Input
+                          type="number"
+                          value={String(editValue)}
+                          onChange={(e) =>
+                            setEditValue(Number(e.target.value) || 0)
+                          }
+                          className="pl-7"
+                          autoFocus
+                        />
+                      </div>
                     ) : (
-                      <Typography
-                        variant="h6"
-                        fontWeight={700}
-                        color={precio.activo ? "#1e293b" : "#9ca3af"}
+                      <span
+                        className={
+                          precio.activo
+                            ? "font-semibold"
+                            : "text-muted-foreground font-semibold"
+                        }
                       >
                         ${precio.precio.toLocaleString()}
-                      </Typography>
+                      </span>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {new Date(precio.vigenciaDesde).toLocaleDateString(
-                        "es-AR"
-                      )}
-                    </Typography>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {new Date(precio.vigenciaDesde).toLocaleDateString("es-AR")}
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell className="text-center">
                     <Switch
                       checked={precio.activo}
-                      onChange={() => handleToggle(precio.id)}
-                      color="success"
-                      size="small"
+                      onCheckedChange={() => handleToggle(precio.id)}
                     />
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell className="text-center">
                     {editingId === precio.id ? (
-                      <IconButton
-                        color="success"
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
                         onClick={() => handleSave(precio.id)}
+                        aria-label="Guardar"
                       >
-                        <SaveIcon />
-                      </IconButton>
+                        <Save className="size-4" />
+                      </Button>
                     ) : (
-                      <IconButton
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
                         onClick={() => handleEdit(precio.id, precio.precio)}
+                        aria-label="Editar"
                       >
-                        <EditIcon />
-                      </IconButton>
+                        <Pencil className="size-4" />
+                      </Button>
                     )}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </TableContainer>
+        </div>
 
-        <Divider sx={{ my: 3 }} />
+        <Separator className="my-6" />
 
-        <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2 }}>
-          Agregar Nuevo Tipo de Combustible
-        </Typography>
-        <Box sx={{ display: "flex", gap: 2, alignItems: "flex-end" }}>
-          <TextField
-            label="Tipo"
-            placeholder="Ej: Biodiesel"
-            size="small"
-            sx={{ width: 200 }}
-          />
-          <TextField
-            label="Precio/Litro"
-            type="number"
-            size="small"
-            sx={{ width: 150 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">$</InputAdornment>
-              ),
-            }}
-          />
-          <Button
-            variant="outlined"
-            onClick={() => toast.info("Funcionalidad disponible próximamente")}
-          >
-            Agregar
-          </Button>
-        </Box>
+        <div className="space-y-2">
+          <div className="text-sm font-medium">
+            Agregar Nuevo Tipo de Combustible
+          </div>
+          <div className="grid gap-2 md:grid-cols-[1fr_200px_auto] md:items-end">
+            <Input placeholder="Ej: Biodiesel" />
+            <div className="relative">
+              <span className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm">
+                $
+              </span>
+              <Input
+                type="number"
+                placeholder="Precio/Litro"
+                className="pl-7"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                toast.info("Funcionalidad disponible próximamente")
+              }
+            >
+              Agregar
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -1057,118 +919,106 @@ function UmbralesTab() {
   };
 
   return (
-    <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
-          🚛 Umbrales por Tipo de Vehículo
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Configure los límites de litros permitidos por carga según el tipo de
-          vehículo
-        </Typography>
+    <Card className="border-border">
+      <CardContent className="pt-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">
+            Umbrales por Tipo de Vehículo
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            Configure los límites de litros permitidos por carga según el tipo
+            de vehículo.
+          </p>
+        </div>
 
-        <Alert severity="warning" sx={{ mb: 3 }} icon={<WarningIcon />}>
-          Las cargas que excedan estos umbrales generarán alertas y podrían
-          requerir validación adicional.
+        <Alert className="mt-4">
+          <TriangleAlert className="size-4" />
+          <AlertTitle>Atención</AlertTitle>
+          <AlertDescription>
+            Las cargas que excedan estos umbrales generarán alertas y podrían
+            requerir validación adicional.
+          </AlertDescription>
         </Alert>
 
-        <TableContainer>
+        <div className="mt-4 overflow-x-auto">
           <Table>
-            <TableHead sx={{ bgcolor: "#f9fafb" }}>
+            <TableHeader>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>Tipo de Vehículo</TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="center">
-                  Mínimo (L)
-                </TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="center">
-                  Máximo (L)
-                </TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="center">
-                  Alertar Exceso
-                </TableCell>
+                <TableHead>Tipo de Vehículo</TableHead>
+                <TableHead className="text-center">Mínimo (L)</TableHead>
+                <TableHead className="text-center">Máximo (L)</TableHead>
+                <TableHead className="text-center">Alertar Exceso</TableHead>
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {umbrales.map((umbral) => (
-                <TableRow key={umbral.id} hover>
+                <TableRow key={umbral.id} className="hover:bg-muted/50">
                   <TableCell>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <DirectionsCarIcon sx={{ color: "#3b82f6" }} />
-                      <Typography fontWeight={600}>
-                        {umbral.tipoVehiculo}
-                      </Typography>
-                    </Box>
+                    <div className="flex items-center gap-2">
+                      <Car className="text-blue-500" size={16} />
+                      <span className="font-medium">{umbral.tipoVehiculo}</span>
+                    </div>
                   </TableCell>
-                  <TableCell align="center">
-                    <TextField
-                      type="number"
-                      size="small"
-                      value={umbral.litrosMin}
-                      onChange={(e) =>
-                        handleChange(
-                          umbral.id,
-                          "litrosMin",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                      sx={{ width: 100 }}
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">L</InputAdornment>
-                        ),
-                      }}
-                    />
+                  <TableCell className="text-center">
+                    <div className="relative mx-auto w-[110px]">
+                      <Input
+                        type="number"
+                        value={String(umbral.litrosMin)}
+                        onChange={(e) =>
+                          handleChange(
+                            umbral.id,
+                            "litrosMin",
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                        className="pr-8 text-center"
+                      />
+                      <span className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs">
+                        L
+                      </span>
+                    </div>
                   </TableCell>
-                  <TableCell align="center">
-                    <TextField
-                      type="number"
-                      size="small"
-                      value={umbral.litrosMax}
-                      onChange={(e) =>
-                        handleChange(
-                          umbral.id,
-                          "litrosMax",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                      sx={{ width: 100 }}
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">L</InputAdornment>
-                        ),
-                      }}
-                    />
+                  <TableCell className="text-center">
+                    <div className="relative mx-auto w-[110px]">
+                      <Input
+                        type="number"
+                        value={String(umbral.litrosMax)}
+                        onChange={(e) =>
+                          handleChange(
+                            umbral.id,
+                            "litrosMax",
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                        className="pr-8 text-center"
+                      />
+                      <span className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs">
+                        L
+                      </span>
+                    </div>
                   </TableCell>
-                  <TableCell align="center">
-                    <Switch
-                      checked={umbral.alertaExceso}
-                      onChange={(e) =>
-                        handleChange(
-                          umbral.id,
-                          "alertaExceso",
-                          e.target.checked
-                        )
-                      }
-                      color="warning"
-                    />
+                  <TableCell className="text-center">
+                    <div className="flex justify-center">
+                      <Switch
+                        checked={umbral.alertaExceso}
+                        onCheckedChange={(checked) =>
+                          handleChange(umbral.id, "alertaExceso", checked)
+                        }
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </TableContainer>
+        </div>
 
-        <Box
-          sx={{ display: "flex", gap: 2, mt: 3, justifyContent: "flex-end" }}
-        >
-          <Button
-            variant="contained"
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
-          >
+        <div className="mt-6 flex justify-end">
+          <Button type="button" onClick={handleSave}>
+            <Save className="size-4" />
             Guardar Umbrales
           </Button>
-        </Box>
+        </div>
       </CardContent>
     </Card>
   );
@@ -1235,143 +1085,109 @@ function AlertasTab() {
   ];
 
   return (
-    <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
-          🔔 Configuración de Alertas
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Configure qué alertas desea recibir y cómo desea ser notificado
-        </Typography>
+    <Card className="border-border">
+      <CardContent className="pt-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">Configuración de Alertas</h2>
+          <p className="text-muted-foreground text-sm">
+            Configure qué alertas desea recibir y cómo desea ser notificado.
+          </p>
+        </div>
 
-        <Grid container spacing={4}>
-          {/* Tipos de Alerta */}
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
-              Tipos de Alerta
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">Tipos de Alerta</div>
+            <div className="space-y-2">
               {tiposAlerta.map((tipo) => (
-                <Card key={tipo.key} variant="outlined" sx={{ p: 2 }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <Box>
-                      <Typography fontWeight={600}>{tipo.label}</Typography>
-                      <Typography variant="caption" color="text.secondary">
+                <Card key={tipo.key} className="border-border">
+                  <CardContent className="flex items-center justify-between gap-3 p-4">
+                    <div>
+                      <div className="font-medium">{tipo.label}</div>
+                      <div className="text-muted-foreground text-xs">
                         {tipo.desc}
-                      </Typography>
-                    </Box>
+                      </div>
+                    </div>
                     <Switch
                       checked={
                         alertas[tipo.key as keyof typeof alertas] as boolean
                       }
-                      onChange={() =>
+                      onCheckedChange={() =>
                         handleToggle(tipo.key as keyof typeof alertas)
                       }
-                      color="warning"
                     />
-                  </Box>
+                  </CardContent>
                 </Card>
               ))}
-            </Box>
-          </Grid>
+            </div>
+          </div>
 
-          {/* Canales y Destinatarios */}
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
-              Canales de Notificación
-            </Typography>
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 3 }}
-            >
-              <FormControlLabel
-                control={
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="text-sm font-semibold">
+                Canales de Notificación
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div className="text-sm">Email</div>
                   <Switch
                     checked={alertas.notifyEmail}
-                    onChange={() => handleToggle("notifyEmail")}
-                    color="success"
+                    onCheckedChange={() => handleToggle("notifyEmail")}
                   />
-                }
-                label="Email"
-              />
-              <FormControlLabel
-                control={
+                </div>
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div className="text-sm">WhatsApp</div>
                   <Switch
                     checked={alertas.notifyWhatsapp}
-                    onChange={() => handleToggle("notifyWhatsapp")}
-                    color="success"
+                    onCheckedChange={() => handleToggle("notifyWhatsapp")}
                   />
-                }
-                label="WhatsApp"
-              />
-              <FormControlLabel
-                control={
+                </div>
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div className="text-sm">Notificación Push</div>
                   <Switch
                     checked={alertas.notifyPush}
-                    onChange={() => handleToggle("notifyPush")}
-                    color="success"
+                    onCheckedChange={() => handleToggle("notifyPush")}
                   />
-                }
-                label="Notificación Push"
-              />
-            </Box>
+                </div>
+              </div>
+            </div>
 
-            <Divider sx={{ my: 2 }} />
+            <Separator />
 
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
-              Destinatarios
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <FormControlLabel
-                control={
+            <div className="space-y-2">
+              <div className="text-sm font-semibold">Destinatarios</div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div className="text-sm">Administrador</div>
                   <Switch
                     checked={alertas.notifyAdmin}
-                    onChange={() => handleToggle("notifyAdmin")}
-                    color="primary"
+                    onCheckedChange={() => handleToggle("notifyAdmin")}
                   />
-                }
-                label="Administrador"
-              />
-              <FormControlLabel
-                control={
+                </div>
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div className="text-sm">Supervisor de Unidad</div>
                   <Switch
                     checked={alertas.notifySupervisor}
-                    onChange={() => handleToggle("notifySupervisor")}
-                    color="primary"
+                    onCheckedChange={() => handleToggle("notifySupervisor")}
                   />
-                }
-                label="Supervisor de Unidad"
-              />
-              <FormControlLabel
-                control={
+                </div>
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div className="text-sm">Operador (solo sus alertas)</div>
                   <Switch
                     checked={alertas.notifyOperador}
-                    onChange={() => handleToggle("notifyOperador")}
-                    color="primary"
+                    onCheckedChange={() => handleToggle("notifyOperador")}
                   />
-                }
-                label="Operador (solo sus alertas)"
-              />
-            </Box>
-          </Grid>
-        </Grid>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <Box
-          sx={{ display: "flex", gap: 2, mt: 4, justifyContent: "flex-end" }}
-        >
-          <Button
-            variant="contained"
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
-          >
+        <div className="mt-6 flex justify-end">
+          <Button type="button" onClick={handleSave}>
+            <Save className="size-4" />
             Guardar Configuración
           </Button>
-        </Box>
+        </div>
       </CardContent>
     </Card>
   );
@@ -1386,7 +1202,7 @@ function WhiteListTab() {
 
   const createContact = useCreateIaWhiteListContact();
   const updateContact = useUpdateIaWhiteListContact();
-  const desactivateContact = useDesactivateIaWhiteListContact();
+  useDesactivateIaWhiteListContact();
   const toggleContact = useToggleIaWhiteListContact();
 
   const [isEditing, setIsEditing] = useState<number | null>(null);
@@ -1463,171 +1279,139 @@ function WhiteListTab() {
   };
 
   return (
-    <Card elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: 2 }}>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
-          📱 WhiteList de IA
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Números de teléfono autorizados para interactuar con el bot de
-          WhatsApp/IA
-        </Typography>
+    <Card className="border-border">
+      <CardContent className="pt-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">WhiteList de IA</h2>
+          <p className="text-muted-foreground text-sm">
+            Números de teléfono autorizados para interactuar con el bot de
+            WhatsApp/IA
+          </p>
+        </div>
 
-        <Alert severity="info" sx={{ mb: 3 }}>
-          Solo los números <strong>activos</strong> en esta lista podrán
-          utilizar el bot de IA para registrar cargas de combustible por
-          WhatsApp.
+        <Alert className="mt-4">
+          <AlertTitle>Importante</AlertTitle>
+          <AlertDescription>
+            Solo los números <strong>activos</strong> en esta lista podrán
+            utilizar el bot de IA para registrar cargas de combustible por
+            WhatsApp.
+          </AlertDescription>
         </Alert>
 
-        {isLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <TableContainer>
+        <div className="mt-4 overflow-x-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-2 py-8">
+              <Spinner className="size-4" />
+              <span className="text-sm text-muted-foreground">Cargando...</span>
+            </div>
+          ) : (
             <Table>
-              <TableHead sx={{ bgcolor: "#f9fafb" }}>
+              <TableHeader>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>Nombre</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>
-                    Número de Teléfono
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700 }} align="center">
-                    Estado
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700 }} align="center">
-                    Acciones
-                  </TableCell>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Número de Teléfono</TableHead>
+                  <TableHead className="text-center">Estado</TableHead>
+                  <TableHead className="text-center">Acciones</TableHead>
                 </TableRow>
-              </TableHead>
+              </TableHeader>
               <TableBody>
                 {contacts?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} align="center">
-                      <Typography variant="body2" color="text.secondary">
-                        No hay contactos en la WhiteList
-                      </Typography>
+                    <TableCell
+                      colSpan={4}
+                      className="text-center text-sm text-muted-foreground"
+                    >
+                      No hay contactos en la WhiteList
                     </TableCell>
                   </TableRow>
                 ) : (
                   contacts?.map((contact) => (
-                    <TableRow key={contact.id} hover>
+                    <TableRow key={contact.id} className="hover:bg-muted/50">
                       <TableCell>
                         {isEditing === contact.id ? (
-                          <TextField
-                            size="small"
+                          <Input
                             value={editData.name}
                             onChange={(e) =>
                               setEditData({ ...editData, name: e.target.value })
                             }
-                            fullWidth
                           />
                         ) : (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                            }}
-                          >
-                            <ContactPhoneIcon
-                              sx={{
-                                color: contact.active ? "#10b981" : "#9ca3af",
-                              }}
+                          <div className="flex items-center gap-2">
+                            <Users
+                              className={
+                                contact.active
+                                  ? "text-emerald-600"
+                                  : "text-muted-foreground"
+                              }
+                              size={16}
                             />
-                            <Typography fontWeight={600}>
-                              {contact.name}
-                            </Typography>
-                          </Box>
+                            <span className="font-medium">{contact.name}</span>
+                          </div>
                         )}
                       </TableCell>
+
                       <TableCell>
                         {isEditing === contact.id ? (
-                          <TextField
-                            size="small"
-                            value={editData.phoneNumber}
-                            onChange={(e) =>
-                              setEditData({
-                                ...editData,
-                                phoneNumber: e.target.value,
-                              })
-                            }
-                            fullWidth
-                            placeholder="+5491123456789"
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <PhoneIcon fontSize="small" />
-                                </InputAdornment>
-                              ),
-                            }}
-                          />
-                        ) : (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                            }}
-                          >
-                            <PhoneIcon
-                              fontSize="small"
-                              sx={{ color: "#3b82f6" }}
+                          <div className="relative">
+                            <Phone className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+                            <Input
+                              value={editData.phoneNumber}
+                              onChange={(e) =>
+                                setEditData({
+                                  ...editData,
+                                  phoneNumber: e.target.value,
+                                })
+                              }
+                              placeholder="+5491123456789"
+                              className="pl-9"
                             />
-                            <Typography variant="body2">
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Phone className="text-primary size-4" />
+                            <span className="text-sm">
                               {contact.phoneNumber}
-                            </Typography>
-                          </Box>
+                            </span>
+                          </div>
                         )}
                       </TableCell>
-                      <TableCell align="center">
-                        {/* ✅ Switch para activar/desactivar */}
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={contact.active}
-                              onChange={() =>
-                                handleToggleActive(contact.id, contact.active)
-                              }
-                              color="success"
-                              size="small"
-                            />
-                          }
-                          label={
-                            <Typography variant="caption" fontWeight={600}>
-                              {contact.active ? "Activo" : "Inactivo"}
-                            </Typography>
-                          }
-                        />
+
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Switch
+                            checked={contact.active}
+                            onCheckedChange={() =>
+                              handleToggleActive(contact.id, contact.active)
+                            }
+                          />
+                          <span className="text-xs font-medium">
+                            {contact.active ? "Activo" : "Inactivo"}
+                          </span>
+                        </div>
                       </TableCell>
-                      <TableCell align="center">
+
+                      <TableCell className="text-center">
                         {isEditing === contact.id ? (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              gap: 1,
-                              justifyContent: "center",
-                            }}
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="outline"
+                            onClick={() => handleUpdate(contact.id)}
+                            disabled={updateContact.isPending}
+                            aria-label="Guardar"
                           >
-                            <IconButton
-                              color="success"
-                              onClick={() => handleUpdate(contact.id)}
-                            >
-                              <SaveIcon />
-                            </IconButton>
-                          </Box>
+                            <Save className="size-4" />
+                          </Button>
                         ) : (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              gap: 1,
-                              justifyContent: "center",
-                            }}
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="outline"
+                            onClick={() => handleEdit(contact)}
+                            aria-label="Editar"
                           >
-                            <IconButton onClick={() => handleEdit(contact)}>
-                              <EditIcon />
-                            </IconButton>
-                          </Box>
+                            <Pencil className="size-4" />
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>
@@ -1635,59 +1419,46 @@ function WhiteListTab() {
                 )}
               </TableBody>
             </Table>
-          </TableContainer>
-        )}
+          )}
+        </div>
 
-        <Divider sx={{ my: 3 }} />
+        <Separator className="my-6" />
 
-        <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2 }}>
-          Agregar Nuevo Contacto
-        </Typography>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "1.2fr 1.5fr auto",
-            gap: 2,
-            alignItems: "center",
-          }}
-        >
-          <TextField
-            label="Nombre"
-            sx={{ mb: 3 }}
-            size="small"
-            value={newContact.name}
-            onChange={(e) =>
-              setNewContact({ ...newContact, name: e.target.value })
-            }
-          />
-          <TextField
-            label="Número de Teléfono"
-            placeholder="+5491123456789"
-            size="small"
-            value={newContact.phoneNumber}
-            onChange={(e) =>
-              setNewContact({ ...newContact, phoneNumber: e.target.value })
-            }
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <PhoneIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-            helperText="Formato: +5491123456789 (código país + área + número)"
-          />
-          <Button
-            variant="contained"
-            
-            startIcon={<AddIcon />}
-            onClick={handleCreate}
-            disabled={createContact.isPending}
-            sx={{ height: 40, mb: 4 }}
-          >
-            Agregar
-          </Button>
-        </Box>
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Agregar Nuevo Contacto</div>
+          <div className="grid gap-2 md:grid-cols-[1.2fr_1.5fr_auto] md:items-center">
+            <Input
+              placeholder="Nombre"
+              value={newContact.name}
+              onChange={(e) =>
+                setNewContact({ ...newContact, name: e.target.value })
+              }
+            />
+            <div className="relative">
+              <Phone className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+              <Input
+                placeholder="+5491123456789"
+                value={newContact.phoneNumber}
+                onChange={(e) =>
+                  setNewContact({ ...newContact, phoneNumber: e.target.value })
+                }
+                className="pl-9"
+              />
+              <p className="text-muted-foreground mt-1 text-xs">
+                Formato: +5491123456789 (código país + área + número)
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={handleCreate}
+              disabled={createContact.isPending}
+              className="h-9"
+            >
+              <Plus className="size-4" />
+              Agregar
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -1695,80 +1466,66 @@ function WhiteListTab() {
 
 // ==================== PÁGINA PRINCIPAL ====================
 export default function SettingsPage() {
-  const [tab, setTab] = useState(0);
-  const { canManageSettings, isReadOnly } = useRoleLogic();
+  const [tab, setTab] = useState("politicas");
+  const { canManageSettings } = useRoleLogic();
   const { hasPermission } = useAuthStore();
   const canEdit = hasPermission("configuracion:editar") && canManageSettings;
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ mb: 3, mt: -3 }}>
-        <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
-          Configuración
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
+    <div className="p-6">
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold tracking-tight">Configuración</h1>
+        <p className="text-muted-foreground text-sm">
           Gestión de políticas, precios, umbrales, alertas y personalización
-        </Typography>
-      </Box>
+        </p>
+      </div>
 
-      {!canEdit && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          No tienes permisos para editar la configuración. Los cambios no se
-          guardarán.
+      {!canEdit ? (
+        <Alert className="mb-4" variant="destructive">
+          <TriangleAlert className="size-4" />
+          <AlertTitle>Sin permisos</AlertTitle>
+          <AlertDescription>
+            No tienes permisos para editar la configuración. Los cambios no se
+            guardarán.
+          </AlertDescription>
         </Alert>
-      )}
+      ) : null}
 
-      <Tabs
-        value={tab}
-        onChange={(_, newValue) => setTab(newValue)}
-        variant="scrollable"
-        scrollButtons="auto"
-        sx={{
-          mb: 3,
-          bgcolor: "white",
-          borderRadius: 2,
-          border: "1px solid #e2e8f0",
-          "& .MuiTab-root": {
-            textTransform: "none",
-            fontWeight: 600,
-            minHeight: 64,
-          },
-        }}
-      >
-        <Tab icon={<PolicyIcon />} iconPosition="start" label="Políticas" />
-        <Tab
-          icon={<LocalGasStationIcon />}
-          iconPosition="start"
-          label="Precios"
-        />
-        <Tab
-          icon={<DirectionsCarIcon />}
-          iconPosition="start"
-          label="Umbrales"
-        />
-        <Tab
-          icon={<ContactPhoneIcon />}
-          iconPosition="start"
-          label="WhiteList IA"
-        />
-        <Tab
-          icon={<NotificationsIcon />}
-          iconPosition="start"
-          label="Alertas"
-        />
-        <Tab
-          icon={<PaletteIcon />}
-          iconPosition="start"
-          label="Personalización"
-        />
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <TabsList className="mb-4 h-auto w-full flex-wrap justify-start gap-1 rounded-lg border bg-background p-1">
+          <TabsTrigger value="politicas" className="h-10">
+            <Shield className="size-4" />
+            Políticas
+          </TabsTrigger>
+          <TabsTrigger value="precios" className="h-10">
+            <Fuel className="size-4" />
+            Precios
+          </TabsTrigger>
+          <TabsTrigger value="umbrales" className="h-10">
+            <Car className="size-4" />
+            Umbrales
+          </TabsTrigger>
+          <TabsTrigger value="whitelist" className="h-10">
+            <Users className="size-4" />
+            WhiteList IA
+          </TabsTrigger>
+          <TabsTrigger value="alertas" className="h-10">
+            <Bell className="size-4" />
+            Alertas
+          </TabsTrigger>
+          <TabsTrigger value="personalizacion" className="h-10">
+            <Palette className="size-4" />
+            Personalización
+          </TabsTrigger>
+        </TabsList>
       </Tabs>
 
-      {tab === 0 && <PoliticasTab />}
-      {tab === 1 && <PreciosTab />}
-      {tab === 2 && <UmbralesTab />}
-      {tab === 3 && <WhiteListTab />}
-      {tab === 4 && <AlertasTab />}
-      {tab === 5 && <PersonalizacionTab />}
-    </Box>
+      {tab === "politicas" && <PoliticasTab />}
+      {tab === "precios" && <PreciosTab />}
+      {tab === "umbrales" && <UmbralesTab />}
+      {tab === "whitelist" && <WhiteListTab />}
+      {tab === "alertas" && <AlertasTab />}
+      {tab === "personalizacion" && <PersonalizacionTab />}
+    </div>
   );
 }
