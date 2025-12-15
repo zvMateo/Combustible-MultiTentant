@@ -13,8 +13,9 @@ import {
   Building2,
   CheckCircle2,
   MoreVertical,
-  Briefcase,
+  XCircle,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
@@ -122,7 +123,7 @@ export default function DriversPage() {
         DNI: d.dni,
         Telefono: d.phoneNumber || "",
         Empresa: company?.name || "",
-        Estado: d.isActive !== false ? "Activo" : "Inactivo",
+        Estado: d.active !== false ? "Activo" : "Inactivo",
       };
     });
 
@@ -355,18 +356,22 @@ export default function DriversPage() {
                   </CardContent>
 
                   <div className="px-5 py-3 bg-muted/30 border-t flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-green-600">
-                      <CheckCircle2 size={14} />
+                    <div className={`flex items-center gap-1.5 ${d.active !== false ? "text-green-600" : "text-red-500"}`}>
+                      {d.active !== false ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
                       <span className="text-xs font-bold uppercase">
-                        Habilitado
+                        {d.active !== false ? "Habilitado" : "Deshabilitado"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Briefcase size={12} />
-                      <span className="text-xs font-bold uppercase">
-                        ID #{d.id}
-                      </span>
-                    </div>
+                    {!isReadOnly && canEdit && (
+                      <Switch
+                        checked={d.active !== false}
+                        onCheckedChange={() => {
+                          deactivateMutation.mutate(d.id);
+                        }}
+                        disabled={deactivateMutation.isPending}
+                        aria-label={d.active !== false ? "Desactivar" : "Activar"}
+                      />
+                    )}
                   </div>
                 </Card>
               ))}

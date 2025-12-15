@@ -26,6 +26,7 @@ const RESOURCE_ENDPOINTS = {
 const RESOURCE_TYPES_ENDPOINTS = {
   getAll: "/ResourceTypes/GetAll",
   getByCompany: "/ResourceTypes/GetByIdCompany",
+  getByBusinessUnit: "/ResourceTypes/GetByIdBusinessUnit",
   getById: "/ResourceTypes/GetById",
   create: "/ResourceTypes/Create",
   update: "/ResourceTypes/Update",
@@ -152,6 +153,17 @@ export const resourceTypesApi = {
     const { data } = await axiosInstance.get<ResourceType[]>(
       RESOURCE_TYPES_ENDPOINTS.getByCompany,
       { params: { idCompany } }
+    );
+    return data;
+  },
+
+  /**
+   * Obtener tipos de recursos por unidad de negocio
+   */
+  async getByBusinessUnit(idBusinessUnit: number): Promise<ResourceType[]> {
+    const { data } = await axiosInstance.get<ResourceType[]>(
+      RESOURCE_TYPES_ENDPOINTS.getByBusinessUnit,
+      { params: { IdBusinessUnit: idBusinessUnit } }
     );
     return data;
   },

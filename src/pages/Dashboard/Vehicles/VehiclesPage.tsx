@@ -343,6 +343,8 @@ export default function VehiclesPage() {
                             <span className="text-sm font-semibold">
                               {typeof v.actualLiters === "number"
                                 ? `${v.actualLiters} L`
+                                : typeof v.initialLiters === "number"
+                                ? `${v.initialLiters} L`
                                 : "N/D"}
                             </span>
                           </div>
