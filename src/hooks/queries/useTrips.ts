@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tripsApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
-import { useIdCompany } from "@/stores/auth.store";
+import { useAuthStore, useIdCompany } from "@/stores/auth.store";
 import type { CreateTripRequest, UpdateTripRequest } from "@/types/api.types";
 
 // Query Keys
@@ -25,11 +25,12 @@ export const tripsKeys = {
 export function useTrips() {
   const storeCompanyId = useIdCompany();
   const companyId = storeCompanyId ?? 0;
+  const hasUser = useAuthStore((s) => !!s.user);
 
   return useQuery({
     queryKey: tripsKeys.byCompany(companyId),
     queryFn: () => tripsApi.getByCompany(companyId),
-    enabled: !!companyId,
+    enabled: hasUser && !!companyId,
     staleTime: 1000 * 60 * 2, // 2 minutos
   });
 }

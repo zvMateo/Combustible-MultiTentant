@@ -59,12 +59,22 @@ function RbacGuard({
   permission?: Permission;
 }) {
   const { hasRole, can } = usePermissions();
+  const { user } = useAuthStore();
+
+  const isAdminAssigned =
+    user?.role === "admin" &&
+    (!!user?.idBusinessUnit || (user?.unidadesAsignadas?.length ?? 0) > 0);
 
   if (roles && roles.length > 0 && !hasRole(roles)) {
     return <Navigate to="/dashboard" replace />;
   }
 
   if (permission && !can(permission)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Admin asignado a unidad: bloquear pantallas de administración global
+  if (isAdminAssigned && (permission === "unidades:gestionar" || permission === "configuracion:editar")) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -91,7 +101,7 @@ export function AppRoutes() {
         {
           path: "business-units",
           element: (
-            <RbacGuard roles={["admin"]} permission="unidades:gestionar">
+            <RbacGuard roles={["superadmin", "admin"]} permission="unidades:gestionar">
               <BusinessUnitsPage />
             </RbacGuard>
           ),
@@ -100,7 +110,7 @@ export function AppRoutes() {
           path: "users",
           element: (
             <RbacGuard
-              roles={["admin", "supervisor"]}
+              roles={["superadmin", "admin", "supervisor"]}
               permission="usuarios:gestionar"
             >
               <UsersPage />
@@ -110,7 +120,7 @@ export function AppRoutes() {
         {
           path: "settings",
           element: (
-            <RbacGuard roles={["admin"]} permission="configuracion:editar">
+            <RbacGuard roles={["superadmin", "admin"]} permission="configuracion:editar">
               <SettingsPage />
             </RbacGuard>
           ),
@@ -119,7 +129,7 @@ export function AppRoutes() {
           path: "vehicles",
           element: (
             <RbacGuard
-              roles={["admin", "supervisor"]}
+              roles={["superadmin", "admin", "supervisor"]}
               permission="vehiculos:gestionar"
             >
               <VehiclesPage />
@@ -130,7 +140,7 @@ export function AppRoutes() {
           path: "drivers",
           element: (
             <RbacGuard
-              roles={["admin", "supervisor"]}
+              roles={["superadmin", "admin", "supervisor"]}
               permission="choferes:gestionar"
             >
               <DriversPage />
@@ -141,7 +151,7 @@ export function AppRoutes() {
           path: "fuel",
           element: (
             <RbacGuard
-              roles={["admin", "supervisor", "operador", "auditor"]}
+              roles={["superadmin", "admin", "supervisor", "operador", "auditor"]}
               permission="eventos:ver"
             >
               <FuelManagementPage />
@@ -152,7 +162,7 @@ export function AppRoutes() {
           path: "resources",
           element: (
             <RbacGuard
-              roles={["admin", "supervisor", "operador"]}
+              roles={["superadmin", "admin", "supervisor", "operador"]}
               permission="recursos:gestionar"
             >
               <ResourcesPage />
@@ -163,7 +173,7 @@ export function AppRoutes() {
           path: "reports",
           element: (
             <RbacGuard
-              roles={["admin", "supervisor", "auditor"]}
+              roles={["superadmin", "admin", "supervisor", "auditor"]}
               permission="reportes:ver"
             >
               <ReportsPage />

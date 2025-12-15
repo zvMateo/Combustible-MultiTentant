@@ -1,7 +1,7 @@
 /**
  * Servicio de Recursos (Vehículos, Tanques, Surtidores) - API Real con Axios
  */
-import axiosInstance from "@/lib/axios";
+import axiosInstance, { toArray } from "@/lib/axios";
 import type {
   Resource,
   ResourceType,
@@ -34,6 +34,14 @@ const RESOURCE_TYPES_ENDPOINTS = {
 
 export const resourcesApi = {
   /**
+   * Obtener todos los recursos (superadmin)
+   */
+  async getAll(): Promise<Resource[]> {
+    const { data } = await axiosInstance.get<Resource[]>(RESOURCE_ENDPOINTS.getAll);
+    return toArray<Resource>(data);
+  },
+
+  /**
    * Obtener recurso por ID
    */
   async getById(id: number): Promise<Resource> {
@@ -54,7 +62,7 @@ export const resourcesApi = {
       RESOURCE_ENDPOINTS.getByType,
       { params: { IdType: idType } }
     );
-    return data;
+    return toArray<Resource>(data);
   },
 
   /**
@@ -65,7 +73,7 @@ export const resourcesApi = {
       RESOURCE_ENDPOINTS.getByCompany,
       { params: { IdCompany: idCompany } }
     );
-    return data;
+    return toArray<Resource>(data);
   },
 
   /**
@@ -76,7 +84,7 @@ export const resourcesApi = {
       RESOURCE_ENDPOINTS.getByBusinessUnit,
       { params: { IdBusinessUnit: idBusinessUnit } }
     );
-    return data;
+    return toArray<Resource>(data);
   },
 
   /**

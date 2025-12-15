@@ -115,3 +115,22 @@ export function useAddUserRole() {
   });
 }
 
+/**
+ * Actualizar rol de un usuario
+ */
+export function useUpdateUserRoles() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, data }: { userId: string; data: AddUserRoleRequest }) =>
+      userRolesApi.updateUserRoles(userId, data),
+    onSuccess: (_, variables) => {
+      toast.success("Rol actualizado correctamente");
+      queryClient.invalidateQueries({ queryKey: userRolesKeys.byUser(variables.userId) });
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+}
+

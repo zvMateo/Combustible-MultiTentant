@@ -13,6 +13,7 @@ import type {
 const LOAD_LITERS_ENDPOINTS = {
   getAll: "/LoadLiters/GetAll",
   getByCompany: "/LoadLiters/GetByIdCompany",
+  getByBusinessUnit: "/LoadLiters/GetByIdBusinessUnit",
   getById: "/LoadLiters/GetById",
   create: "/LoadLiters/Create",
   update: "/LoadLiters/Update",
@@ -24,12 +25,33 @@ const LOAD_LITERS_ENDPOINTS = {
 
 export const loadLitersApi = {
   /**
+   * Obtener todas las cargas de combustible (superadmin)
+   */
+  async getAll(): Promise<LoadLiters[]> {
+    const { data } = await axiosInstance.get<LoadLiters[]>(
+      LOAD_LITERS_ENDPOINTS.getAll
+    );
+    return data;
+  },
+
+  /**
    * Obtener cargas de combustible por empresa
    */
   async getByCompany(idCompany: number): Promise<LoadLiters[]> {
     const { data } = await axiosInstance.get<LoadLiters[]>(
       LOAD_LITERS_ENDPOINTS.getByCompany,
       { params: { idCompany } }
+    );
+    return data;
+  },
+
+  /**
+   * Obtener cargas de combustible por unidad de negocio
+   */
+  async getByBusinessUnit(idBusinessUnit: number): Promise<LoadLiters[]> {
+    const { data } = await axiosInstance.get<LoadLiters[]>(
+      LOAD_LITERS_ENDPOINTS.getByBusinessUnit,
+      { params: { idBusinessUnit } }
     );
     return data;
   },

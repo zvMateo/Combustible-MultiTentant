@@ -1,6 +1,7 @@
 // src/services/auth.service.ts
 import type { User, UserRole } from "@/types";
 import { authApi } from "./api/auth.api";
+import { usersApi } from "./api/users.api";
 import { tokenStorage } from "@/lib/axios";
 import type { AuthClaimDto } from "./api/auth.api";
 
@@ -8,6 +9,9 @@ import type { AuthClaimDto } from "./api/auth.api";
  * Mapeo de nombres de roles de la API a roles de la aplicación
  */
 const ROLE_MAPPING: Record<string, UserRole> = {
+  SuperAdmin: "superadmin",
+  Superadmin: "superadmin",
+  SUPERADMIN: "superadmin",
   Admin: "admin",
   Administrador: "admin",
   Supervisor: "supervisor",
@@ -25,10 +29,8 @@ function normalizeRole(apiRoleName: string): UserRole {
 
   // Buscar por coincidencia parcial
   const lowerName = apiRoleName.toLowerCase();
-  // En este proyecto NO existe superadmin. Si la API devuelve algo tipo "super",
-  // lo tratamos como "admin".
-  if (lowerName.includes("superadmin") || lowerName.includes("super")) {
-    return "admin";
+  if (/super\s*[-_]?\s*admin/.test(lowerName)) {
+    return "superadmin";
   }
   if (lowerName.includes("admin")) {
     return "admin";
@@ -133,9 +135,36 @@ class AuthService {
       }
 
       const userName = parseUserName(claims, credentials.userName);
-      const idCompany = parseCompanyId(claims);
-      const idBusinessUnit = parseBusinessUnitId(claims);
+      let idCompany = parseCompanyId(claims);
+      let idBusinessUnit = parseBusinessUnitId(claims);
       const userRole = parseRole(claims);
+
+      // Si por algún motivo los claims no vienen completos, completar desde el usuario
+      // (hay endpoints y pantallas que dependen de idCompany/idBusinessUnit)
+      if (!idCompany || !idBusinessUnit) {
+        try {
+          const detailed = await usersApi.getById(userId);
+
+          if (!idCompany) {
+            const detailedCompanyId = detailed?.idCompany;
+            if (typeof detailedCompanyId === "number" && detailedCompanyId > 0) {
+              idCompany = detailedCompanyId;
+            }
+          }
+
+          if (!idBusinessUnit) {
+            const detailedBusinessUnitId = detailed?.idBusinessUnit;
+            if (
+              typeof detailedBusinessUnitId === "number" &&
+              detailedBusinessUnitId > 0
+            ) {
+              idBusinessUnit = detailedBusinessUnitId;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
 
       // 4️⃣ Construir objeto User
       const user: User = {
@@ -237,7 +266,6 @@ class AuthService {
     const user = this.getCurrentUser();
     if (!user) return false;
 
-    // No existe superadmin ni rutas /a en este proyecto.
     return true;
   }
 

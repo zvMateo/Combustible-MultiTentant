@@ -35,25 +35,25 @@ const menuStructure: MenuItem[] = [
     label: "Dashboard",
     icon: <LayoutDashboard size={22} />,
     path: "/dashboard",
-    roles: ["admin", "supervisor", "operador", "auditor"],
+    roles: ["superadmin", "admin", "supervisor", "operador", "auditor"],
   },
   {
     label: "Administración",
     icon: <Shield size={22} />,
-    roles: ["admin", "supervisor"],
+    roles: ["superadmin", "admin", "supervisor"],
     submenu: [
       {
         label: "Unidades de Negocio",
         icon: <Store size={18} />,
         path: "/dashboard/business-units",
-        roles: ["admin"],
+        roles: ["superadmin", "admin"],
         permission: "unidades:gestionar",
       },
       {
         label: "Usuarios",
         icon: <Users size={18} />,
         path: "/dashboard/users",
-        roles: ["admin", "supervisor"],
+        roles: ["superadmin", "admin", "supervisor"],
         permission: "usuarios:gestionar",
       },
     ],
@@ -61,20 +61,20 @@ const menuStructure: MenuItem[] = [
   {
     label: "Flota",
     icon: <Truck size={22} />,
-    roles: ["admin", "supervisor"],
+    roles: ["superadmin", "admin", "supervisor"],
     submenu: [
       {
         label: "Vehículos",
         icon: <Truck size={18} />,
         path: "/dashboard/vehicles",
-        roles: ["admin", "supervisor"],
+        roles: ["superadmin", "admin", "supervisor"],
         permission: "vehiculos:gestionar",
       },
       {
         label: "Choferes",
         icon: <User size={18} />,
         path: "/dashboard/drivers",
-        roles: ["admin", "supervisor"],
+        roles: ["superadmin", "admin", "supervisor"],
         permission: "choferes:gestionar",
       },
     ],
@@ -82,20 +82,20 @@ const menuStructure: MenuItem[] = [
   {
     label: "Combustible",
     icon: <Fuel size={22} />,
-    roles: ["admin", "supervisor", "operador", "auditor"],
+    roles: ["superadmin", "admin", "supervisor", "operador", "auditor"],
     submenu: [
       {
         label: "Cargas",
         icon: <Fuel size={18} />,
         path: "/dashboard/fuel",
-        roles: ["admin", "supervisor", "operador", "auditor"],
+        roles: ["superadmin", "admin", "supervisor", "operador", "auditor"],
         permission: "eventos:ver",
       },
       {
         label: "Recursos",
         icon: <Fuel size={18} />,
         path: "/dashboard/resources",
-        roles: ["admin", "supervisor", "operador"],
+        roles: ["superadmin", "admin", "supervisor", "operador"],
         permission: "recursos:gestionar",
       },
     ],
@@ -104,14 +104,14 @@ const menuStructure: MenuItem[] = [
     label: "Reportes",
     icon: <BarChart3 size={22} />,
     path: "/dashboard/reports",
-    roles: ["admin", "supervisor", "auditor"],
+    roles: ["superadmin", "admin", "supervisor", "auditor"],
     permission: "reportes:ver",
   },
   {
     label: "Configuración",
     icon: <Settings size={22} />,
     path: "/dashboard/settings",
-    roles: ["admin"],
+    roles: ["superadmin", "admin"],
     permission: "configuracion:editar",
   },
 ];
@@ -130,9 +130,15 @@ export default function Sidebar() {
     Combustible: true,
   });
 
-  const isAdmin = tenant.role === "admin";
+  const isAdmin = tenant.role === "admin" || tenant.role === "superadmin";
+  const isAdminAssigned =
+    tenant.role === "admin" &&
+    typeof tenant.idBusinessUnit === "number" &&
+    tenant.idBusinessUnit > 0;
   const unidadNombre = isAdmin
-    ? unidadActiva?.nombre ?? "Global"
+    ? tenant.idBusinessUnit
+      ? unidadActiva?.nombre ?? "Mi Unidad"
+      : unidadActiva?.nombre ?? "Global"
     : unidadActiva?.nombre ?? unidades[0]?.nombre ?? "Mi Unidad";
 
   const handleMenuClick = (label: string) => {
@@ -144,6 +150,14 @@ export default function Sidebar() {
 
   const hasAccess = (roles: UserRole[], permission?: Permission) => {
     if (!hasRole(roles)) return false;
+    if (isAdminAssigned) {
+      if (
+        permission === "unidades:gestionar" ||
+        permission === "configuracion:editar"
+      ) {
+        return false;
+      }
+    }
     return permission ? can(permission) : true;
   };
 

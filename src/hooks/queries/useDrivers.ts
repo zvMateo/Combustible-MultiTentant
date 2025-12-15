@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { driversApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
-import { useIdCompany } from "@/stores/auth.store";
+import { useAuthStore, useIdCompany } from "@/stores/auth.store";
 import type {
   CreateDriverRequest,
   UpdateDriverRequest,
@@ -28,11 +28,12 @@ export const driversKeys = {
 export function useDrivers(idCompany?: number) {
   const storeCompanyId = useIdCompany();
   const companyId = idCompany ?? storeCompanyId ?? 0;
+  const hasUser = useAuthStore((s) => !!s.user);
 
   return useQuery({
     queryKey: driversKeys.byCompany(companyId),
     queryFn: () => driversApi.getByCompany(companyId),
-    enabled: !!companyId,
+    enabled: hasUser && !!companyId,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }

@@ -5,8 +5,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { resourcesApi, resourceTypesApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
-import { useIdCompany } from "@/stores/auth.store";
+import { useAuthStore, useIdBusinessUnit, useIdCompany } from "@/stores/auth.store";
+import { useUnidadActivaId } from "@/stores/unidad.store";
 import type {
+  Resource,
   CreateResourceRequest,
   UpdateResourceRequest,
   CreateResourceTypeRequest,
@@ -44,6 +46,75 @@ export const resourceTypesKeys = {
   detail: (id: number) => [...resourceTypesKeys.all, "detail", id] as const,
 };
 
+function normalizeResource(raw: unknown): Resource {
+  const r = raw as Record<string, unknown>;
+
+  const id =
+    (r.id as number | undefined) ??
+    (r.Id as number | undefined) ??
+    (r.ID as number | undefined) ??
+    0;
+
+  const idType =
+    (r.idType as number | undefined) ??
+    (r.IdType as number | undefined) ??
+    (r.idtype as number | undefined) ??
+    0;
+
+  const idCompany =
+    (r.idCompany as number | undefined) ??
+    (r.IdCompany as number | undefined) ??
+    (r.idcompany as number | undefined) ??
+    0;
+
+  const idBusinessUnit =
+    (r.idBusinessUnit as number | undefined) ??
+    (r.IdBusinessUnit as number | undefined) ??
+    (r.idbusinessunit as number | undefined);
+
+  const name =
+    (r.name as string | undefined) ??
+    (r.Name as string | undefined) ??
+    "";
+
+  const identifier =
+    (r.identifier as string | undefined) ??
+    (r.Identifier as string | undefined) ??
+    "";
+
+  const nativeLiters =
+    (r.nativeLiters as number | undefined) ??
+    (r.NativeLiters as number | undefined);
+  const actualLiters =
+    (r.actualLiters as number | undefined) ??
+    (r.ActualLiters as number | undefined);
+
+  const active =
+    (r.active as boolean | undefined) ??
+    (r.Active as boolean | undefined) ??
+    (r.isActive as boolean | undefined) ??
+    (r.IsActive as boolean | undefined);
+  const isActive =
+    (r.isActive as boolean | undefined) ??
+    (r.IsActive as boolean | undefined) ??
+    (r.active as boolean | undefined) ??
+    (r.Active as boolean | undefined);
+
+  return {
+    ...(r as unknown as Resource),
+    id,
+    idType,
+    idCompany,
+    ...(typeof idBusinessUnit === "number" ? { idBusinessUnit } : null),
+    name,
+    identifier,
+    ...(typeof nativeLiters === "number" ? { nativeLiters } : null),
+    ...(typeof actualLiters === "number" ? { actualLiters } : null),
+    ...(typeof active === "boolean" ? { active } : null),
+    ...(typeof isActive === "boolean" ? { isActive } : null),
+  };
+}
+
 /**
  * Obtener todos los recursos
  */
@@ -51,10 +122,40 @@ export function useResources(idCompany?: number) {
   const storeCompanyId = useIdCompany();
   const companyId = idCompany ?? storeCompanyId ?? 0;
 
+  const user = useAuthStore((s) => s.user);
+  const hasUser = !!user;
+  const activeBusinessUnitId = useUnidadActivaId();
+  const userBusinessUnitId = useIdBusinessUnit();
+  const fallbackAssignedId = user?.unidadesAsignadas?.[0] ?? null;
+
+  const isSuperAdmin = user?.role === "superadmin";
+  const isAdmin = user?.role === "admin";
+  const isCompanyAdmin = isAdmin || isSuperAdmin;
+  const isAdminAssigned =
+    isAdmin && (!!userBusinessUnitId || !!fallbackAssignedId);
+
+  const businessUnitId =
+    activeBusinessUnitId ??
+    (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
+    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
+
+  const useBusinessUnitScope = !!businessUnitId;
+  const shouldHaveBusinessUnit = !isCompanyAdmin || isAdminAssigned;
+  const enabled =
+    hasUser &&
+    (useBusinessUnitScope ? true : shouldHaveBusinessUnit ? false : !!companyId);
+
   return useQuery({
-    queryKey: resourcesKeys.byCompany(companyId),
-    queryFn: () => resourcesApi.getByCompany(companyId),
-    enabled: !!companyId,
+    queryKey: useBusinessUnitScope
+      ? resourcesKeys.byBusinessUnit(businessUnitId as number)
+      : resourcesKeys.byCompany(companyId),
+    queryFn: async () => {
+      const data = useBusinessUnitScope
+        ? await resourcesApi.getByBusinessUnit(businessUnitId as number)
+        : await resourcesApi.getByCompany(companyId);
+      return Array.isArray(data) ? data.map(normalizeResource) : [];
+    },
+    enabled,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -116,10 +217,39 @@ export function useVehicles() {
   const storeCompanyId = useIdCompany();
   const companyId = storeCompanyId ?? 0;
 
+  const user = useAuthStore((s) => s.user);
+  const hasUser = !!user;
+  const activeBusinessUnitId = useUnidadActivaId();
+  const userBusinessUnitId = useIdBusinessUnit();
+  const fallbackAssignedId = user?.unidadesAsignadas?.[0] ?? null;
+
+  const isSuperAdmin = user?.role === "superadmin";
+  const isAdmin = user?.role === "admin";
+  const isCompanyAdmin = isAdmin || isSuperAdmin;
+  const isAdminAssigned =
+    isAdmin && (!!userBusinessUnitId || !!fallbackAssignedId);
+
+  const businessUnitId =
+    activeBusinessUnitId ??
+    (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
+    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
+
+  const useBusinessUnitScope = !!businessUnitId;
+  const shouldHaveBusinessUnit = !isCompanyAdmin || isAdminAssigned;
+  const enabled =
+    hasUser &&
+    (useBusinessUnitScope ? true : shouldHaveBusinessUnit ? false : !!companyId);
+
   return useQuery({
-    queryKey: resourcesKeys.vehicles(companyId),
+    queryKey: useBusinessUnitScope
+      ? resourcesKeys.list({ idType: 1, idBusinessUnit: businessUnitId as number })
+      : resourcesKeys.vehicles(companyId),
     queryFn: async () => {
-      const all = await resourcesApi.getByCompany(companyId);
+      const raw = useBusinessUnitScope
+        ? await resourcesApi.getByBusinessUnit(businessUnitId as number)
+        : await resourcesApi.getByCompany(companyId);
+
+      const all = Array.isArray(raw) ? raw.map(normalizeResource) : [];
       // Filtrar vehículos: idType 1 (legacy), idType 5 (nuevo tipo "Vehiculo"), o que tenga "vehiculo" en el type array
       // También filtrar recursos inactivos (active: false)
       return all.filter((r) => {
@@ -150,7 +280,7 @@ export function useVehicles() {
         return r.idType === 1 || r.idType === 5;
       });
     },
-    enabled: !!companyId,
+    enabled,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -163,10 +293,39 @@ export function useTanks() {
   const storeCompanyId = useIdCompany();
   const companyId = storeCompanyId ?? 0;
 
+  const user = useAuthStore((s) => s.user);
+  const hasUser = !!user;
+  const activeBusinessUnitId = useUnidadActivaId();
+  const userBusinessUnitId = useIdBusinessUnit();
+  const fallbackAssignedId = user?.unidadesAsignadas?.[0] ?? null;
+
+  const isSuperAdmin = user?.role === "superadmin";
+  const isAdmin = user?.role === "admin";
+  const isCompanyAdmin = isAdmin || isSuperAdmin;
+  const isAdminAssigned =
+    isAdmin && (!!userBusinessUnitId || !!fallbackAssignedId);
+
+  const businessUnitId =
+    activeBusinessUnitId ??
+    (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
+    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
+
+  const useBusinessUnitScope = !!businessUnitId;
+  const shouldHaveBusinessUnit = !isCompanyAdmin || isAdminAssigned;
+  const enabled =
+    hasUser &&
+    (useBusinessUnitScope ? true : shouldHaveBusinessUnit ? false : !!companyId);
+
   return useQuery({
-    queryKey: resourcesKeys.tanks(companyId),
+    queryKey: useBusinessUnitScope
+      ? resourcesKeys.list({ idType: 2, idBusinessUnit: businessUnitId as number })
+      : resourcesKeys.tanks(companyId),
     queryFn: async () => {
-      const all = await resourcesApi.getByCompany(companyId);
+      const raw = useBusinessUnitScope
+        ? await resourcesApi.getByBusinessUnit(businessUnitId as number)
+        : await resourcesApi.getByCompany(companyId);
+
+      const all = Array.isArray(raw) ? raw.map(normalizeResource) : [];
       // Filtrar tanques: buscar por type array o idType 2
       // También filtrar recursos inactivos (active: false)
       return all.filter((r) => {
@@ -184,7 +343,7 @@ export function useTanks() {
         return r.idType === 2;
       });
     },
-    enabled: !!companyId,
+    enabled,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -197,10 +356,39 @@ export function useDispensers() {
   const storeCompanyId = useIdCompany();
   const companyId = storeCompanyId ?? 0;
 
+  const user = useAuthStore((s) => s.user);
+  const hasUser = !!user;
+  const activeBusinessUnitId = useUnidadActivaId();
+  const userBusinessUnitId = useIdBusinessUnit();
+  const fallbackAssignedId = user?.unidadesAsignadas?.[0] ?? null;
+
+  const isSuperAdmin = user?.role === "superadmin";
+  const isAdmin = user?.role === "admin";
+  const isCompanyAdmin = isAdmin || isSuperAdmin;
+  const isAdminAssigned =
+    isAdmin && (!!userBusinessUnitId || !!fallbackAssignedId);
+
+  const businessUnitId =
+    activeBusinessUnitId ??
+    (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
+    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
+
+  const useBusinessUnitScope = !!businessUnitId;
+  const shouldHaveBusinessUnit = !isCompanyAdmin || isAdminAssigned;
+  const enabled =
+    hasUser &&
+    (useBusinessUnitScope ? true : shouldHaveBusinessUnit ? false : !!companyId);
+
   return useQuery({
-    queryKey: resourcesKeys.dispensers(companyId),
+    queryKey: useBusinessUnitScope
+      ? resourcesKeys.list({ idType: 3, idBusinessUnit: businessUnitId as number })
+      : resourcesKeys.dispensers(companyId),
     queryFn: async () => {
-      const all = await resourcesApi.getByCompany(companyId);
+      const raw = useBusinessUnitScope
+        ? await resourcesApi.getByBusinessUnit(businessUnitId as number)
+        : await resourcesApi.getByCompany(companyId);
+
+      const all = Array.isArray(raw) ? raw.map(normalizeResource) : [];
       // Filtrar surtidores: buscar por type array o idType 3
       // También filtrar recursos inactivos (active: false)
       return all.filter((r) => {
@@ -221,7 +409,7 @@ export function useDispensers() {
         return r.idType === 3;
       });
     },
-    enabled: !!companyId,
+    enabled,
     staleTime: 1000 * 60 * 5,
   });
 }

@@ -5,7 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { loadLitersApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
-import { useIdCompany } from "@/stores/auth.store";
+import { useAuthStore, useIdBusinessUnit, useIdCompany } from "@/stores/auth.store";
+import { useUnidadActivaId } from "@/stores/unidad.store";
 import type {
   CreateLoadLitersRequest,
   UpdateLoadLitersRequest,
@@ -18,6 +19,8 @@ export const loadLitersKeys = {
   lists: () => [...loadLitersKeys.all, "list"] as const,
   byCompany: (idCompany: number) =>
     [...loadLitersKeys.all, "byCompany", idCompany] as const,
+  byBusinessUnit: (idBusinessUnit: number) =>
+    [...loadLitersKeys.all, "byBusinessUnit", idBusinessUnit] as const,
   detail: (id: number) => [...loadLitersKeys.all, "detail", id] as const,
   loadTrips: () => [...loadLitersKeys.all, "loadTrips"] as const,
   loadTripDetail: (id: number) =>
@@ -37,6 +40,57 @@ export function useLoadLiters(idCompany?: number) {
     queryKey: loadLitersKeys.byCompany(companyId),
     queryFn: () => loadLitersApi.getByCompany(companyId),
     enabled: !!companyId,
+    staleTime: 1000 * 60 * 2, // 2 minutos
+  });
+}
+
+/**
+ * Obtener cargas de combustible respetando el scope:
+ * - Si hay unidad (seleccionada/asignada) => GetByIdBusinessUnit
+ * - Si no => GetByIdCompany
+ */
+export function useLoadLitersScoped() {
+  const storeCompanyId = useIdCompany();
+  const companyId = storeCompanyId ?? 0;
+
+  const user = useAuthStore((s) => s.user);
+  const hasUser = !!user;
+
+  const activeBusinessUnitId = useUnidadActivaId();
+  const userBusinessUnitId = useIdBusinessUnit();
+  const fallbackAssignedId = user?.unidadesAsignadas?.[0] ?? null;
+
+  const isSuperAdmin = user?.role === "superadmin";
+  const isAdmin = user?.role === "admin";
+  const isCompanyAdmin = isAdmin || isSuperAdmin;
+  const isAdminAssigned =
+    isAdmin && (!!userBusinessUnitId || !!fallbackAssignedId);
+
+  // Regla:
+  // - Si hay unidad activa => usar esa
+  // - Si admin asignado => forzar su unidad
+  // - Si NO es admin/superadmin => usar su unidad asignada
+  // - Si es admin/superadmin y está en "Todas" => NO filtrar por unidad
+  const businessUnitId =
+    activeBusinessUnitId ??
+    (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
+    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
+
+  const useBusinessUnitScope = !!businessUnitId;
+  const shouldHaveBusinessUnit = !isCompanyAdmin || isAdminAssigned;
+  const enabled =
+    hasUser &&
+    (useBusinessUnitScope ? true : shouldHaveBusinessUnit ? false : !!companyId);
+
+  return useQuery({
+    queryKey: useBusinessUnitScope
+      ? loadLitersKeys.byBusinessUnit(businessUnitId as number)
+      : loadLitersKeys.byCompany(companyId),
+    queryFn: () =>
+      useBusinessUnitScope
+        ? loadLitersApi.getByBusinessUnit(businessUnitId as number)
+        : loadLitersApi.getByCompany(companyId),
+    enabled,
     staleTime: 1000 * 60 * 2, // 2 minutos
   });
 }

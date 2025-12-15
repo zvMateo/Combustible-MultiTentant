@@ -41,11 +41,12 @@ import {
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import {
-  useLoadLiters,
+  useLoadLitersScoped,
   useCreateLoadLiters,
   useUpdateLoadLiters,
+  useResources,
+  useFuelTypes,
 } from "@/hooks/queries";
-import { useResources, useFuelTypes } from "@/hooks/queries";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
 import type {
   LoadLiters,
@@ -83,7 +84,7 @@ export default function LoadLitersTab() {
   const [errors, setErrors] = useState<FormErrors>({});
 
   // React Query hooks
-  const { data: loads = [], isLoading, error } = useLoadLiters();
+  const { data: loads = [], isLoading, error } = useLoadLitersScoped();
   const { data: resources = [] } = useResources();
   const { data: fuelTypes = [] } = useFuelTypes();
   const createMutation = useCreateLoadLiters();

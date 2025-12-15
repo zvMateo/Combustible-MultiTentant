@@ -2,12 +2,18 @@
 
 /**
  * Roles del sistema
+ * - superadmin: Empresa padre (puede ver todas las empresas)
  * - admin: Administrador de empresa/tenant
  * - supervisor: Puede validar eventos
  * - operador: Solo puede registrar cargas
  * - auditor: Solo lectura para auditorías
  */
-export type UserRole = "admin" | "supervisor" | "operador" | "auditor";
+export type UserRole =
+  | "superadmin"
+  | "admin"
+  | "supervisor"
+  | "operador"
+  | "auditor";
 
 /**
  * Permisos granulares del sistema
@@ -29,8 +35,7 @@ export type Permission =
   | "unidades:gestionar"
   | "reportes:ver"
   | "reportes:exportar"
-  | "configuracion:editar"
-  | "empresas:gestionar";
+  | "configuracion:editar";
 
 /**
  * Mapeo de roles a permisos
@@ -40,6 +45,29 @@ export type Permission =
  * - auditor: Solo lectura de su unidad asignada
  */
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  superadmin: [
+    // Gestión completa de la empresa
+    "unidades:ver",
+    "unidades:gestionar",
+    "usuarios:gestionar",
+    "configuracion:editar",
+    // Gestión de recursos
+    "vehiculos:gestionar",
+    "choferes:gestionar",
+    "surtidores:gestionar",
+    "tanques:gestionar",
+    "recursos:gestionar",
+    "centros-costo:gestionar",
+    // Eventos
+    "eventos:crear",
+    "eventos:editar",
+    "eventos:eliminar",
+    "eventos:validar",
+    "eventos:ver",
+    // Reportes
+    "reportes:ver",
+    "reportes:exportar",
+  ],
   admin: [
     // Gestión completa de la empresa
     "unidades:ver",
@@ -133,8 +161,11 @@ export interface UserFormData {
  */
 export function canViewAllUnits(user: User | null): boolean {
   if (!user) return false;
-  // Admin ve todas, supervisor/auditor solo las asignadas
-  return user.role === "admin";
+  // Superadmin ve todo
+  if (user.role === "superadmin") return true;
+  // Admin ve todas si no está asignado a una unidad
+  if (user.role !== "admin") return false;
+  return !user.idBusinessUnit && (user.unidadesAsignadas?.length ?? 0) === 0;
 }
 
 /**
@@ -142,8 +173,13 @@ export function canViewAllUnits(user: User | null): boolean {
  */
 export function canAccessUnit(user: User | null, unidadId: number): boolean {
   if (!user) return false;
+  // Superadmin accede a todo
+  if (user.role === "superadmin") return true;
   // Admin accede a todo
-  if (user.role === "admin") return true;
+  if (user.role === "admin") {
+    const assigned = user.idBusinessUnit ?? user.unidadesAsignadas?.[0] ?? null;
+    return assigned ? assigned === unidadId : true;
+  }
   // Otros roles solo si está en sus unidades asignadas
   return (user.unidadesAsignadas ?? []).includes(unidadId);
 }
