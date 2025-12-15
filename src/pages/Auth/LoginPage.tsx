@@ -1,8 +1,6 @@
-// src/pages/Auth/LoginPage.tsx
 import { useState, useEffect } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -11,8 +9,7 @@ import { ArrowLeft, Fuel, Lock, User } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated, isLoading, error, clearError } =
-    useAuthStore();
+  const { login, isAuthenticated, isLoading, error, clearError } = useAuthStore();
 
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +18,6 @@ export default function LoginPage() {
   const primaryColor = "#1E2C56";
   const secondaryColor = "#3b82f6";
 
-  // Redirigir si ya está autenticado
   useEffect(() => {
     if (isAuthenticated) {
       navigate("/dashboard", { replace: true });
@@ -41,171 +37,148 @@ export default function LoginPage() {
     try {
       await login(userName, password);
     } catch {
-      // Error ya manejado en el store
+      // Error manejado en el store
     }
   };
 
   const displayError = localError || error;
 
   return (
-    <div
-      className="relative min-h-screen flex flex-col items-center justify-center gap-6 bg-cover bg-center bg-no-repeat p-4"
-      style={{ backgroundImage: "url('/images/LoginFondo.png')" }}
-    >
-      {/* Botón de volver */}
+    // fixed inset-0 garantiza que el fondo ocupe TODA la pantalla sin barras blancas
+    <div className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900">
+      
+      {/* Fondo con imagen y overlay oscuro para resaltar la card */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-500"
+        style={{ backgroundImage: "url('/images/LoginFondo.png')" }}
+      >
+        <div className="absolute inset-0 bg-black/30" />
+      </div>
+
+      {/* Botón Volver */}
       <Button
         type="button"
+        variant="ghost"
         onClick={() => navigate("/")}
-        className="absolute left-4 top-4 z-20 text-white/90 hover:bg-secondary bg-transparent hover:text-white/90"
+        className="absolute left-4 top-4 z-20 text-white hover:bg-white/10 hover:text-white"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Volver al inicio
+        Volver
       </Button>
 
-      {/* Card de Login */}
-      <div className="relative z-10 w-full max-w-md">
-        <Card
-          className="overflow-hidden border-0 shadow-2xl"
+      <div className="relative z-10 w-full max-w-[400px]">
+        {/* Contenedor Principal (Reemplaza a la Card para evitar gaps internos) */}
+        <div 
+          className="flex flex-col overflow-hidden shadow-2xl"
           style={{
-            borderRadius: "16px",
+            borderRadius: "20px",
             backgroundColor: "rgba(255, 255, 255, 0.98)",
-            backdropFilter: "blur(20px)",
           }}
         >
-          {/* Header con color primario */}
+          {/* Header Azul Sólido - Pegado arriba sin bordes blancos */}
           <div
-            className="px-8 py-8 text-center text-white"
+            className="flex flex-col items-center px-8 py-10 text-center text-white"
             style={{ backgroundColor: primaryColor }}
           >
             <div
-              className="mx-auto mb-5 flex h-17 w-17 items-center justify-center rounded-full"
+              className="mb-4 flex h-16 w-16 items-center justify-center rounded-full"
               style={{
                 background: `linear-gradient(145deg, ${secondaryColor}, ${secondaryColor}CC)`,
-                boxShadow: `0 0 20px ${secondaryColor}55, 0 4px 12px rgba(0,0,0,0.25)`,
-                border: "3px solid rgba(255, 255, 255, 0.2)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "5px auto 1.25rem auto",
+                boxShadow: `0 4px 15px ${secondaryColor}66`,
+                border: "2px solid rgba(255, 255, 255, 0.2)",
               }}
             >
-              <Fuel className="h-10 w-10 text-white mx-auto my-auto" />
+              <Fuel className="h-8 w-8 text-white" />
             </div>
-
-            <h1 className="mb-2 text-2xl font-bold tracking-tight">
-              Iniciar Sesión
-            </h1>
-            <p className="text-sm opacity-90">
-              Sistema de Gestión de Combustibles
+            <h1 className="text-2xl font-bold tracking-tight">Inicio de Sesión</h1>
+            <p className="text-sm opacity-80 mt-1 uppercase tracking-widest font-medium">
+              Gestión de Combustibles
             </p>
           </div>
 
-          {/* Contenido del formulario */}
-          <CardContent className="px-6 py-8">
-            <div className="space-y-12">
-              <div className="flex justify-center">
-                <form
-                  onSubmit={handleSubmit}
-                  className="w-full max-w-xs space-y-6"
-                >
-                  {/* Campo Usuario */}
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="username"
-                      className="block text-sm font-semibold text-gray-700"
-                    >
-                      Usuario
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
-                      <Input
-                        id="username"
-                        type="text"
-                        value={userName}
-                        onChange={(e) => setUserName(e.target.value)}
-                        required
-                        disabled={isLoading}
-                        className="h-12 w-full rounded-lg border-gray-300 bg-gray-50 pl-11 pr-3 text-base focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Campo Contraseña */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label
-                        htmlFor="password"
-                        className="block text-sm font-semibold text-gray-700"
-                      >
-                        Contraseña
-                      </label>
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
-                      <Input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        disabled={isLoading}
-                        className="h-12 w-full rounded-lg border-gray-300 bg-gray-50 pl-11 pr-3 text-base focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Mensaje de error */}
-                  {displayError && (
-                    <Alert variant="destructive" className="rounded-lg">
-                      <AlertDescription className="text-sm font-medium">
-                        {displayError}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {/* Botón de login */}
-                  <Button
-                    type="submit"
+          {/* Formulario - Sección Blanca Pegada al Header */}
+          <div className="px-8 py-10 bg-white">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              
+              <div className="space-y-2">
+                <label htmlFor="username" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 ml-1">
+                  Usuario
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="Tu usuario"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
                     disabled={isLoading}
-                    className="h-12 w-full rounded-lg text-base font-bold transition-all duration-200 "
-                    style={{
-                      marginTop: "1rem",
-                      color: "white",
-                      backgroundColor: primaryColor,
-                    }}
-                  >
-                    {isLoading ? (
-                      <span className="flex items-center justify-center gap-2 ">
-                        <Spinner className="h-5 w-5 text-white" />
-                        <span>Ingresando...</span>
-                      </span>
-                    ) : (
-                      "Iniciar Sesión"
-                    )}
-                  </Button>
-                </form>
+                    className="h-12 border-slate-200 bg-slate-50 pl-10 text-sm focus:bg-white transition-all rounded-xl"
+                  />
+                </div>
               </div>
 
-              {/* Enlace de registro */}
-              <div className="border-gray-200 pt-8 text-center">
-                <p className="text-sm text-gray-600">
-                  ¿No tienes cuenta?{" "}
-                  <RouterLink
-                    to="/registro"
-                    className="font-semibold hover:underline"
-                    style={{ color: secondaryColor }}
-                  >
-                    Registra tu empresa
-                  </RouterLink>
-                </p>
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 ml-1">
+                  Contraseña
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    className="h-12 border-slate-200 bg-slate-50 pl-10 text-sm focus:bg-white transition-all rounded-xl"
+                  />
+                </div>
               </div>
+
+              {displayError && (
+                <Alert variant="destructive" className="py-2 border-none bg-red-50 text-red-600 rounded-lg">
+                  <AlertDescription className="text-xs font-bold text-center">
+                    {displayError}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="h-12 w-full text-base font-bold shadow-lg transition-all active:scale-[0.98] uppercase tracking-widest"
+                style={{ backgroundColor: primaryColor, color: "white" }}
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner className="h-5 w-5 text-white" />
+                    Ingresando...
+                  </span>
+                ) : (
+                  "INGRESAR"
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-8 border-t border-slate-100 pt-6 text-center">
+              <p className="text-xs text-slate-500">
+                ¿No tienes cuenta?{" "}
+                <RouterLink
+                  to="/registro"
+                  className="font-bold hover:underline"
+                  style={{ color: secondaryColor }}
+                >
+                  Registra tu empresa
+                </RouterLink>
+              </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Footer */}
-        <p className="mt-6 text-center text-sm text-white/80">
-          © 2025 GoodApps - Gestión de Combustibles
+        {/* Footer Copyright */}
+        <p className="mt-6 text-center text-[10px] font-medium uppercase tracking-[0.2em] text-white/60">
+          © 2025 GoodApps - V2.0
         </p>
       </div>
     </div>

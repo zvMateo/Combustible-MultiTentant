@@ -1,4 +1,3 @@
-// src/pages/Auth/RegisterPage.tsx
 import { useState, useEffect } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
@@ -17,18 +16,11 @@ import {
   Building2,
   CheckCircle2,
   Fuel,
-  Mail,
-  Phone,
-  User,
-  UserCircle,
-  Lock,
 } from "lucide-react";
 
 interface FormData {
-  // Paso 1 - Datos empresa
   empresaNombre: string;
   empresaRazonSocial: string;
-  // Paso 2 - Datos admin
   adminNombre: string;
   adminApellido: string;
   adminUserName: string;
@@ -42,7 +34,7 @@ interface FormErrors {
   [key: string]: string;
 }
 
-const steps = ["Datos de la Empresa", "Datos del Administrador"];
+const steps = ["Empresa", "Administrador"];
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -68,459 +60,200 @@ export default function RegisterPage() {
   const primaryColor = "#1E2C56";
   const secondaryColor = "#3b82f6";
 
-  // Redirigir si ya está autenticado
   useEffect(() => {
     if (isAuthenticated) {
       navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
-  const handleChange =
-    (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      setFormData({ ...formData, [field]: e.target.value });
-      // Limpiar error del campo
-      if (errors[field]) {
-        setErrors({ ...errors, [field]: "" });
-      }
-    };
+  const handleChange = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [field]: e.target.value });
+    if (errors[field]) setErrors({ ...errors, [field]: "" });
+  };
 
   const validateStep1 = (): boolean => {
-    const newErrors: FormErrors = {};
-
     if (!formData.empresaNombre.trim()) {
-      newErrors.empresaNombre = "El nombre es obligatorio";
+      setErrors({ empresaNombre: "El nombre es obligatorio" });
+      return false;
     }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return true;
   };
 
   const validateStep2 = (): boolean => {
     const newErrors: FormErrors = {};
-
-    if (!formData.adminNombre.trim()) {
-      newErrors.adminNombre = "El nombre es obligatorio";
-    }
-    if (!formData.adminApellido.trim()) {
-      newErrors.adminApellido = "El apellido es obligatorio";
-    }
-    if (!formData.adminUserName.trim()) {
-      newErrors.adminUserName = "El nombre de usuario es obligatorio";
-    }
-    if (!formData.adminEmail.trim()) {
-      newErrors.adminEmail = "El email es obligatorio";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.adminEmail)) {
-      newErrors.adminEmail = "Email inválido";
-    }
-    if (!formData.adminPassword) {
-      newErrors.adminPassword = "La contraseña es obligatoria";
-    } else if (formData.adminPassword.length < 8) {
-      newErrors.adminPassword = "Mínimo 8 caracteres";
-    }
-    if (formData.adminPassword !== formData.adminPasswordConfirm) {
-      newErrors.adminPasswordConfirm = "Las contraseñas no coinciden";
-    }
-
+    if (!formData.adminNombre.trim()) newErrors.adminNombre = "Obligatorio";
+    if (!formData.adminEmail.trim()) newErrors.adminEmail = "Obligatorio";
+    if (formData.adminPassword.length < 8) newErrors.adminPassword = "Mínimo 8 caracteres";
+    if (formData.adminPassword !== formData.adminPasswordConfirm) newErrors.adminPasswordConfirm = "No coinciden";
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleNext = () => {
-    if (activeStep === 0 && validateStep1()) {
-      setActiveStep(1);
-    } else if (activeStep === 1 && validateStep2()) {
-      handleSubmit();
-    }
-  };
-
-  const handleBack = () => {
-    setActiveStep(0);
+    if (activeStep === 0 && validateStep1()) setActiveStep(1);
+    else if (activeStep === 1 && validateStep2()) handleSubmit();
   };
 
   const handleSubmit = async () => {
     setIsLoading(true);
-
     try {
-      // 1️⃣ Crear la empresa primero
-      const companyData = {
+      const newCompany = await companiesApi.create({
         name: formData.empresaNombre,
         detail: formData.empresaRazonSocial || undefined,
-      };
+      });
 
-      console.log("🚀 [RegisterPage] Creando empresa:", companyData);
-      const newCompany = await companiesApi.create(companyData);
-      console.log("✅ [RegisterPage] Empresa creada:", newCompany);
+      if (!newCompany?.id) throw new Error("ID de empresa no encontrado");
 
-      if (!newCompany || !newCompany.id) {
-        throw new Error("No se pudo obtener el ID de la empresa creada");
-      }
-
-      const idCompany = newCompany.id;
-
-      const userData = {
+      await usersApi.createRegister({
         firstName: formData.adminNombre,
         lastName: formData.adminApellido,
         email: formData.adminEmail,
         userName: formData.adminUserName,
         password: formData.adminPassword,
         confirmPassword: formData.adminPasswordConfirm,
-        idCompany: idCompany,
-        idBusinessUnit: undefined,
+        idCompany: newCompany.id,
         phoneNumber: formData.adminPhoneNumber || "",
-      };
-
-      console.log("🚀 [RegisterPage] Creando usuario administrador:", {
-        ...userData,
-        password: "***",
-        confirmPassword: "***",
       });
-      await usersApi.createRegister(userData);
-      console.log("✅ [RegisterPage] Usuario creado correctamente");
 
-      setIsLoading(false);
       setSuccess(true);
-      toast.success("¡Empresa registrada exitosamente!");
-
-      // Redirigir al login después de 3 segundos
-      setTimeout(() => {
-        navigate("/login");
-      }, 3000);
+      toast.success("¡Registro exitoso!");
+      setTimeout(() => navigate("/login"), 3000);
     } catch (error) {
-      console.error("❌ [RegisterPage] Error en el registro:", error);
+      toast.error(getErrorMessage(error));
       setIsLoading(false);
-      const errorMessage = getErrorMessage(error);
-      toast.error(
-        errorMessage ||
-          "Error al registrar la empresa. Por favor, intenta nuevamente."
-      );
     }
   };
 
-  if (success) {
-    return (
-      <div
-        className="flex min-h-screen items-center justify-center p-4"
-        style={{
-          background:
-            "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%)",
-        }}
-      >
-        <Card className="w-full max-w-[450px] rounded-xl p-8 text-center">
-          <CheckCircle2 className="mx-auto mb-4 h-20 w-20 text-emerald-500" />
-          <div className="mb-2 text-2xl font-bold">¡Registro Exitoso!</div>
-          <div className="mb-6 text-sm text-muted-foreground">
-            Tu empresa <strong>{formData.empresaNombre}</strong> ha sido registrada.
-            <br />
-            Serás redirigido al login en unos segundos...
-          </div>
-          <Spinner className="mx-auto size-6" style={{ color: secondaryColor }} />
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div
-      className="flex min-h-screen flex-col overflow-auto"
-      style={{
-        background:
-          "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%)",
-      }}
-    >
-      <div className="p-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => navigate("/")}
-          className="text-white/80 hover:bg-white/10"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Volver al inicio
-        </Button>
+    <div className="fixed inset-0 flex flex-col items-center justify-center p-4 overflow-y-auto bg-slate-900">
+      {/* Fondo optimizado */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/images/LoginFondo.png')" }}
+      >
+        <div className="absolute inset-0 bg-black/40" />
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center px-4 py-10">
-        <div className="w-full max-w-2xl">
-          <Card
-            className="overflow-hidden gap-0 p-0"
-            style={{
-              borderRadius: 12,
-              backgroundColor: "rgba(255, 255, 255, 0.95)",
-              backdropFilter: "blur(20px)",
-              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.4)",
-            }}
-          >
-            <div className="px-6 py-6 text-center text-white" style={{ backgroundColor: primaryColor }}>
-              <div
-                className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
-                style={{
-                  background: `linear-gradient(145deg, ${secondaryColor}, ${secondaryColor}CC)`,
-                  boxShadow: `0 0 20px ${secondaryColor}55`,
-                  border: "3px solid rgba(255, 255, 255, 0.2)",
-                }}
-              >
-                <Fuel className="h-8 w-8 text-white" />
-              </div>
-              <div className="mb-1 text-2xl font-bold">Registrar Empresa</div>
-              <div className="text-sm opacity-80">Crea tu cuenta empresarial en minutos</div>
-            </div>
+      <Button
+        variant="ghost"
+        onClick={() => navigate("/")}
+        className="absolute left-4 top-4 z-20 text-white hover:bg-white/10"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+      </Button>
 
-            <div className="px-6 pt-6">
-              <div className="grid grid-cols-2 gap-4">
-                {steps.map((label, idx) => {
-                  const isCompleted = idx < activeStep;
-                  const isCurrent = idx === activeStep;
-                  return (
-                    <div key={label} className="flex flex-col items-center gap-2">
-                      <div
-                        className="flex h-9 w-9 items-center justify-center rounded-full border text-sm font-bold"
-                        style={{
-                          backgroundColor: isCompleted || isCurrent ? primaryColor : "transparent",
-                          borderColor: isCompleted || isCurrent ? primaryColor : "#e2e8f0",
-                          color: isCompleted || isCurrent ? "#fff" : "#64748b",
-                        }}
-                      >
-                        {idx + 1}
-                      </div>
-                      <div
-                        className="text-center text-xs font-semibold"
-                        style={{ color: isCurrent ? primaryColor : "#64748b" }}
-                      >
-                        {label}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+      <div className="relative z-10 w-full max-w-[500px] my-auto">
+        <Card className="overflow-hidden border-0 shadow-2xl bg-white/95 backdrop-blur-md rounded-2xl">
+          {/* Header sólido */}
+          <div className="bg-[#1E2C56] px-8 py-8 text-center text-white">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-500 shadow-lg border-2 border-white/20">
+              <Fuel className="h-7 w-7 text-white" />
             </div>
-
-            <CardContent className="p-0">
-              <div className="p-7">
-              {activeStep === 0 ? (
-                <div>
-                  <div className="mb-4 flex items-center gap-2">
-                    <Building2 className="h-5 w-5" style={{ color: secondaryColor }} />
-                    <div className="text-lg font-semibold">Datos de la Empresa</div>
+            <h1 className="text-2xl font-bold tracking-tight">Crear Cuenta</h1>
+            
+            {/* Stepper horizontal sutil */}
+            <div className="mt-6 flex justify-center items-center gap-4">
+              {steps.map((label, idx) => (
+                <div key={label} className="flex items-center gap-2">
+                  <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold border ${activeStep === idx ? 'bg-blue-500 border-blue-500 text-white' : 'border-white/30 text-white/50'}`}>
+                    {idx + 1}
                   </div>
+                  <span className={`text-[11px] font-bold uppercase tracking-wider ${activeStep === idx ? 'text-white' : 'text-white/40'}`}>
+                    {label}
+                  </span>
+                  {idx === 0 && <div className="w-8 h-[1px] bg-white/20 mx-2" />}
+                </div>
+              ))}
+            </div>
+          </div>
 
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <Label>Nombre de la Empresa</Label>
-                      <Input
-                        placeholder="Mi Empresa S.A."
+          <CardContent className="px-8 py-8">
+            <form className="space-y-5">
+              {activeStep === 0 ? (
+                /* PASO 1: EMPRESA */
+                <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+                  <div className="space-y-2">
+                    <Label className="text-[11px] font-bold uppercase text-slate-500 ml-1">Nombre Comercial</Label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input 
+                        placeholder="Ej: Logística Central S.A." 
+                        className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200"
                         value={formData.empresaNombre}
                         onChange={handleChange("empresaNombre")}
-                        className="mt-2"
-                      />
-                      {errors.empresaNombre && (
-                        <div className="mt-1 text-xs text-red-600">
-                          {errors.empresaNombre}
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label>Razón Social (opcional)</Label>
-                      <Input
-                        placeholder="Razón Social S.A."
-                        value={formData.empresaRazonSocial}
-                        onChange={handleChange("empresaRazonSocial")}
-                        className="mt-2"
                       />
                     </div>
+                    {errors.empresaNombre && <p className="text-[10px] font-bold text-red-500">{errors.empresaNombre}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[11px] font-bold uppercase text-slate-500 ml-1">Razón Social (Opcional)</Label>
+                    <Input 
+                      placeholder="Nombre legal de la empresa" 
+                      className="h-11 rounded-xl bg-slate-50 border-slate-200"
+                      value={formData.empresaRazonSocial}
+                      onChange={handleChange("empresaRazonSocial")}
+                    />
                   </div>
                 </div>
               ) : (
-                <div>
-                  <div className="mb-4 flex items-center gap-2">
-                    <User className="h-5 w-5" style={{ color: secondaryColor }} />
-                    <div className="text-lg font-semibold">Datos del Administrador</div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <Label>Nombre</Label>
-                      <Input
-                        value={formData.adminNombre}
-                        onChange={handleChange("adminNombre")}
-                        className="mt-2"
-                      />
-                      {errors.adminNombre && (
-                        <div className="mt-1 text-xs text-red-600">
-                          {errors.adminNombre}
-                        </div>
-                      )}
+                /* PASO 2: ADMIN */
+                <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-bold uppercase text-slate-500 ml-1">Nombre</Label>
+                      <Input value={formData.adminNombre} onChange={handleChange("adminNombre")} className="h-10 rounded-lg" />
                     </div>
-
-                    <div>
-                      <Label>Apellido</Label>
-                      <Input
-                        value={formData.adminApellido}
-                        onChange={handleChange("adminApellido")}
-                        className="mt-2"
-                      />
-                      {errors.adminApellido && (
-                        <div className="mt-1 text-xs text-red-600">
-                          {errors.adminApellido}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <Label>Nombre de Usuario</Label>
-                      <div className="relative mt-2">
-                        <UserCircle className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
-                        <Input
-                          placeholder="admin.usuario"
-                          value={formData.adminUserName}
-                          onChange={handleChange("adminUserName")}
-                          className="pl-10"
-                        />
-                      </div>
-                      {errors.adminUserName && (
-                        <div className="mt-1 text-xs text-red-600">
-                          {errors.adminUserName}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <Label>Email</Label>
-                      <div className="relative mt-2">
-                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
-                        <Input
-                          type="email"
-                          placeholder="admin@miempresa.com"
-                          value={formData.adminEmail}
-                          onChange={handleChange("adminEmail")}
-                          className="pl-10"
-                        />
-                      </div>
-                      {errors.adminEmail && (
-                        <div className="mt-1 text-xs text-red-600">
-                          {errors.adminEmail}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <Label>Teléfono</Label>
-                      <div className="relative mt-2">
-                        <Phone className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
-                        <Input
-                          type="tel"
-                          placeholder="+54 9 11 1234-5678"
-                          value={formData.adminPhoneNumber}
-                          onChange={handleChange("adminPhoneNumber")}
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label>Contraseña</Label>
-                      <div className="relative mt-2">
-                        <Lock className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
-                        <Input
-                          type="password"
-                          value={formData.adminPassword}
-                          onChange={handleChange("adminPassword")}
-                          className="pl-10"
-                        />
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {errors.adminPassword || "Mínimo 8 caracteres"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label>Confirmar Contraseña</Label>
-                      <Input
-                        type="password"
-                        value={formData.adminPasswordConfirm}
-                        onChange={handleChange("adminPasswordConfirm")}
-                        className="mt-2"
-                      />
-                      {errors.adminPasswordConfirm && (
-                        <div className="mt-1 text-xs text-red-600">
-                          {errors.adminPasswordConfirm}
-                        </div>
-                      )}
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-bold uppercase text-slate-500 ml-1">Apellido</Label>
+                      <Input value={formData.adminApellido} onChange={handleChange("adminApellido")} className="h-10 rounded-lg" />
                     </div>
                   </div>
-
-                  <Alert className="mt-4">
-                    <AlertDescription className="text-[0.85rem]">
-                      Este usuario será el administrador principal de la empresa y podrá crear otros usuarios.
-                    </AlertDescription>
-                  </Alert>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-bold uppercase text-slate-500 ml-1">Email Corporativo</Label>
+                    <Input type="email" value={formData.adminEmail} onChange={handleChange("adminEmail")} className="h-10 rounded-lg" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-bold uppercase text-slate-500 ml-1">Contraseña</Label>
+                      <Input type="password" value={formData.adminPassword} onChange={handleChange("adminPassword")} className="h-10 rounded-lg" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-bold uppercase text-slate-500 ml-1">Confirmar</Label>
+                      <Input type="password" value={formData.adminPasswordConfirm} onChange={handleChange("adminPasswordConfirm")} className="h-10 rounded-lg" />
+                    </div>
+                  </div>
                 </div>
               )}
 
-              <div className="mt-8 flex gap-3">
-                {activeStep > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleBack}
-                    className="h-11 flex-1 rounded-md font-semibold"
-                  >
+              <div className="pt-4 flex gap-3">
+                {activeStep === 1 && (
+                  <Button variant="outline" onClick={() => setActiveStep(0)} className="h-11 flex-1 font-bold rounded-xl border-slate-200">
                     Atrás
                   </Button>
                 )}
-
-                <Button
-                  type="button"
-                  onClick={handleNext}
+                <Button 
+                  onClick={handleNext} 
                   disabled={isLoading}
-                  className="h-11 flex-1 rounded-md font-bold text-white"
-                  style={{ backgroundColor: primaryColor }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                      secondaryColor;
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                      primaryColor;
-                  }}
+                  className="h-11 flex-[2] bg-[#1E2C56] text-white font-bold rounded-xl shadow-lg hover:bg-[#2a3c74]"
                 >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Spinner className="size-5 text-white" />
-                      <span>Registrando...</span>
-                    </span>
-                  ) : activeStep === steps.length - 1 ? (
-                    "Crear Empresa"
-                  ) : (
-                    "Siguiente"
-                  )}
+                  {isLoading ? <Spinner className="h-4 w-4" /> : activeStep === 0 ? "Siguiente" : "Crear mi Empresa"}
                 </Button>
               </div>
 
-              <div className="relative my-8">
-                <div className="h-px bg-slate-200" />
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-sm text-slate-400">
-                  ¿Ya tienes cuenta?
-                </div>
-              </div>
-
-              <Button
-                asChild
-                type="button"
-                variant="outline"
-                className="h-11 w-full rounded-md font-semibold"
-                style={{ borderColor: secondaryColor, color: secondaryColor }}
-              >
-                <RouterLink to="/login">Iniciar Sesión</RouterLink>
-              </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="mt-6 text-center text-xs text-white/70">
-            © 2025 GoodApps - Gestión de Combustibles
-          </div>
-        </div>
+              <p className="text-center text-xs text-slate-500 mt-6 pt-4 border-t border-slate-100">
+                ¿Ya tienes cuenta? <RouterLink to="/login" className="text-blue-600 font-bold hover:underline">Inicia Sesión</RouterLink>
+              </p>
+            </form>
+          </CardContent>
+        </Card>
+        
+        {success && (
+          <Alert className="mt-4 bg-emerald-50 border-emerald-200 text-emerald-800 animate-in zoom-in">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <AlertDescription className="font-medium">¡Empresa registrada! Redirigiendo...</AlertDescription>
+          </Alert>
+        )}
       </div>
     </div>
   );

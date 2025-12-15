@@ -1,21 +1,22 @@
-// src/pages/Landing/LandingPage.tsx
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuthStore } from "@/stores/auth.store";
-import { Box, Typography, Button, Container, Stack, Chip } from "@mui/material";
-import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
-import BusinessIcon from "@mui/icons-material/Business";
-import SecurityIcon from "@mui/icons-material/Security";
-import SpeedIcon from "@mui/icons-material/Speed";
-import LoginIcon from "@mui/icons-material/Login";
-import PersonAddIcon from "@mui/icons-material/PersonAdd";
-import DashboardIcon from "@mui/icons-material/Dashboard";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Fuel, 
+  Building2, 
+  ShieldCheck, 
+  Zap, 
+  LogIn, 
+  UserPlus, 
+  ArrowRight 
+} from "lucide-react";
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
 
-  // Redirigir al dashboard si ya está autenticado
   useEffect(() => {
     if (isAuthenticated) {
       navigate("/dashboard", { replace: true });
@@ -23,431 +24,155 @@ export default function LandingPage() {
   }, [isAuthenticated, navigate]);
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        background:
-          "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%)",
-      }}
-    >
-      {/* Header */}
-      <Box
-        component="header"
-        sx={{
-          py: 2.5,
-          px: { xs: 2, sm: 4 },
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-          backdropFilter: "blur(10px)",
-          bgcolor: "rgba(15, 23, 42, 0.5)",
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Box
-                sx={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 2,
-                  background:
-                    "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 4px 14px rgba(59, 130, 246, 0.4)",
-                }}
-              >
-                <LocalGasStationIcon sx={{ fontSize: 26, color: "white" }} />
-              </Box>
-              <Box>
-                <Typography
-                  variant="h6"
-                  fontWeight={700}
-                  color="white"
-                  sx={{
-                    fontSize: { xs: "1rem", sm: "1.15rem" },
-                    lineHeight: 1.2,
-                  }}
-                >
-                  GoodApps
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{ color: "rgba(255,255,255,0.6)", fontSize: "0.7rem" }}
-                >
-                  Gestión de Combustibles
-                </Typography>
-              </Box>
-            </Box>
+    <div className="min-h-screen flex flex-col bg-[#0f172a] relative overflow-hidden selection:bg-blue-500/30">
+      {/* Efecto de luz de fondo (Efecto Glow) */}
+      <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-blue-600/15 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-indigo-600/10 blur-[100px] rounded-full pointer-events-none" />
 
-            <Stack direction="row" spacing={1.5}>
-              <Button
-                variant="outlined"
-                startIcon={<LoginIcon />}
-                onClick={() => navigate("/login")}
-                sx={{
-                  color: "white",
-                  borderColor: "rgba(255,255,255,0.3)",
-                  textTransform: "none",
-                  fontWeight: 600,
-                  px: { xs: 2, sm: 3 },
-                  borderRadius: 2,
-                  "&:hover": {
-                    borderColor: "white",
-                    bgcolor: "rgba(255,255,255,0.1)",
-                  },
-                }}
-              >
-                Ingresar
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<PersonAddIcon />}
+      {/* Header / Navbar */}
+      <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#0f172a]/70 backdrop-blur-xl">
+        <div className="container mx-auto max-w-7xl h-16 flex items-center justify-between px-4 sm:px-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Fuel className="text-white w-6 h-6" />
+            </div>
+            <div className="hidden sm:block">
+              <span className="text-xl font-bold text-white tracking-tight">GoodApps</span>
+              <span className="text-blue-500 font-bold text-xl ml-1">Fuel</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              className="text-white/70 hover:text-white hover:bg-white/5 font-medium"
+              onClick={() => navigate("/login")}
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              Ingresar
+            </Button>
+            <Button 
+              className="bg-white text-slate-950 hover:bg-slate-200 font-bold rounded-lg px-6"
+              onClick={() => navigate("/registro")}
+            >
+              Empezar ahora
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <main className="flex-grow flex items-center py-12 md:py-24 px-4 sm:px-8 relative z-10">
+        <div className="container mx-auto max-w-7xl grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+          <div className="md:col-span-7 text-center md:text-left space-y-8">
+            <Badge 
+              variant="outline" 
+              className="bg-blue-500/10 text-blue-400 border-blue-500/20 px-4 py-1 text-sm font-semibold rounded-full"
+            >
+              ✨ Nueva Versión 2025
+            </Badge>
+            
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-white leading-[1.1] tracking-tight">
+              Control total del <br />
+              <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                combustible
+              </span> de tu flota
+            </h1>
+
+            <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto md:mx-0 leading-relaxed font-medium">
+              La plataforma definitiva para gestionar cargas, vehículos y choferes. 
+              Optimiza tus costos con reportes inteligentes en tiempo real.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+              <Button 
+                size="lg" 
+                className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-14 px-8 rounded-xl shadow-xl shadow-blue-500/20 text-lg group"
                 onClick={() => navigate("/registro")}
-                sx={{
-                  bgcolor: "#3b82f6",
-                  textTransform: "none",
-                  fontWeight: 600,
-                  px: { xs: 2, sm: 3 },
-                  borderRadius: 2,
-                  boxShadow: "0 4px 14px rgba(59, 130, 246, 0.4)",
-                  "&:hover": {
-                    bgcolor: "#2563eb",
-                  },
-                }}
               >
-                Registrarse
+                Crear mi cuenta gratis
+                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
-            </Stack>
-          </Box>
-        </Container>
-      </Box>
-
-      {/* Main Content */}
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          display: "flex",
-          alignItems: "center",
-          py: { xs: 6, md: 10 },
-          px: { xs: 2, sm: 4 },
-        }}
-      >
-        <Container maxWidth="lg">
-          <Stack
-            spacing={{ xs: 6, md: 8 }}
-            alignItems="center"
-            textAlign="center"
-          >
-            {/* Hero Section */}
-            <Box sx={{ maxWidth: "850px" }}>
-              <Chip
-                label="✨ Plataforma 100% Autogestionable"
-                sx={{
-                  mb: 3,
-                  bgcolor: "rgba(59, 130, 246, 0.2)",
-                  color: "#93c5fd",
-                  fontWeight: 600,
-                  fontSize: "0.85rem",
-                  border: "1px solid rgba(59, 130, 246, 0.3)",
-                }}
-              />
-              <Typography
-                variant="h1"
-                fontWeight={800}
-                color="white"
-                sx={{
-                  mb: 3,
-                  fontSize: { xs: "2.2rem", sm: "3rem", md: "3.75rem" },
-                  letterSpacing: "-0.03em",
-                  lineHeight: 1.1,
-                  background:
-                    "linear-gradient(135deg, #ffffff 0%, #93c5fd 100%)",
-                  backgroundClip: "text",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="text-white border-white/10 bg-white/5 hover:bg-white/10 h-14 px-8 rounded-xl text-lg font-bold"
+                onClick={() => navigate("/login")}
               >
-                Gestión de Combustibles
-                <br />
-                para tu Empresa
-              </Typography>
-              <Typography
-                variant="h6"
-                color="rgba(255,255,255,0.8)"
-                fontWeight={400}
-                sx={{
-                  mb: 5,
-                  lineHeight: 1.7,
-                  fontSize: { xs: "1rem", sm: "1.15rem", md: "1.25rem" },
-                  maxWidth: "700px",
-                  mx: "auto",
-                }}
-              >
-                Registra tu empresa en minutos y comienza a controlar cargas de
-                combustible, vehículos, choferes y reportes en tiempo real.
-              </Typography>
+                Ver Demo
+              </Button>
+            </div>
+          </div>
 
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={2}
-                justifyContent="center"
-              >
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<PersonAddIcon />}
-                  onClick={() => navigate("/registro")}
-                  sx={{
-                    bgcolor: "#3b82f6",
-                    color: "white",
-                    fontWeight: 700,
-                    fontSize: { xs: "1rem", sm: "1.1rem" },
-                    px: { xs: 4, sm: 5 },
-                    py: { xs: 1.5, sm: 1.75 },
-                    borderRadius: 2.5,
-                    textTransform: "none",
-                    boxShadow: "0 4px 20px rgba(59, 130, 246, 0.5)",
-                    "&:hover": {
-                      bgcolor: "#2563eb",
-                      boxShadow: "0 6px 25px rgba(59, 130, 246, 0.6)",
-                      transform: "translateY(-2px)",
-                    },
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  Crear mi Empresa Gratis
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  startIcon={<DashboardIcon />}
-                  onClick={() => navigate("/login")}
-                  sx={{
-                    color: "white",
-                    borderColor: "rgba(255,255,255,0.4)",
-                    fontWeight: 600,
-                    fontSize: { xs: "1rem", sm: "1.1rem" },
-                    px: { xs: 4, sm: 5 },
-                    py: { xs: 1.5, sm: 1.75 },
-                    borderRadius: 2.5,
-                    textTransform: "none",
-                    "&:hover": {
-                      borderColor: "white",
-                      bgcolor: "rgba(255,255,255,0.1)",
-                    },
-                  }}
-                >
-                  Ya tengo cuenta
-                </Button>
-              </Stack>
-            </Box>
+          {/* Imagen / Dashboard Preview */}
+          <div className="md:col-span-5 hidden md:block">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[30px] blur opacity-25 group-hover:opacity-50 transition duration-1000" />
+              <div className="relative bg-slate-900 border border-white/10 rounded-[24px] overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+                <img 
+                  src="https://images.unsplash.com/photo-1551288049-bbb653283b78?q=80&w=1000&auto=format&fit=crop" 
+                  alt="Dashboard Preview" 
+                  className="w-full h-auto opacity-80"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
 
-            {/* Features */}
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" },
-                gap: { xs: 3, sm: 4 },
-                width: "100%",
-                maxWidth: "1100px",
-              }}
-            >
-              {[
-                {
-                  icon: <BusinessIcon sx={{ fontSize: { xs: 40, sm: 48 } }} />,
-                  title: "Multi-Empresa",
-                  desc: "Gestiona múltiples unidades de negocio desde un solo lugar",
-                },
-                {
-                  icon: <SecurityIcon sx={{ fontSize: { xs: 40, sm: 48 } }} />,
-                  title: "Datos Seguros",
-                  desc: "Información protegida y respaldada en la nube",
-                },
-                {
-                  icon: <SpeedIcon sx={{ fontSize: { xs: 40, sm: 48 } }} />,
-                  title: "Tiempo Real",
-                  desc: "Dashboard y reportes actualizados al instante",
-                },
-              ].map((feature, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    bgcolor: "rgba(255,255,255,0.05)",
-                    p: { xs: 3.5, sm: 4 },
-                    borderRadius: 3,
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      bgcolor: "rgba(255,255,255,0.08)",
-                      borderColor: "rgba(59, 130, 246, 0.4)",
-                      transform: "translateY(-4px)",
-                    },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      color: "#3b82f6",
-                      mb: 2.5,
-                      opacity: 0.9,
-                    }}
-                  >
-                    {feature.icon}
-                  </Box>
-                  <Typography
-                    variant="h6"
-                    fontWeight={700}
-                    color="white"
-                    sx={{
-                      mb: 1.5,
-                      fontSize: { xs: "1.1rem", sm: "1.2rem" },
-                    }}
-                  >
-                    {feature.title}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="rgba(255,255,255,0.7)"
-                    sx={{
-                      fontSize: { xs: "0.9rem", sm: "0.95rem" },
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {feature.desc}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-
-            {/* How it works */}
-            <Box
-              sx={{
-                p: { xs: 4, sm: 5 },
-                bgcolor: "rgba(59, 130, 246, 0.1)",
-                borderRadius: 4,
-                border: "1px solid rgba(59, 130, 246, 0.2)",
-                maxWidth: "800px",
-                width: "100%",
-              }}
-            >
-              <Typography
-                variant="h5"
-                color="white"
-                fontWeight={700}
-                sx={{ fontSize: { xs: "1.2rem", sm: "1.4rem" }, mb: 3 }}
+      {/* Features Grid */}
+      <section className="py-20 bg-white/[0.02] border-y border-white/5">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { 
+                icon: <Building2 className="w-10 h-10 text-blue-500" />, 
+                title: "Multi-Unidad", 
+                desc: "Gestiona múltiples sedes o campos desde un solo panel administrativo unificado." 
+              },
+              { 
+                icon: <ShieldCheck className="w-10 h-10 text-blue-500" />, 
+                title: "Seguridad Avanzada", 
+                desc: "Roles de usuario granulares y trazabilidad completa de cada carga de combustible." 
+              },
+              { 
+                icon: <Zap className="w-10 h-10 text-blue-500" />, 
+                title: "Reportes en Vivo", 
+                desc: "Visualiza el consumo de tu flota al instante con gráficos dinámicos y exportación." 
+              }
+            ].map((feature, i) => (
+              <div 
+                key={i} 
+                className="p-8 rounded-[24px] bg-white/5 border border-white/5 hover:border-blue-500/30 hover:bg-white/[0.07] transition-all duration-300 group"
               >
-                🚀 Comienza en 3 simples pasos
-              </Typography>
-              <Stack spacing={2}>
-                {[
-                  { step: "1", text: "Registra tu empresa con tu email" },
-                  {
-                    step: "2",
-                    text: "Configura tus unidades de negocio, vehículos y choferes",
-                  },
-                  {
-                    step: "3",
-                    text: "¡Comienza a registrar cargas de combustible!",
-                  },
-                ].map((item) => (
-                  <Box
-                    key={item.step}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 2,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: "50%",
-                        bgcolor: "#3b82f6",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 700,
-                        color: "white",
-                        fontSize: "1rem",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {item.step}
-                    </Box>
-                    <Typography
-                      color="rgba(255,255,255,0.9)"
-                      sx={{ fontSize: { xs: "0.95rem", sm: "1.05rem" } }}
-                    >
-                      {item.text}
-                    </Typography>
-                  </Box>
-                ))}
-              </Stack>
-            </Box>
-          </Stack>
-        </Container>
-      </Box>
+                <div className="mb-6 group-hover:scale-110 transition-transform duration-300">{feature.icon}</div>
+                <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
+                <p className="text-slate-400 leading-relaxed font-medium">{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
-      <Box
-        component="footer"
-        sx={{
-          py: 3,
-          px: { xs: 2, sm: 4 },
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          bgcolor: "rgba(15, 23, 42, 0.5)",
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: { xs: "center", md: "space-between" },
-              alignItems: "center",
-              flexDirection: { xs: "column", md: "row" },
-              gap: { xs: 2, md: 0 },
-            }}
-          >
-            <Typography
-              variant="body2"
-              color="rgba(255,255,255,0.6)"
-              sx={{ fontSize: { xs: "0.85rem", sm: "0.9rem" } }}
-            >
-              © 2025 GoodApps - Gestión de Combustibles
-            </Typography>
-            <Stack direction="row" spacing={2}>
-              {["Términos", "Privacidad", "Contacto"].map((item) => (
-                <Button
-                  key={item}
-                  sx={{
-                    color: "rgba(255,255,255,0.6)",
-                    textTransform: "none",
-                    fontSize: { xs: "0.85rem", sm: "0.9rem" },
-                    minWidth: "auto",
-                    p: 0.5,
-                    "&:hover": {
-                      color: "white",
-                      bgcolor: "transparent",
-                    },
-                  }}
-                >
-                  {item}
-                </Button>
-              ))}
-            </Stack>
-          </Box>
-        </Container>
-      </Box>
-    </Box>
+      <footer className="py-12 border-t border-white/5">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <p className="text-slate-500 text-sm font-medium order-2 md:order-1">
+            © 2025 GoodApps Management. Todos los derechos reservados.
+          </p>
+          <div className="flex items-center gap-8 order-1 md:order-2">
+            {["Términos", "Privacidad", "Soporte"].map((item) => (
+              <a 
+                key={item} 
+                href="#" 
+                className="text-slate-500 hover:text-white text-sm font-semibold transition-colors"
+              >
+                {item}
+              </a>
+            ))}
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }

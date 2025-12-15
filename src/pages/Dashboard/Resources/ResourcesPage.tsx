@@ -107,6 +107,7 @@ export default function ResourcesPage() {
     idCompany: idCompany || 0,
     idBusinessUnit: undefined,
     nativeLiters: undefined,
+    actualLiters: undefined,
     name: "",
     identifier: "",
   });
@@ -248,6 +249,7 @@ export default function ResourcesPage() {
       idCompany: finalIdCompany,
       idBusinessUnit: undefined,
       nativeLiters: undefined,
+      actualLiters: undefined,
       name: "",
       identifier: "",
     });
@@ -262,6 +264,7 @@ export default function ResourcesPage() {
       idCompany: resource.idCompany,
       idBusinessUnit: resource.idBusinessUnit,
       nativeLiters: resource.nativeLiters,
+      actualLiters: resource.actualLiters,
       name: resource.name,
       identifier: resource.identifier,
     });
@@ -304,7 +307,8 @@ export default function ResourcesPage() {
           idType: formData.idType,
           idCompany: formData.idCompany,
           idBusinessUnit: formData.idBusinessUnit,
-          nativeLiters: formData.nativeLiters,
+          nativeLiters: formData.nativeLiters ?? 0,
+          actualLiters: formData.actualLiters ?? 0,
           name: formData.name,
           identifier: formData.identifier,
         };
@@ -316,6 +320,7 @@ export default function ResourcesPage() {
           idCompany: finalIdCompany,
           idBusinessUnit: formData.idBusinessUnit ?? 0,
           nativeLiters: formData.nativeLiters ?? 0,
+          actualLiters: formData.actualLiters ?? 0,
           name: formData.name.trim(),
           identifier: formData.identifier.trim(),
         };
@@ -454,7 +459,7 @@ export default function ResourcesPage() {
   const getResourceTypeName = (resource: Resource) => {
     const typeArray = resource.type ?? [];
     if (typeArray.length > 0) {
-      return typeArray[0];
+      return typeof typeArray[0] === "string" ? typeArray[0] : "Recurso";
     }
     return (
       resourceTypes.find((rt) => rt.id === resource.idType)?.name || "Recurso"
