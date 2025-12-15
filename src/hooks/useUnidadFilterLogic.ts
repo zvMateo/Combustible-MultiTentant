@@ -32,13 +32,36 @@ export function useUnidadFilterLogic(): UnidadFilterResult {
   const { unidadActiva, unidades } = useUnidadStore();
 
   return useMemo(() => {
+    const isSuperAdmin = user?.role === "superadmin";
     const isAdmin = user?.role === "admin";
+    const isCompanyAdmin = isAdmin || isSuperAdmin;
     const isSupervisor = user?.role === "supervisor";
     const isAuditor = user?.role === "auditor";
     const unidadesAsignadas = user?.unidadesAsignadas ?? [];
+    const assignedForAdmin =
+      isAdmin ? user?.idBusinessUnit ?? unidadesAsignadas[0] ?? undefined : undefined;
 
-    // Admin puede ver todas si no tiene unidad seleccionada
-    if (isAdmin) {
+    // Admin (incluye superadmin) puede ver todas si no tiene unidad seleccionada
+    if (isCompanyAdmin) {
+      // Admin asignado a una unidad: siempre filtra por esa unidad (no existe "Todas")
+      if (assignedForAdmin) {
+        const preferredId = unidadActiva?.id ?? assignedForAdmin;
+        const enforcedId = unidadesAsignadas.includes(preferredId)
+          ? preferredId
+          : assignedForAdmin;
+        const unidadNombre =
+          unidades.find((u) => u.id === enforcedId)?.nombre ?? "Mi Unidad";
+
+        return {
+          unidadIdFilter: enforcedId,
+          unidadIdsFilter: [enforcedId],
+          canViewAll: false,
+          hasFilter: true,
+          unidadNombre,
+          isAdmin: true,
+        };
+      }
+
       // Si hay unidad activa seleccionada, filtrar por ella
       if (unidadActiva) {
         return {

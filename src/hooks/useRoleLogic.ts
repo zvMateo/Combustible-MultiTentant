@@ -66,58 +66,63 @@ export function useRoleLogic(): RoleLogicReturn {
 
   return useMemo(() => {
     const role = user?.role || null;
+    const isSuperAdmin = role === "superadmin";
     const isAdmin = role === "admin";
     const isSupervisor = role === "supervisor";
     const isOperador = role === "operador";
     const isAuditor = role === "auditor";
 
+    const isAdminAssigned =
+      isAdmin &&
+      (!!user?.idBusinessUnit || (user?.unidadesAsignadas?.length ?? 0) > 0);
+
     // ============================================
     // PERMISOS DE VISUALIZACIÓN
     // ============================================
-    const canViewAllUnits = isAdmin;
-    const canViewAllData = isAdmin;
+    const canViewAllUnits = isSuperAdmin || (isAdmin && !isAdminAssigned);
+    const canViewAllData = isSuperAdmin || (isAdmin && !isAdminAssigned);
 
     // ============================================
     // PERMISOS DE GESTIÓN GENERALES
     // ============================================
     // Crear: Admin, Supervisor, Operador
-    const canCreate = isAdmin || isSupervisor || isOperador;
+    const canCreate = isSuperAdmin || isAdmin || isSupervisor || isOperador;
 
     // Editar: Admin, Supervisor
-    const canEdit = isAdmin || isSupervisor;
+    const canEdit = isSuperAdmin || isAdmin || isSupervisor;
 
     // Eliminar: Solo Admin
-    const canDelete = isAdmin;
+    const canDelete = isSuperAdmin || isAdmin;
 
     // Validar eventos: Admin, Supervisor
-    const canValidate = isAdmin || isSupervisor;
+    const canValidate = isSuperAdmin || isAdmin || isSupervisor;
 
     // Exportar: Admin, Supervisor, Auditor
-    const canExport = isAdmin || isSupervisor || isAuditor;
+    const canExport = isSuperAdmin || isAdmin || isSupervisor || isAuditor;
 
     // ============================================
     // PERMISOS ESPECÍFICOS POR MÓDULO
     // ============================================
     // Usuarios: Admin, Supervisor (solo para su unidad)
-    const canManageUsers = isAdmin || isSupervisor;
+    const canManageUsers = isSuperAdmin || isAdmin || isSupervisor;
 
     // Unidades de Negocio: Solo Admin
-    const canManageBusinessUnits = isAdmin;
+    const canManageBusinessUnits = isSuperAdmin || (isAdmin && !isAdminAssigned);
 
     // Vehículos: Admin, Supervisor
-    const canManageVehicles = isAdmin || isSupervisor;
+    const canManageVehicles = isSuperAdmin || isAdmin || isSupervisor;
 
     // Choferes: Admin, Supervisor
-    const canManageDrivers = isAdmin || isSupervisor;
+    const canManageDrivers = isSuperAdmin || isAdmin || isSupervisor;
 
     // Recursos (tanques, surtidores): Admin, Supervisor, Operador
-    const canManageResources = isAdmin || isSupervisor || isOperador;
+    const canManageResources = isSuperAdmin || isAdmin || isSupervisor || isOperador;
 
     // Centros de Costo: Admin, Supervisor
-    const canManageCostCenters = isAdmin || isSupervisor;
+    const canManageCostCenters = isSuperAdmin || isAdmin || isSupervisor;
 
     // Configuración: Solo Admin
-    const canManageSettings = isAdmin;
+    const canManageSettings = isSuperAdmin || (isAdmin && !isAdminAssigned);
 
     // ============================================
     // FILTRADO DE DATOS

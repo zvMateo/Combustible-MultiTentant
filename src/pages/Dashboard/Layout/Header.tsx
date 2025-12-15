@@ -32,20 +32,48 @@ export default function Header() {
   const { unidades, unidadActiva, setUnidadActiva } = useUnidadStore();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-
   const handleLogout = () => {
     logout();
     setOpen(false);
     navigate("/login");
   };
 
+  const isSuperAdmin = user?.role === "superadmin";
   const isAdmin = user?.role === "admin";
-  const canSwitchUnidad = isAdmin && unidades.length > 1;
+  const isCompanyAdmin = isSuperAdmin || isAdmin;
+  const isAdminAssigned =
+    isAdmin &&
+    (!!user?.idBusinessUnit || (user?.unidadesAsignadas?.length ?? 0) > 0);
+  const canSwitchUnidad =
+    (isSuperAdmin || (isAdmin && !isAdminAssigned)) && unidades.length > 1;
+
+  const unidadNombre = (() => {
+    if (isCompanyAdmin) {
+      if (isAdminAssigned) {
+        const forcedId = user?.idBusinessUnit ?? user?.unidadesAsignadas?.[0];
+        return (
+          unidades.find((u) => u.id === forcedId)?.nombre ||
+          unidadActiva?.nombre ||
+          "Mi Unidad"
+        );
+      }
+      return unidadActiva?.nombre || "Todas las Unidades";
+    }
+    if (unidadActiva?.nombre) return unidadActiva.nombre;
+    if (user?.idBusinessUnit) {
+      return (
+        unidades.find((u) => u.id === user.idBusinessUnit)?.nombre ||
+        "Mi Unidad"
+      );
+    }
+    return unidades[0]?.nombre || "Mi Unidad";
+  })();
 
   const getAvatarColor = () => "#1E2C56";
 
   const getRolColor = (rol: UserRole | undefined) => {
     const colors: Record<UserRole, { bg: string; color: string }> = {
+      superadmin: { bg: "#0f172a10", color: "#0f172a" },
       admin: { bg: "#1E2C5610", color: "#1E2C56" },
       supervisor: { bg: "#3b82f610", color: "#3b82f6" },
       operador: { bg: "#f59e0b10", color: "#f59e0b" },
@@ -90,14 +118,14 @@ export default function Header() {
           <div className="hidden items-center gap-3 md:flex bg-slate-50/50 px-4 py-2 rounded-xl border border-slate-100">
             <Store size={18} className="text-slate-400" />
             <span className="text-[15px] font-medium text-slate-600">
-              {unidadActiva?.nombre || "Todas las Unidades"}
+              {unidadNombre}
             </span>
           </div>
         </div>
 
         {/* Lado Derecho */}
         <div className="flex items-center gap-5">
-          
+
           {canSwitchUnidad && (
             <Select
               value={String(unidadActiva?.id ?? "all")}
@@ -106,7 +134,7 @@ export default function Header() {
               <SelectTrigger className="h-10 w-52 border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
                 <SelectValue placeholder="Cambiar Unidad" />
               </SelectTrigger>
-              <SelectContent className="bg-white border-slate-200 shadow-xl z-[60]">
+              <SelectContent className="bg-white border-slate-200 shadow-xl z-60">
                 <SelectItem value="all" className="text-sm font-medium">Todas las Unidades</SelectItem>
                 {unidades.map((u) => (
                   <SelectItem key={u.id} value={String(u.id)} className="text-sm">
@@ -141,7 +169,7 @@ export default function Header() {
             <DropdownMenuContent 
               align="end" 
               sideOffset={8}
-              className="w-64 border border-slate-200 bg-white p-1.5 shadow-xl rounded-2xl z-[60]"
+              className="w-64 border border-slate-200 bg-white p-1.5 shadow-xl rounded-2xl z-60"
             >
               <div className="flex items-center gap-3 p-3 mb-1">
                 <Avatar className="h-10 w-10 border border-slate-100">
@@ -169,7 +197,7 @@ export default function Header() {
                   <span className="text-sm font-medium">Mi Perfil</span>
                 </DropdownMenuItem>
 
-                {isAdmin && (
+                {isCompanyAdmin && !isAdminAssigned && (
                   <DropdownMenuItem 
                     onSelect={() => {
                       setOpen(false);

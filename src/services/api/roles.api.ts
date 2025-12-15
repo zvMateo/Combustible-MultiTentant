@@ -14,6 +14,7 @@ const ROLES_ENDPOINTS = {
 const USER_ROLES_ENDPOINTS = {
   getByUser: (userId: string) => `/UserRoles/GetUserRolesByUserId/${userId}`,
   addToUser: (userId: string) => `/UserRoles/AddUserRoles/${userId}`,
+  updateUserRoles: (userId: string) => `/UserRoles/UpdateUserRoles/${userId}`,
 } as const;
 
 export const rolesApi = {
@@ -25,11 +26,11 @@ export const rolesApi = {
 
     // ✅ Desempaquetar: {status: 200, message: '...', roles: Array(2)}
     if (Array.isArray(data)) {
-      return data;
+      return data as ApiRole[];
     }
 
     if (data && Array.isArray(data.roles)) {
-      return data.roles;
+      return data.roles as ApiRole[];
     }
 
     console.error("❌ Formato inesperado en roles.getAll():", data);
@@ -81,7 +82,7 @@ export const userRolesApi = {
         data.length,
         "roles"
       );
-      return data;
+      return data as ApiRole[];
     }
 
     if (data && Array.isArray(data.userRoles)) {
@@ -122,6 +123,18 @@ export const userRolesApi = {
         "Content-Type": "application/json", // ✅ Forzar Content-Type
       },
     });
+  },
+
+  async updateUserRoles(userId: string, roleData: AddUserRoleRequest): Promise<void> {
+    await axiosInstance.post(
+      USER_ROLES_ENDPOINTS.updateUserRoles(userId),
+      roleData,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
   },
 };
 

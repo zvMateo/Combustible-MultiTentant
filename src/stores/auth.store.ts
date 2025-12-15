@@ -148,7 +148,10 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Es Admin de empresa
-      isAdmin: () => get().user?.role === "admin",
+      isAdmin: () => {
+        const role = get().user?.role;
+        return role === "admin" || role === "superadmin";
+      },
     }),
     {
       name: "auth-storage",

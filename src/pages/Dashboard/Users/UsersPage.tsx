@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQueries } from "@tanstack/react-query";
 import {
   Download,
   Mail,
@@ -7,9 +8,8 @@ import {
   Plus,
   Search,
   Store,
-  ShieldCheck,
+  User,
   MoreVertical,
-  Briefcase,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { getErrorMessage } from "@/lib/axios";
+import { usersApi } from "@/services/api/users.api";
 
 // Hooks y Store
 import {
@@ -51,6 +52,7 @@ import {
   useUpdateUser,
   useRoles,
   useAddUserRole,
+  useUpdateUserRoles,
   useBusinessUnits,
 } from "@/hooks/queries";
 import { userRolesApi } from "@/services/api";
@@ -111,6 +113,7 @@ export default function UsersPage() {
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
   const addRoleMutation = useAddUserRole();
+  const updateUserRolesMutation = useUpdateUserRoles();
 
   // Filtrado de búsqueda y roles
   const filteredUsers = useMemo(() => {
@@ -129,9 +132,29 @@ export default function UsersPage() {
     return filtered;
   }, [users, searchTerm, isSupervisor, isAuditor, unidadIdsFilter]);
 
+  const userRoleQueries = useQueries({
+    queries: filteredUsers.map((u) => ({
+      queryKey: ["userRoles", u.id],
+      queryFn: () => userRolesApi.getByUser(u.id),
+      enabled: !!u.id,
+      staleTime: 1000 * 60 * 5,
+    })),
+  });
+
+  const roleNameByUserId = useMemo(() => {
+    const map = new Map<string, string>();
+    filteredUsers.forEach((u, idx) => {
+      const rolesData = userRoleQueries[idx]?.data;
+      map.set(u.id, rolesData?.[0]?.name || "Sin rol");
+    });
+    return map;
+  }, [filteredUsers, userRoleQueries]);
+
   // Handlers
-  const handleEdit = async (u: ApiUser) => {
+  const handleEdit = (u: ApiUser) => {
+    setErrors({});
     setEditingUser(u);
+    setSelectedRoleId("");
     setFormData({
       firstName: u.firstName || "",
       lastName: u.lastName || "",
@@ -143,20 +166,61 @@ export default function UsersPage() {
       idBusinessUnit: u.idBusinessUnit,
       phoneNumber: u.phoneNumber || "",
     });
-    try {
-      const rolesData = await userRolesApi.getByUser(u.id);
-      setSelectedRoleId(rolesData[0]?.id || "");
-    } catch {
-      setSelectedRoleId("");
-    }
     setOpenDialog(true);
+
+    void (async () => {
+      try {
+        const detailed = await usersApi.getById(u.id);
+        setFormData((prev) => ({
+          ...prev,
+          firstName: detailed?.firstName ?? prev.firstName,
+          lastName: detailed?.lastName ?? prev.lastName,
+          email: detailed?.email ?? prev.email,
+          userName: detailed?.userName ?? prev.userName,
+          idCompany: detailed?.idCompany ?? prev.idCompany,
+          idBusinessUnit: detailed?.idBusinessUnit ?? prev.idBusinessUnit,
+          phoneNumber: detailed?.phoneNumber ?? prev.phoneNumber,
+        }));
+      } catch {
+        // ignore
+      }
+
+      try {
+        const rolesData = await userRolesApi.getByUser(u.id);
+        setSelectedRoleId(rolesData[0]?.id || "");
+      } catch {
+        setSelectedRoleId("");
+      }
+    })();
   };
 
   const handleSave = async () => {
     setErrors({});
-    if (!formData.firstName || !formData.email || !formData.userName) {
-      setErrors({ general: "Por favor, completa los campos obligatorios." });
-      return;
+    if (editingUser) {
+      if (!formData.email?.trim() || !formData.userName?.trim()) {
+        setErrors({ general: "Por favor, completa los campos obligatorios." });
+        return;
+      }
+    } else {
+      if (
+        !formData.firstName?.trim() ||
+        !formData.lastName?.trim() ||
+        !formData.email?.trim() ||
+        !formData.userName?.trim()
+      ) {
+        setErrors({ general: "Por favor, completa Nombre, Apellido, Email y Usuario." });
+        return;
+      }
+
+      if (!formData.password?.trim() || !formData.confirmPassword?.trim()) {
+        setErrors({ general: "Por favor, completa la contraseña y su confirmación." });
+        return;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        setErrors({ general: "Las contraseñas no coinciden." });
+        return;
+      }
     }
 
     try {
@@ -173,12 +237,24 @@ export default function UsersPage() {
           data: updateData,
         });
         if (selectedRoleId) {
-          await addRoleMutation.mutateAsync({ userId: editingUser.id, data: { roleId: selectedRoleId } });
+          await updateUserRolesMutation.mutateAsync({
+            userId: editingUser.id,
+            data: { roleId: selectedRoleId },
+          });
         }
       } else {
-        const newUser = await createMutation.mutateAsync(formData);
+        const payload: CreateUserRequest = {
+          ...formData,
+          idBusinessUnit: formData.idBusinessUnit ?? 0,
+          phoneNumber: formData.phoneNumber || "",
+        };
+
+        const newUser = await createMutation.mutateAsync(payload);
         if (selectedRoleId && newUser?.id) {
-          await addRoleMutation.mutateAsync({ userId: newUser.id, data: { roleId: selectedRoleId } });
+          await addRoleMutation.mutateAsync({
+            userId: newUser.id,
+            data: { roleId: selectedRoleId },
+          });
         }
       }
       setOpenDialog(false);
@@ -273,7 +349,7 @@ export default function UsersPage() {
 
               <div className="space-y-1">
                 <h3 className="font-bold text-slate-800 text-base leading-tight truncate">
-                  {u.firstName} {u.lastName}
+                  {[u.firstName, u.lastName].filter(Boolean).join(" ") || u.userName}
                 </h3>
                 <Badge variant="secondary" className="bg-slate-100 text-slate-500 border-none text-[10px] font-bold px-2 py-0">
                   @{u.userName}
@@ -297,19 +373,15 @@ export default function UsersPage() {
                     {businessUnits.find(b => b.id === u.idBusinessUnit)?.name || "Acceso Global"}
                   </span>
                 </div>
+
+                <div className="flex items-center gap-3 text-slate-500">
+                  <User size={15} className="text-slate-300 shrink-0" />
+                  <span className="text-xs font-semibold truncate tracking-tight">
+                    {roleNameByUserId.get(u.id) || "Sin rol"}
+                  </span>
+                </div>
               </div>
             </CardContent>
-
-            <div className="px-5 py-3 bg-slate-50/50 border-t border-slate-50 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-blue-600">
-                <ShieldCheck size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Activo</span>
-              </div>
-              <div className="flex items-center gap-1 text-slate-300">
-                <Briefcase size={12} />
-                <span className="text-[9px] font-bold">EMPRESA #{u.idCompany}</span>
-              </div>
-            </div>
           </Card>
         ))}
       </div>
@@ -340,39 +412,68 @@ export default function UsersPage() {
           
           <div className="p-8 bg-white space-y-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
             {errors.general && (
-              <Alert variant="destructive" className="rounded-xl border-none bg-rose-50 text-rose-600">
-                <AlertDescription className="text-xs font-bold">{errors.general}</AlertDescription>
+              <Alert
+                variant="destructive"
+                className="rounded-xl border-none bg-rose-50 text-rose-600"
+              >
+                <AlertDescription className="text-xs font-bold">
+                  {errors.general}
+                </AlertDescription>
               </Alert>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Nombre</Label>
-                <Input value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all" placeholder="Ej: Juan" />
+            {!editingUser && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                    Nombre
+                  </Label>
+                  <Input
+                    value={formData.firstName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, firstName: e.target.value })
+                    }
+                    className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all"
+                    placeholder="Ej: Juan"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                    Apellido
+                  </Label>
+                  <Input
+                    value={formData.lastName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, lastName: e.target.value })
+                    }
+                    className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all"
+                    placeholder="Ej: Pérez"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Apellido</Label>
-                <Input value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all" placeholder="Ej: Pérez" />
-              </div>
-            </div>
-            
+            )}
+
             <div className="space-y-2">
-              <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Correo Electrónico</Label>
+              <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                Correo Electrónico
+              </Label>
               <Input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all" placeholder="email@empresa.com" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Nombre de Usuario</Label>
+                <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                  Nombre de Usuario
+                </Label>
                 <Input value={formData.userName} onChange={e => setFormData({...formData, userName: e.target.value})} className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all" placeholder="jperez" />
               </div>
               <div className="space-y-2">
                 <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Rol de Sistema</Label>
                 <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
-                  <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50/50">
+                  <SelectTrigger className="h-11 w-full rounded-xl border-slate-200 bg-white">
                     <SelectValue placeholder="Elegir rol..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="w-[--radix-select-trigger-width]">
                     {roles.map(r => <SelectItem key={r.id} value={r.id} className="font-medium">{r.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -398,10 +499,10 @@ export default function UsersPage() {
                 value={formData.idBusinessUnit ? String(formData.idBusinessUnit) : "none"} 
                 onValueChange={v => setFormData({...formData, idBusinessUnit: v === "none" ? undefined : Number(v)})}
               >
-                <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50/50">
+                <SelectTrigger className="h-11 w-full rounded-xl border-slate-200 bg-white">
                   <SelectValue placeholder="Sin unidad (Acceso Total)" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="w-[--radix-select-trigger-width]">
                   <SelectItem value="none" className="font-bold text-primary italic">Acceso Global (Todas las unidades)</SelectItem>
                   {businessUnits.map(b => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
                 </SelectContent>

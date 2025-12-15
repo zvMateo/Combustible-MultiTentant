@@ -36,7 +36,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
-  useLoadLiters,
+  useLoadLitersScoped,
   useDrivers,
   loadLitersKeys,
   resourcesKeys,
@@ -99,7 +99,7 @@ export default function Dashboard() {
   const unidadNombre = useUnidadActivaNombre();
   const unidadActiva = useUnidadActiva();
 
-  const { data: loadsData, isLoading: loadingLoads } = useLoadLiters();
+  const { data: loadsData, isLoading: loadingLoads } = useLoadLitersScoped();
   const { data: driversData, isLoading: loadingChoferes } = useDrivers();
 
   const toArray = <T,>(value: unknown): T[] => {

@@ -59,10 +59,11 @@ import {
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import type { BusinessUnit, Driver, LoadLiters, Resource, Trip } from "@/types/api.types";
 
 // Hooks
 import {
-  useLoadLiters,
+  useLoadLitersScoped,
   useVehicles,
   useDrivers,
   useTrips,
@@ -144,7 +145,7 @@ export default function ReportsPage() {
   const queryClient = useQueryClient();
 
   // React Query hooks
-  const { data: loadsData = [], isLoading: loadingLoads } = useLoadLiters();
+  const { data: loadsData = [], isLoading: loadingLoads } = useLoadLitersScoped();
   const { data: vehiclesData = [], isLoading: loadingVehiculos } =
     useVehicles();
   const { data: driversData = [], isLoading: loadingChoferes } = useDrivers();
@@ -155,12 +156,12 @@ export default function ReportsPage() {
     useBusinessUnits();
 
   // Extraer datos
-  const loads = loadsData;
-  const vehicles = vehiclesData;
-  const drivers = driversData;
-  const trips = tripsData;
-  const allResources = resourcesData;
-  const businessUnits = businessUnitsData;
+  const loads: LoadLiters[] = loadsData;
+  const vehicles: Resource[] = vehiclesData;
+  const drivers: Driver[] = driversData;
+  const trips: Trip[] = tripsData;
+  const allResources: Resource[] = resourcesData;
+  const businessUnits: BusinessUnit[] = businessUnitsData;
 
   // 1. Calcular Consumo por Vehículo (L/100km, L/hora)
   const consumoVehiculos = useMemo((): ConsumoVehiculoData[] => {

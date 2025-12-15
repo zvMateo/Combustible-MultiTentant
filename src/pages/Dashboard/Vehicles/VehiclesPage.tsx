@@ -77,7 +77,7 @@ export default function VehiclesPage() {
 
   const getInitialFormData = (): CreateResourceRequest => ({
     idType: RESOURCE_TYPES.VEHICLE,
-    idCompany: user?.idCompany || 2,
+    idCompany: user?.idCompany || 0,
     idBusinessUnit: undefined,
     nativeLiters: undefined,
     actualLiters: undefined,
@@ -87,7 +87,7 @@ export default function VehiclesPage() {
 
   const [formData, setFormData] = useState<CreateResourceRequest>({
     idType: RESOURCE_TYPES.VEHICLE,
-    idCompany: user?.idCompany || 2,
+    idCompany: user?.idCompany || 0,
     idBusinessUnit: undefined,
     nativeLiters: undefined,
     actualLiters: undefined,
