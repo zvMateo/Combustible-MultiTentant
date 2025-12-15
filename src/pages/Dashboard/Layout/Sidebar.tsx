@@ -269,7 +269,7 @@ export default function Sidebar() {
         </nav>
 
         {/* Card Upgrade PRO - Estilo Figma */}
-        <div className="shrink-0 px-4 pb-4">
+        {/* <div className="shrink-0 px-4 pb-4">
           <div className="rounded-3xl bg-gradient-to-br from-sky-100 to-sky-50 p-5 relative overflow-hidden">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
@@ -288,7 +288,7 @@ export default function Sidebar() {
             <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-sky-200/50 rounded-full" />
             <div className="absolute -right-2 -bottom-2 w-16 h-16 bg-sky-300/30 rounded-full" />
           </div>
-        </div>
+        </div> */}
 
         {/* Logout */}
         <div className="shrink-0 px-4 pb-6">
