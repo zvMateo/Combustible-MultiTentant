@@ -1,21 +1,18 @@
 import { useState, useCallback } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import {
-  Box,
-  Button,
-  Typography,
-  LinearProgress,
-  Alert,
-  Card,
-  CardContent,
-  IconButton,
-  Chip,
-} from "@mui/material";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import DeleteIcon from "@mui/icons-material/Delete";
-import ImageIcon from "@mui/icons-material/Image";
-import AudioFileIcon from "@mui/icons-material/AudioFile";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import ErrorIcon from "@mui/icons-material/Error";
+  Upload,
+  Trash2,
+  Image,
+  AudioLines,
+  CheckCircle,
+  AlertCircle,
+  X,
+} from "lucide-react";
 import type { TipoEvidencia } from "@/types/evidencia";
 
 interface FileUploadProps {
@@ -39,7 +36,7 @@ export default function FileUpload({
   onUpload,
   tipo,
   accept = tipo.startsWith("foto") ? "image/*" : "audio/*",
-  maxSize = 10, // 10MB por defecto
+  maxSize = 10,
   multiple = true,
   maxFiles = 5,
 }: FileUploadProps) {
@@ -52,26 +49,21 @@ export default function FileUpload({
       if (!newFiles) return;
 
       const validateFile = (file: File): string | null => {
-        // Validar tamaño
         if (file.size > maxSize * 1024 * 1024) {
           return `El archivo excede el tamaño máximo de ${maxSize}MB`;
         }
-
-        // Validar tipo
         if (tipo.startsWith("foto") && !file.type.startsWith("image/")) {
           return "Solo se permiten imágenes";
         }
         if (tipo === "audio" && !file.type.startsWith("audio/")) {
           return "Solo se permiten archivos de audio";
         }
-
         return null;
       };
 
       setError("");
       const fileArray = Array.from(newFiles);
 
-      // Validar cantidad
       if (files.length + fileArray.length > maxFiles) {
         setError(`Máximo ${maxFiles} archivos permitidos`);
         return;
@@ -92,7 +84,6 @@ export default function FileUpload({
           progress: 0,
         };
 
-        // Crear preview para imágenes
         if (file.type.startsWith("image/")) {
           fileWithPreview.preview = URL.createObjectURL(file);
         }
@@ -127,7 +118,6 @@ export default function FileUpload({
   const removeFile = (index: number) => {
     setFiles((prev) => {
       const newFiles = [...prev];
-      // Revocar URL de preview
       if (newFiles[index]?.preview) {
         URL.revokeObjectURL(newFiles[index].preview!);
       }
@@ -143,7 +133,6 @@ export default function FileUpload({
 
     if (filesToUpload.length === 0) return;
 
-    // Actualizar estado a uploading
     setFiles((prev) =>
       prev.map((f) =>
         f.status === "pending"
@@ -154,8 +143,6 @@ export default function FileUpload({
 
     try {
       await onUpload(filesToUpload, tipo);
-
-      // Actualizar a success
       setFiles((prev) =>
         prev.map((f) =>
           f.status === "uploading"
@@ -164,7 +151,6 @@ export default function FileUpload({
         )
       );
     } catch (err) {
-      // Actualizar a error
       setFiles((prev) =>
         prev.map((f) =>
           f.status === "uploading"
@@ -180,50 +166,43 @@ export default function FileUpload({
   };
 
   const getFileIcon = (file: File) => {
-    if (file.type.startsWith("image/")) {
-      return <ImageIcon />;
-    }
-    if (file.type.startsWith("audio/")) {
-      return <AudioFileIcon />;
-    }
-    return <CloudUploadIcon />;
+    if (file.type.startsWith("image/")) return <Image className="size-6" />;
+    if (file.type.startsWith("audio/"))
+      return <AudioLines className="size-6" />;
+    return <Upload className="size-6" />;
   };
 
   return (
-    <Box>
+    <div>
       {/* Drop Zone */}
-      <Box
+      <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        sx={{
-          border: isDragging ? "2px dashed #1E2C56" : "2px dashed #e0e0e0",
-          borderRadius: 2,
-          p: 4,
-          textAlign: "center",
-          bgcolor: isDragging ? "#1E2C5608" : "#f8f9fa",
-          transition: "all 0.2s",
-          cursor: "pointer",
-        }}
         onClick={() => document.getElementById("file-input")?.click()}
+        className={`
+          border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all
+          ${
+            isDragging
+              ? "border-primary bg-primary/5"
+              : "border-border bg-muted/30"
+          }
+          hover:border-primary/50
+        `}
       >
-        <CloudUploadIcon
-          sx={{
-            fontSize: 48,
-            color: isDragging ? "#1E2C56" : "#999",
-            mb: 2,
-          }}
+        <Upload
+          className={`size-12 mx-auto mb-3 ${
+            isDragging ? "text-primary" : "text-muted-foreground"
+          }`}
         />
-        <Typography variant="h6" gutterBottom>
-          Arrastra archivos aquí
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <p className="text-lg font-semibold mb-1">Arrastra archivos aquí</p>
+        <p className="text-sm text-muted-foreground mb-2">
           o haz clic para seleccionar
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
+        </p>
+        <p className="text-xs text-muted-foreground">
           {tipo.startsWith("foto") ? "Imágenes" : "Audio"} • Máximo {maxSize}MB
           • Hasta {maxFiles} archivos
-        </Typography>
+        </p>
 
         <input
           id="file-input"
@@ -231,153 +210,113 @@ export default function FileUpload({
           accept={accept}
           multiple={multiple}
           onChange={handleFileInput}
-          style={{ display: "none" }}
+          className="hidden"
         />
-      </Box>
+      </div>
 
       {/* Error Alert */}
       {error && (
-        <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError("")}>
-          {error}
+        <Alert variant="destructive" className="mt-3">
+          <AlertCircle className="size-4" />
+          <AlertDescription className="flex items-center justify-between">
+            {error}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setError("")}
+            >
+              <X className="size-3" />
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
 
       {/* File List */}
       {files.length > 0 && (
-        <Box sx={{ mt: 3 }}>
+        <div className="mt-4 space-y-2">
           {files.map((fileItem, index) => (
-            <Card
-              key={index}
-              elevation={0}
-              sx={{
-                mb: 2,
-                border: "1px solid #e0e0e0",
-                borderRadius: 2,
-              }}
-            >
-              <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 2,
-                  }}
-                >
+            <Card key={index}>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-3">
                   {/* Preview/Icon */}
                   {fileItem.preview ? (
-                    <Box
-                      component="img"
+                    <img
                       src={fileItem.preview}
-                      sx={{
-                        width: 60,
-                        height: 60,
-                        objectFit: "cover",
-                        borderRadius: 1,
-                      }}
+                      alt=""
+                      className="w-14 h-14 object-cover rounded-lg"
                     />
                   ) : (
-                    <Box
-                      sx={{
-                        width: 60,
-                        height: 60,
-                        bgcolor: "#f5f5f5",
-                        borderRadius: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#999",
-                      }}
-                    >
+                    <div className="w-14 h-14 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
                       {getFileIcon(fileItem.file)}
-                    </Box>
+                    </div>
                   )}
 
                   {/* File Info */}
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="body2" fontWeight={600}>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">
                       {fileItem.file.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    </p>
+                    <p className="text-xs text-muted-foreground">
                       {(fileItem.file.size / 1024 / 1024).toFixed(2)} MB
-                    </Typography>
+                    </p>
 
-                    {/* Progress Bar */}
                     {fileItem.status === "uploading" && (
-                      <LinearProgress
-                        variant="determinate"
+                      <Progress
                         value={fileItem.progress}
-                        sx={{ mt: 1 }}
+                        className="h-1 mt-2"
                       />
                     )}
 
-                    {/* Error Message */}
                     {fileItem.error && (
-                      <Typography
-                        variant="caption"
-                        color="error"
-                        sx={{ display: "block", mt: 0.5 }}
-                      >
+                      <p className="text-xs text-destructive mt-1">
                         {fileItem.error}
-                      </Typography>
+                      </p>
                     )}
-                  </Box>
+                  </div>
 
                   {/* Status & Actions */}
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <div className="flex items-center gap-2">
                     {fileItem.status === "success" && (
-                      <Chip
-                        icon={<CheckCircleIcon />}
-                        label="Subido"
-                        size="small"
-                        color="success"
-                      />
+                      <Badge variant="default" className="gap-1">
+                        <CheckCircle className="size-3" />
+                        Subido
+                      </Badge>
                     )}
                     {fileItem.status === "error" && (
-                      <Chip
-                        icon={<ErrorIcon />}
-                        label="Error"
-                        size="small"
-                        color="error"
-                      />
+                      <Badge variant="destructive" className="gap-1">
+                        <AlertCircle className="size-3" />
+                        Error
+                      </Badge>
                     )}
                     {fileItem.status === "pending" && (
-                      <IconButton
-                        size="small"
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
                         onClick={() => removeFile(index)}
-                        sx={{ color: "#ef4444" }}
                       >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
+                        <Trash2 className="size-4" />
+                      </Button>
                     )}
-                  </Box>
-                </Box>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
 
           {/* Upload Button */}
           {files.some((f) => f.status === "pending") && (
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={handleUpload}
-              startIcon={<CloudUploadIcon />}
-              sx={{
-                mt: 2,
-                bgcolor: "#1E2C56",
-                "&:hover": {
-                  bgcolor: "#16213E",
-                },
-              }}
-            >
+            <Button className="w-full mt-3" onClick={handleUpload}>
+              <Upload className="size-4 mr-2" />
               Subir {files.filter((f) => f.status === "pending").length}{" "}
               {files.filter((f) => f.status === "pending").length === 1
                 ? "archivo"
                 : "archivos"}
             </Button>
           )}
-        </Box>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }

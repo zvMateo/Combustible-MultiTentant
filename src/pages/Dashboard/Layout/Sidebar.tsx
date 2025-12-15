@@ -8,7 +8,6 @@ import {
   LogOut,
   Settings,
   Shield,
-  Sparkles,
   Store,
   Truck,
   User,
@@ -136,11 +135,13 @@ export default function Sidebar() {
     tenant.role === "admin" &&
     typeof tenant.idBusinessUnit === "number" &&
     tenant.idBusinessUnit > 0;
-  const unidadNombre = isAdmin
+  // Variable usada para mostrar nombre de unidad activa
+  const _unidadNombre = isAdmin
     ? tenant.idBusinessUnit
       ? unidadActiva?.nombre ?? "Mi Unidad"
       : unidadActiva?.nombre ?? "Global"
     : unidadActiva?.nombre ?? unidades[0]?.nombre ?? "Mi Unidad";
+  void _unidadNombre; // Evitar warning de variable no usada
 
   const handleMenuClick = (label: string) => {
     setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));

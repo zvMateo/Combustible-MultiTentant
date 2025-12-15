@@ -153,7 +153,7 @@ export default function RegisterPage() {
     <AuthShell onBack={() => navigate("/")}>
       <div className="mx-auto w-full max-w-[500px] py-10">
         <Card className="overflow-hidden rounded-2xl border-0 bg-white/95 shadow-2xl backdrop-blur-md">
-          <div className="bg-[#1E2C56] px-8 py-8 text-center text-white">
+          <div className="bg-primary px-8 py-8 text-center text-primary-foreground">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/20 bg-blue-500 shadow-lg">
               <Fuel className="h-7 w-7 text-white" />
             </div>
@@ -327,7 +327,7 @@ export default function RegisterPage() {
                   type="button"
                   onClick={handleNext}
                   disabled={isLoading}
-                  className="h-11 flex-[2] rounded-xl bg-[#1E2C56] font-bold text-white shadow-lg hover:bg-[#2a3c74]"
+                  className="h-11 flex-[2] rounded-xl bg-primary font-bold text-primary-foreground shadow-lg hover:bg-primary/90"
                 >
                   {isLoading ? (
                     <span className="flex items-center gap-2">

@@ -1,26 +1,48 @@
 // src/routes/index.tsx
+import { lazy, Suspense } from "react";
 import { useRoutes, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
-import { Box, CircularProgress } from "@mui/material";
+import { Spinner } from "@/components/ui/spinner";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Permission, UserRole } from "@/types";
 
-// Pages
+// Componente de carga para Suspense
+function PageLoader() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <Spinner className="size-8 text-primary" />
+    </div>
+  );
+}
+
+// Pages públicas (carga inmediata para mejor UX inicial)
 import LandingPage from "@/pages/Landing/LandingPage";
 import LoginPage from "@/pages/Auth/LoginPage";
 import RegisterPage from "@/pages/Auth/RegisterPage";
 
-// Dashboard Layout & Pages
+// Dashboard Layout (carga inmediata - es el contenedor)
 import DashboardLayout from "@/pages/Dashboard/Layout/DashboardLayout";
-import Dashboard from "@/pages/Dashboard/Dashboard/Dashboard";
-import BusinessUnitsPage from "@/pages/Dashboard/BusinessUnits/BusinessUnitsPage";
-import UsersPage from "@/pages/Dashboard/Users/UsersPage";
-import SettingsPage from "@/pages/Dashboard/Settings/SettingsPage";
-import VehiclesPage from "@/pages/Dashboard/Vehicles/VehiclesPage";
-import DriversPage from "@/pages/Dashboard/Drivers/DriversPage";
-import FuelManagementPage from "@/pages/Dashboard/Fuel/FuelManagementPage";
-import ResourcesPage from "@/pages/Dashboard/Resources/ResourcesPage";
-import ReportsPage from "@/pages/Dashboard/Reports/ReportsPage";
+
+// Dashboard Pages (lazy loading)
+const Dashboard = lazy(() => import("@/pages/Dashboard/Dashboard/Dashboard"));
+const BusinessUnitsPage = lazy(
+  () => import("@/pages/Dashboard/BusinessUnits/BusinessUnitsPage")
+);
+const UsersPage = lazy(() => import("@/pages/Dashboard/Users/UsersPage"));
+const SettingsPage = lazy(
+  () => import("@/pages/Dashboard/Settings/SettingsPage")
+);
+const VehiclesPage = lazy(
+  () => import("@/pages/Dashboard/Vehicles/VehiclesPage")
+);
+const DriversPage = lazy(() => import("@/pages/Dashboard/Drivers/DriversPage"));
+const FuelManagementPage = lazy(
+  () => import("@/pages/Dashboard/Fuel/FuelManagementPage")
+);
+const ResourcesPage = lazy(
+  () => import("@/pages/Dashboard/Resources/ResourcesPage")
+);
+const ReportsPage = lazy(() => import("@/pages/Dashboard/Reports/ReportsPage"));
 
 // Auth Guard Component
 function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -28,17 +50,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-          bgcolor: "#F8FAFB",
-        }}
-      >
-        <CircularProgress sx={{ color: "#284057" }} />
-      </Box>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Spinner className="size-8 text-primary" />
+      </div>
     );
   }
 
@@ -74,7 +88,11 @@ function RbacGuard({
   }
 
   // Admin asignado a unidad: bloquear pantallas de administración global
-  if (isAdminAssigned && (permission === "unidades:gestionar" || permission === "configuracion:editar")) {
+  if (
+    isAdminAssigned &&
+    (permission === "unidades:gestionar" ||
+      permission === "configuracion:editar")
+  ) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -97,12 +115,24 @@ export function AppRoutes() {
         </AuthGuard>
       ),
       children: [
-        { index: true, element: <Dashboard /> },
+        {
+          index: true,
+          element: (
+            <Suspense fallback={<PageLoader />}>
+              <Dashboard />
+            </Suspense>
+          ),
+        },
         {
           path: "business-units",
           element: (
-            <RbacGuard roles={["superadmin", "admin"]} permission="unidades:gestionar">
-              <BusinessUnitsPage />
+            <RbacGuard
+              roles={["superadmin", "admin"]}
+              permission="unidades:gestionar"
+            >
+              <Suspense fallback={<PageLoader />}>
+                <BusinessUnitsPage />
+              </Suspense>
             </RbacGuard>
           ),
         },
@@ -113,15 +143,22 @@ export function AppRoutes() {
               roles={["superadmin", "admin", "supervisor"]}
               permission="usuarios:gestionar"
             >
-              <UsersPage />
+              <Suspense fallback={<PageLoader />}>
+                <UsersPage />
+              </Suspense>
             </RbacGuard>
           ),
         },
         {
           path: "settings",
           element: (
-            <RbacGuard roles={["superadmin", "admin"]} permission="configuracion:editar">
-              <SettingsPage />
+            <RbacGuard
+              roles={["superadmin", "admin"]}
+              permission="configuracion:editar"
+            >
+              <Suspense fallback={<PageLoader />}>
+                <SettingsPage />
+              </Suspense>
             </RbacGuard>
           ),
         },
@@ -132,7 +169,9 @@ export function AppRoutes() {
               roles={["superadmin", "admin", "supervisor"]}
               permission="vehiculos:gestionar"
             >
-              <VehiclesPage />
+              <Suspense fallback={<PageLoader />}>
+                <VehiclesPage />
+              </Suspense>
             </RbacGuard>
           ),
         },
@@ -143,7 +182,9 @@ export function AppRoutes() {
               roles={["superadmin", "admin", "supervisor"]}
               permission="choferes:gestionar"
             >
-              <DriversPage />
+              <Suspense fallback={<PageLoader />}>
+                <DriversPage />
+              </Suspense>
             </RbacGuard>
           ),
         },
@@ -151,10 +192,18 @@ export function AppRoutes() {
           path: "fuel",
           element: (
             <RbacGuard
-              roles={["superadmin", "admin", "supervisor", "operador", "auditor"]}
+              roles={[
+                "superadmin",
+                "admin",
+                "supervisor",
+                "operador",
+                "auditor",
+              ]}
               permission="eventos:ver"
             >
-              <FuelManagementPage />
+              <Suspense fallback={<PageLoader />}>
+                <FuelManagementPage />
+              </Suspense>
             </RbacGuard>
           ),
         },
@@ -165,7 +214,9 @@ export function AppRoutes() {
               roles={["superadmin", "admin", "supervisor", "operador"]}
               permission="recursos:gestionar"
             >
-              <ResourcesPage />
+              <Suspense fallback={<PageLoader />}>
+                <ResourcesPage />
+              </Suspense>
             </RbacGuard>
           ),
         },
@@ -176,7 +227,9 @@ export function AppRoutes() {
               roles={["superadmin", "admin", "supervisor", "auditor"]}
               permission="reportes:ver"
             >
-              <ReportsPage />
+              <Suspense fallback={<PageLoader />}>
+                <ReportsPage />
+              </Suspense>
             </RbacGuard>
           ),
         },

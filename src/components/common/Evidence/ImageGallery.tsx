@@ -1,21 +1,15 @@
 import { useState } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  IconButton,
-  Box,
-  Grid,
-  Card,
-  CardMedia,
-  Typography,
-  Chip,
-} from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import ZoomInIcon from "@mui/icons-material/ZoomIn";
-import ZoomOutIcon from "@mui/icons-material/ZoomOut";
-import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
-import NavigateNextIcon from "@mui/icons-material/NavigateNext";
-import DownloadIcon from "@mui/icons-material/Download";
+  X,
+  ZoomIn,
+  ZoomOut,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+} from "lucide-react";
 import type { Evidencia } from "@/types/evidencia";
 
 interface ImageGalleryProps {
@@ -72,264 +66,130 @@ export default function ImageGallery({
 
   if (images.length === 0) {
     return (
-      <Box sx={{ textAlign: "center", py: 4 }}>
-        <Typography color="text.secondary">
-          No hay imágenes para mostrar
-        </Typography>
-      </Box>
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No hay imágenes para mostrar</p>
+      </div>
     );
   }
 
   return (
     <>
       {/* Thumbnail Grid */}
-      <Grid container spacing={2}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {images.map((image, index) => (
-          // @ts-expect-error - MUI v7 Grid type incompatibility
-          <Grid xs={6} sm={4} md={3} key={image.id}>
-            <Card
-              elevation={0}
-              sx={{
-                cursor: "pointer",
-                border: "1px solid #e0e0e0",
-                borderRadius: 2,
-                transition: "all 0.2s",
-                "&:hover": {
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                  transform: "scale(1.02)",
-                },
-              }}
-              onClick={() => handleOpen(index)}
-            >
-              <Box sx={{ position: "relative" }}>
-                <CardMedia
-                  component="img"
-                  height="150"
-                  image={image.url}
-                  alt={image.tipo}
-                  sx={{
-                    objectFit: "cover",
-                    backgroundColor: "#f5f5f5",
-                  }}
-                />
-                <Chip
-                  label={image.tipo.replace("foto-", "")}
-                  size="small"
-                  sx={{
-                    position: "absolute",
-                    top: 8,
-                    right: 8,
-                    bgcolor: "rgba(255,255,255,0.95)",
-                    fontWeight: 600,
-                    fontSize: 10,
-                    textTransform: "capitalize",
-                  }}
-                />
-              </Box>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* Lightbox Dialog */}
-      <Dialog
-        open={open}
-        onClose={handleClose}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: "#000",
-            backgroundImage: "none",
-          },
-        }}
-      >
-        <DialogContent sx={{ p: 0, position: "relative", bgcolor: "#000" }}>
-          {/* Close Button */}
-          <IconButton
-            onClick={handleClose}
-            sx={{
-              position: "absolute",
-              top: 16,
-              right: 16,
-              color: "white",
-              bgcolor: "rgba(0,0,0,0.5)",
-              zIndex: 1,
-              "&:hover": {
-                bgcolor: "rgba(0,0,0,0.7)",
-              },
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-
-          {/* Image Info */}
-          <Box
-            sx={{
-              position: "absolute",
-              top: 16,
-              left: 16,
-              zIndex: 1,
-            }}
-          >
-            <Chip
-              label={currentImage?.tipo.replace("foto-", "") || ""}
-              sx={{
-                bgcolor: "rgba(255,255,255,0.95)",
-                fontWeight: 600,
-                textTransform: "capitalize",
-              }}
-            />
-            <Typography
-              variant="caption"
-              sx={{
-                display: "block",
-                color: "white",
-                mt: 1,
-                bgcolor: "rgba(0,0,0,0.6)",
-                px: 1,
-                py: 0.5,
-                borderRadius: 1,
-              }}
-            >
-              {currentIndex + 1} / {images.length}
-            </Typography>
-          </Box>
-
-          {/* Zoom Controls */}
-          <Box
-            sx={{
-              position: "absolute",
-              bottom: 16,
-              right: 16,
-              display: "flex",
-              gap: 1,
-              zIndex: 1,
-            }}
-          >
-            <IconButton
-              onClick={handleZoomOut}
-              disabled={zoom <= 0.5}
-              sx={{
-                color: "white",
-                bgcolor: "rgba(0,0,0,0.5)",
-                "&:hover": {
-                  bgcolor: "rgba(0,0,0,0.7)",
-                },
-                "&:disabled": {
-                  color: "rgba(255,255,255,0.3)",
-                },
-              }}
-            >
-              <ZoomOutIcon />
-            </IconButton>
-            <Typography
-              sx={{
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                px: 1,
-                bgcolor: "rgba(0,0,0,0.5)",
-                borderRadius: 1,
-                minWidth: 60,
-                justifyContent: "center",
-              }}
-            >
-              {Math.round(zoom * 100)}%
-            </Typography>
-            <IconButton
-              onClick={handleZoomIn}
-              disabled={zoom >= 3}
-              sx={{
-                color: "white",
-                bgcolor: "rgba(0,0,0,0.5)",
-                "&:hover": {
-                  bgcolor: "rgba(0,0,0,0.7)",
-                },
-                "&:disabled": {
-                  color: "rgba(255,255,255,0.3)",
-                },
-              }}
-            >
-              <ZoomInIcon />
-            </IconButton>
-            {onDownload && (
-              <IconButton
-                onClick={handleDownload}
-                sx={{
-                  color: "white",
-                  bgcolor: "rgba(0,0,0,0.5)",
-                  "&:hover": {
-                    bgcolor: "rgba(0,0,0,0.7)",
-                  },
-                }}
-              >
-                <DownloadIcon />
-              </IconButton>
-            )}
-          </Box>
-
-          {/* Navigation Buttons */}
-          {images.length > 1 && (
-            <>
-              <IconButton
-                onClick={handlePrevious}
-                sx={{
-                  position: "absolute",
-                  left: 16,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "white",
-                  bgcolor: "rgba(0,0,0,0.5)",
-                  "&:hover": {
-                    bgcolor: "rgba(0,0,0,0.7)",
-                  },
-                }}
-              >
-                <NavigateBeforeIcon fontSize="large" />
-              </IconButton>
-              <IconButton
-                onClick={handleNext}
-                sx={{
-                  position: "absolute",
-                  right: 16,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "white",
-                  bgcolor: "rgba(0,0,0,0.5)",
-                  "&:hover": {
-                    bgcolor: "rgba(0,0,0,0.7)",
-                  },
-                }}
-              >
-                <NavigateNextIcon fontSize="large" />
-              </IconButton>
-            </>
-          )}
-
-          {/* Image */}
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              minHeight: "70vh",
-              overflow: "auto",
-              p: 6,
-            }}
+          <div
+            key={image.id}
+            onClick={() => handleOpen(index)}
+            className="relative cursor-pointer rounded-xl overflow-hidden border border-border transition-all hover:shadow-lg hover:scale-[1.02]"
           >
             <img
-              src={currentImage?.url}
-              alt={currentImage?.tipo}
-              style={{
-                maxWidth: "100%",
-                maxHeight: "80vh",
-                transform: `scale(${zoom})`,
-                transition: "transform 0.2s",
-                objectFit: "contain",
-              }}
+              src={image.url}
+              alt={image.tipo}
+              className="w-full h-36 object-cover bg-muted"
             />
-          </Box>
+            <Badge className="absolute top-2 right-2 text-[10px] capitalize">
+              {image.tipo.replace("foto-", "")}
+            </Badge>
+          </div>
+        ))}
+      </div>
+
+      {/* Lightbox Dialog */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-4xl p-0 bg-black border-none">
+          <div className="relative min-h-[70vh]">
+            {/* Close Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClose}
+              className="absolute top-4 right-4 z-10 text-white bg-black/50 hover:bg-black/70"
+            >
+              <X className="size-5" />
+            </Button>
+
+            {/* Image Info */}
+            <div className="absolute top-4 left-4 z-10">
+              <Badge className="capitalize">
+                {currentImage?.tipo.replace("foto-", "") || ""}
+              </Badge>
+              <p className="text-white text-xs mt-2 bg-black/60 px-2 py-1 rounded">
+                {currentIndex + 1} / {images.length}
+              </p>
+            </div>
+
+            {/* Zoom Controls */}
+            <div className="absolute bottom-4 right-4 z-10 flex gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleZoomOut}
+                disabled={zoom <= 0.5}
+                className="text-white bg-black/50 hover:bg-black/70 disabled:opacity-30"
+              >
+                <ZoomOut className="size-5" />
+              </Button>
+              <span className="text-white bg-black/50 px-3 py-2 rounded-md text-sm min-w-[60px] text-center">
+                {Math.round(zoom * 100)}%
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleZoomIn}
+                disabled={zoom >= 3}
+                className="text-white bg-black/50 hover:bg-black/70 disabled:opacity-30"
+              >
+                <ZoomIn className="size-5" />
+              </Button>
+              {onDownload && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDownload}
+                  className="text-white bg-black/50 hover:bg-black/70"
+                >
+                  <Download className="size-5" />
+                </Button>
+              )}
+            </div>
+
+            {/* Navigation Buttons */}
+            {images.length > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handlePrevious}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white bg-black/50 hover:bg-black/70 h-12 w-12"
+                >
+                  <ChevronLeft className="size-8" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleNext}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white bg-black/50 hover:bg-black/70 h-12 w-12"
+                >
+                  <ChevronRight className="size-8" />
+                </Button>
+              </>
+            )}
+
+            {/* Image */}
+            <div className="flex justify-center items-center min-h-[70vh] p-12">
+              <img
+                src={currentImage?.url}
+                alt={currentImage?.tipo}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "80vh",
+                  transform: `scale(${zoom})`,
+                  transition: "transform 0.2s",
+                  objectFit: "contain",
+                }}
+              />
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>

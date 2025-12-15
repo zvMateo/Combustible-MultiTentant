@@ -44,14 +44,16 @@ export default function DataTable<T extends { id: number | string }>({
   onView,
   emptyMessage = "No hay datos para mostrar",
 }: DataTableProps<T>) {
-  const badgeClassByColor = (color:
-    | "default"
-    | "primary"
-    | "secondary"
-    | "error"
-    | "info"
-    | "success"
-    | "warning") => {
+  const badgeClassByColor = (
+    color:
+      | "default"
+      | "primary"
+      | "secondary"
+      | "error"
+      | "info"
+      | "success"
+      | "warning"
+  ) => {
     switch (color) {
       case "success":
         return "bg-emerald-100 text-emerald-700";
@@ -113,7 +115,7 @@ export default function DataTable<T extends { id: number | string }>({
   return (
     <div className="overflow-hidden rounded-lg bg-white shadow-md">
       <Table>
-        <TableHeader className="bg-[#f5f5f5]">
+        <TableHeader className="bg-muted/50">
           <TableRow>
             {columns.map((column) => (
               <TableHead
@@ -124,7 +126,9 @@ export default function DataTable<T extends { id: number | string }>({
               </TableHead>
             ))}
             {(onEdit || onDelete || onView) && (
-              <TableHead className="font-bold text-slate-900">Acciones</TableHead>
+              <TableHead className="font-bold text-slate-900">
+                Acciones
+              </TableHead>
             )}
           </TableRow>
         </TableHeader>
@@ -192,4 +196,3 @@ export default function DataTable<T extends { id: number | string }>({
     </div>
   );
 }
-

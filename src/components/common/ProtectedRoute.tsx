@@ -67,7 +67,7 @@ export default function ProtectedRoute({
         </div>
         <Button
           onClick={() => window.history.back()}
-          className="bg-[#1E2C56] font-semibold hover:bg-[#16213E]"
+          className="bg-primary font-semibold hover:bg-primary/90"
         >
           Volver
         </Button>

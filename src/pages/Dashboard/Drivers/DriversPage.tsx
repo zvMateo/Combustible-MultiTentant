@@ -387,7 +387,7 @@ export default function DriversPage() {
         }}
       >
         <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden rounded-3xl border-none shadow-2xl bg-white">
-          <div className="bg-[#1E2C56] px-8 py-10 text-white relative">
+          <div className="bg-primary px-8 py-10 text-primary-foreground relative">
             <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/5" />
             <DialogTitle className="text-2xl font-bold text-white tracking-tight">
               {editingDriver
@@ -497,7 +497,7 @@ export default function DriversPage() {
             </Button>
             <Button
               onClick={handleSave}
-              className="rounded-xl bg-[#1E2C56] text-white font-bold px-10 shadow-xl shadow-blue-900/20 hover:bg-[#2a3c74] transition-all"
+              className="rounded-xl bg-primary text-primary-foreground font-bold px-10 shadow-xl hover:bg-primary/90 transition-all"
             >
               {editingDriver ? "Guardar Cambios" : "Confirmar Chofer"}
             </Button>

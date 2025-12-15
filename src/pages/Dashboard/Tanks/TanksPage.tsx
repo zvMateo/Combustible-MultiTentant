@@ -294,7 +294,7 @@ export default function TanksPage() {
                 type="button"
                 onClick={handleNew}
                 disabled={createMutation.isPending}
-                className="h-10 rounded-xl bg-[#1E2C56] px-6 font-bold text-white shadow-lg shadow-blue-900/20 hover:bg-[#2a3c74] active:scale-95"
+                className="h-10 rounded-xl bg-primary px-6 font-bold text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-95"
               >
                 <Plus className="mr-2 h-4 w-4 text-white" />
                 Nuevo Tanque
