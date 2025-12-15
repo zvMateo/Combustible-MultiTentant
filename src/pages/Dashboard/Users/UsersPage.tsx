@@ -7,6 +7,7 @@ import {
   Phone,
   Plus,
   Search,
+  ShieldCheck,
   Store,
   User,
   MoreVertical,
@@ -223,12 +224,16 @@ export default function UsersPage() {
         !formData.email?.trim() ||
         !formData.userName?.trim()
       ) {
-        setErrors({ general: "Por favor, completa Nombre, Apellido, Email y Usuario." });
+        setErrors({
+          general: "Por favor, completa Nombre, Apellido, Email y Usuario.",
+        });
         return;
       }
 
       if (!formData.password?.trim() || !formData.confirmPassword?.trim()) {
-        setErrors({ general: "Por favor, completa la contraseña y su confirmación." });
+        setErrors({
+          general: "Por favor, completa la contraseña y su confirmación.",
+        });
         return;
       }
 
@@ -397,43 +402,58 @@ export default function UsersPage() {
                       )}
                     </div>
 
-              <div className="space-y-1">
-                <h3 className="font-bold text-slate-800 text-base leading-tight truncate">
-                  {[u.firstName, u.lastName].filter(Boolean).join(" ") || u.userName}
-                </h3>
-                <Badge variant="secondary" className="bg-slate-100 text-slate-500 border-none text-[10px] font-bold px-2 py-0">
-                  @{u.userName}
-                </Badge>
-              </div>
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-slate-800 text-base leading-tight truncate">
+                        {[u.firstName, u.lastName].filter(Boolean).join(" ") ||
+                          u.userName}
+                      </h3>
+                      <Badge
+                        variant="secondary"
+                        className="bg-slate-100 text-slate-500 border-none text-[10px] font-bold px-2 py-0"
+                      >
+                        @{u.userName}
+                      </Badge>
+                    </div>
 
-              <div className="mt-5 space-y-2.5">
-                <div className="flex items-center gap-3 text-slate-500">
-                  <Mail size={15} className="text-slate-300 shrink-0" />
-                  <span className="text-xs font-medium truncate tracking-tight">{u.email}</span>
-                </div>
-                {u.phoneNumber && (
-                  <div className="flex items-center gap-3 text-slate-500">
-                    <Phone size={15} className="text-slate-300 shrink-0" />
-                    <span className="text-xs font-medium tracking-tight">{u.phoneNumber}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-3 text-slate-500">
-                  <Store size={15} className="text-slate-300 shrink-0" />
-                  <span className="text-xs font-medium truncate tracking-tight italic">
-                    {businessUnits.find(b => b.id === u.idBusinessUnit)?.name || "Acceso Global"}
-                  </span>
-                </div>
+                    <div className="mt-5 space-y-2.5">
+                      <div className="flex items-center gap-3 text-slate-500">
+                        <Mail size={15} className="text-slate-300 shrink-0" />
+                        <span className="text-xs font-medium truncate tracking-tight">
+                          {u.email}
+                        </span>
+                      </div>
+                      {u.phoneNumber && (
+                        <div className="flex items-center gap-3 text-slate-500">
+                          <Phone
+                            size={15}
+                            className="text-slate-300 shrink-0"
+                          />
+                          <span className="text-xs font-medium tracking-tight">
+                            {u.phoneNumber}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3 text-slate-500">
+                        <Store size={15} className="text-slate-300 shrink-0" />
+                        <span className="text-xs font-medium truncate tracking-tight italic">
+                          {businessUnits.find((b) => b.id === u.idBusinessUnit)
+                            ?.name || "Acceso Global"}
+                        </span>
+                      </div>
 
-                <div className="flex items-center gap-3 text-slate-500">
-                  <User size={15} className="text-slate-300 shrink-0" />
-                  <span className="text-xs font-semibold truncate tracking-tight">
-                    {roleNameByUserId.get(u.id) || "Sin rol"}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                      <div className="flex items-center gap-3 text-slate-500">
+                        <User size={15} className="text-slate-300 shrink-0" />
+                        <span className="text-xs font-semibold truncate tracking-tight">
+                          {roleNameByUserId.get(u.id) || "Sin rol"}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </SectionCard>
       </div>
 
       {/* Dialogo Refactorizado - Contrastes Altos */}
@@ -507,7 +527,15 @@ export default function UsersPage() {
               <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
                 Correo Electrónico
               </Label>
-              <Input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all" placeholder="email@empresa.com" />
+              <Input
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all"
+                placeholder="email@empresa.com"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -515,16 +543,36 @@ export default function UsersPage() {
                 <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
                   Nombre de Usuario
                 </Label>
-                <Input value={formData.userName} onChange={e => setFormData({...formData, userName: e.target.value})} className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all" placeholder="jperez" />
+                <Input
+                  value={formData.userName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, userName: e.target.value })
+                  }
+                  className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all"
+                  placeholder="jperez"
+                />
               </div>
               <div className="space-y-2">
-                <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Rol de Sistema</Label>
-                <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+                <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                  Rol de Sistema
+                </Label>
+                <Select
+                  value={selectedRoleId}
+                  onValueChange={setSelectedRoleId}
+                >
                   <SelectTrigger className="h-11 w-full rounded-xl border-slate-200 bg-white">
                     <SelectValue placeholder="Elegir rol..." />
                   </SelectTrigger>
                   <SelectContent className="w-[--radix-select-trigger-width]">
-                    {roles.map(r => <SelectItem key={r.id} value={r.id} className="font-medium">{r.name}</SelectItem>)}
+                    {roles.map((r) => (
+                      <SelectItem
+                        key={r.id}
+                        value={r.id}
+                        className="font-medium"
+                      >
+                        {r.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -585,8 +633,17 @@ export default function UsersPage() {
                   <SelectValue placeholder="Sin unidad (Acceso Total)" />
                 </SelectTrigger>
                 <SelectContent className="w-[--radix-select-trigger-width]">
-                  <SelectItem value="none" className="font-bold text-primary italic">Acceso Global (Todas las unidades)</SelectItem>
-                  {businessUnits.map(b => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
+                  <SelectItem
+                    value="none"
+                    className="font-bold text-primary italic"
+                  >
+                    Acceso Global (Todas las unidades)
+                  </SelectItem>
+                  {businessUnits.map((b) => (
+                    <SelectItem key={b.id} value={String(b.id)}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
