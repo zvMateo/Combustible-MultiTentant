@@ -1473,62 +1473,76 @@ export default function SettingsPage() {
   const canEdit = hasPermission("configuracion:editar") && canManageSettings;
 
   return (
-    <div className="space-y-6">
-      <div className="border-b bg-background px-6 py-6">
-        <PageHeader
-          title="Configuración"
-          description="Gestión de políticas, precios, umbrales, alertas y personalización"
-        />
-      </div>
+    <div className="space-y-6 p-6">
+      <PageHeader
+        title="Configuración"
+        description="Gestión de políticas, precios, umbrales, alertas y personalización"
+      />
 
-      <div className="p-6 space-y-4">
-        {!canEdit ? (
-          <Alert variant="destructive">
-            <TriangleAlert className="size-4" />
-            <AlertTitle>Sin permisos</AlertTitle>
-            <AlertDescription>
-              No tienes permisos para editar la configuración. Los cambios no se
-              guardarán.
-            </AlertDescription>
-          </Alert>
-        ) : null}
+      {!canEdit ? (
+        <Alert variant="destructive" className="rounded-2xl">
+          <TriangleAlert className="size-4" />
+          <AlertTitle>Sin permisos</AlertTitle>
+          <AlertDescription>
+            No tienes permisos para editar la configuración. Los cambios no se
+            guardarán.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
-        <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-lg border bg-background p-1">
-            <TabsTrigger value="politicas" className="h-10">
-              <Shield className="size-4" />
-              Políticas
-            </TabsTrigger>
-            <TabsTrigger value="precios" className="h-10">
-              <Fuel className="size-4" />
-              Precios
-            </TabsTrigger>
-            <TabsTrigger value="umbrales" className="h-10">
-              <Car className="size-4" />
-              Umbrales
-            </TabsTrigger>
-            <TabsTrigger value="whitelist" className="h-10">
-              <Users className="size-4" />
-              WhiteList IA
-            </TabsTrigger>
-            <TabsTrigger value="alertas" className="h-10">
-              <Bell className="size-4" />
-              Alertas
-            </TabsTrigger>
-            <TabsTrigger value="personalizacion" className="h-10">
-              <Palette className="size-4" />
-              Personalización
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <TabsList className="mb-6 h-auto w-full flex-wrap justify-start gap-2 rounded-2xl bg-secondary/50 p-1.5">
+          <TabsTrigger
+            value="politicas"
+            className="h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Shield className="size-4" />
+            Políticas
+          </TabsTrigger>
+          <TabsTrigger
+            value="precios"
+            className="h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Fuel className="size-4" />
+            Precios
+          </TabsTrigger>
+          <TabsTrigger
+            value="umbrales"
+            className="h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Car className="size-4" />
+            Umbrales
+          </TabsTrigger>
+          <TabsTrigger
+            value="whitelist"
+            className="h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Users className="size-4" />
+            WhiteList IA
+          </TabsTrigger>
+          <TabsTrigger
+            value="alertas"
+            className="h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Bell className="size-4" />
+            Alertas
+          </TabsTrigger>
+          <TabsTrigger
+            value="personalizacion"
+            className="h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Palette className="size-4" />
+            Personalización
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-        {tab === "politicas" && <PoliticasTab />}
-        {tab === "precios" && <PreciosTab />}
-        {tab === "umbrales" && <UmbralesTab />}
-        {tab === "whitelist" && <WhiteListTab />}
-        {tab === "alertas" && <AlertasTab />}
-        {tab === "personalizacion" && <PersonalizacionTab />}
-      </div>
+      {tab === "politicas" && <PoliticasTab />}
+      {tab === "precios" && <PreciosTab />}
+      {tab === "umbrales" && <UmbralesTab />}
+      {tab === "whitelist" && <WhiteListTab />}
+      {tab === "alertas" && <AlertasTab />}
+      {tab === "personalizacion" && <PersonalizacionTab />}
     </div>
   );
 }

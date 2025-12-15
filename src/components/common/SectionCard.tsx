@@ -27,7 +27,7 @@ export function SectionCard({
   contentClassName,
 }: SectionCardProps) {
   return (
-    <Card className={cn("border-0 shadow-sm", className)}>
+    <Card className={cn("", className)}>
       {title || description || actions ? (
         <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-1">

@@ -217,7 +217,7 @@ export default function VehiclesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="border-b bg-background px-6 py-6">
+      <div className="bg-background px-6 py-6">
         <PageHeader
           title="Flota de Vehículos"
           description="Administración de activos y unidades de transporte"

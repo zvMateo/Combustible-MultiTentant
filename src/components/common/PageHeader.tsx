@@ -20,13 +20,13 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 md:flex-row md:items-center md:justify-between animate-fade-in",
+        "flex flex-col gap-4 md:flex-row md:items-center md:justify-between",
         className
       )}
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3">
         {icon ? (
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary shrink-0">
             {icon}
           </div>
         ) : null}
@@ -35,9 +35,7 @@ export function PageHeader({
             {title}
           </h1>
           {description ? (
-            <p className="mt-1.5 text-sm font-medium text-muted-foreground">
-              {description}
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           ) : null}
         </div>
       </div>

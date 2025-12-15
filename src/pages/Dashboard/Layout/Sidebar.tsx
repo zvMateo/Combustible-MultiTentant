@@ -5,8 +5,10 @@ import {
   ChevronDown,
   Fuel,
   LayoutDashboard,
+  LogOut,
   Settings,
   Shield,
+  Sparkles,
   Store,
   Truck,
   User,
@@ -16,10 +18,9 @@ import { useTenantContext } from "@/stores/auth.store";
 import { useUnidadStore } from "@/stores/unidad.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { UserRole, Permission } from "@/types";
-import { useTheme } from "@/components/providers/theme/use-theme";
+import { useAuthStore } from "@/stores/auth.store";
 
-// Mantenemos el ancho de 340px con presencia institucional
-const DRAWER_WIDTH = 340;
+const DRAWER_WIDTH = 260;
 
 interface MenuItem {
   label: string;
@@ -121,8 +122,8 @@ export default function Sidebar() {
   const location = useLocation();
   const tenant = useTenantContext();
   const { unidadActiva, unidades } = useUnidadStore();
-  const { tenantTheme } = useTheme();
   const { hasRole, can } = usePermissions();
+  const { logout } = useAuthStore();
 
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
     Administración: true,
@@ -161,57 +162,33 @@ export default function Sidebar() {
     return permission ? can(permission) : true;
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <div className="shrink-0" style={{ width: DRAWER_WIDTH }}>
       <aside
-        className="fixed left-0 top-0 flex h-screen flex-col border-r shadow-2xl"
-        style={{
-          width: DRAWER_WIDTH,
-          background: `linear-gradient(180deg, ${
-            tenantTheme?.sidebarBg || "#1E2C56"
-          } 0%, ${tenantTheme?.sidebarBg || "#151f3d"} 100%)`,
-          color: tenantTheme?.sidebarText || "#ffffff",
-          borderRightColor: "rgba(255, 255, 255, 0.08)",
-        }}
+        className="fixed left-0 top-0 flex h-screen flex-col bg-sidebar text-sidebar-foreground"
+        style={{ width: DRAWER_WIDTH }}
       >
-        {/* HEADER GESTIÓN */}
-        <div className="shrink-0 px-6 py-8 text-center">
-          <div className="mb-5 flex justify-center">
-            <div
-              className="flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg transition-transform duration-300 hover:scale-105"
-              style={{
-                background: `linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)`,
-                border: `2px solid ${tenantTheme?.accentColor || "#10b981"}50`,
-                boxShadow: `0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)`,
-              }}
-            >
-              <Fuel
-                size={30}
-                style={{ color: tenantTheme?.accentColor || "#10b981" }}
-              />
+        {/* Logo y Marca */}
+        <div className="shrink-0 px-6 pt-8 pb-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
+              <Fuel size={24} className="text-white" />
             </div>
-          </div>
-
-          <h1 className="text-xl font-bold tracking-tight mb-1">
-            {"Gestión Combustible"}
-          </h1>
-          <p className="text-xs opacity-40 font-medium mb-5 tracking-widest uppercase">
-            {tenant.name}
-          </p>
-
-          <div className="inline-flex items-center gap-2.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 px-4 py-2 text-sm font-medium transition-all duration-200 hover:bg-white/10">
-            <Store
-              size={15}
-              style={{ color: tenantTheme?.accentColor || "#10b981" }}
-            />
-            <span className="truncate max-w-[200px]">{unidadNombre}</span>
+            <div>
+              <h1 className="text-lg font-bold text-white tracking-tight">
+                {tenant.name || "Combustible"}
+              </h1>
+            </div>
           </div>
         </div>
 
-        <div className="mx-6 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent mb-4" />
-
-        {/* NAVEGACIÓN: Bloques con ICONOS y compactos */}
-        <nav className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar">
+        {/* Navegación Principal */}
+        <nav className="flex-1 overflow-y-auto px-4 py-2">
           <div className="space-y-1">
             {menuStructure.map((item) => {
               if (!hasAccess(item.roles)) return null;
@@ -224,55 +201,45 @@ export default function Sidebar() {
                 const isOpen = !!openMenus[item.label];
 
                 return (
-                  <div key={item.label} className="menu-group">
+                  <div key={item.label}>
                     <button
                       onClick={() => handleMenuClick(item.label)}
-                      className="flex w-full items-center justify-between rounded-xl px-4 py-2 transition-all hover:bg-white/5"
+                      className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-white/70 transition-all hover:bg-white/5 hover:text-white"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="opacity-70">{item.icon}</span>
-                        <span className="text-[15px] font-semibold tracking-wide">
+                        {item.icon}
+                        <span className="text-sm font-medium">
                           {item.label}
                         </span>
                       </div>
                       <ChevronDown
                         size={16}
                         className={`transition-transform duration-200 ${
-                          isOpen ? "rotate-180" : "opacity-40"
+                          isOpen ? "rotate-180" : ""
                         }`}
                       />
                     </button>
 
                     <div
                       className={`overflow-hidden transition-all duration-300 ${
-                        isOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+                        isOpen ? "max-h-60" : "max-h-0"
                       }`}
                     >
-                      <div className="space-y-0.5 py-1 pl-4">
-                        {" "}
-                        {/* Menos indentación para que entren los iconos */}
+                      <div className="space-y-1 py-1 pl-4">
                         {filteredSub.map((sub) => {
                           const active = isActive(sub.path);
                           return (
                             <button
                               key={sub.path}
                               onClick={() => sub.path && navigate(sub.path)}
-                              className={`flex w-full items-center gap-3 rounded-lg py-1.5 px-4 text-left transition-all ${
+                              className={`flex w-full items-center gap-3 rounded-xl py-2.5 px-4 text-left transition-all ${
                                 active
-                                  ? "bg-white/10 text-white shadow-sm"
+                                  ? "bg-white text-sidebar font-semibold"
                                   : "text-white/60 hover:text-white hover:bg-white/5"
                               }`}
                             >
-                              <span
-                                className={
-                                  active ? "opacity-100" : "opacity-50"
-                                }
-                              >
-                                {sub.icon}
-                              </span>
-                              <span className="text-[14px] font-medium">
-                                {sub.label}
-                              </span>
+                              {sub.icon}
+                              <span className="text-sm">{sub.label}</span>
                             </button>
                           );
                         })}
@@ -287,59 +254,51 @@ export default function Sidebar() {
                 <button
                   key={item.path}
                   onClick={() => item.path && navigate(item.path)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-2 transition-all ${
+                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 transition-all ${
                     active
-                      ? "bg-white/15 shadow-sm"
-                      : "hover:bg-white/5 opacity-80 hover:opacity-100"
+                      ? "bg-white text-sidebar font-semibold"
+                      : "text-white/70 hover:bg-white/5 hover:text-white"
                   }`}
-                  style={
-                    active
-                      ? {
-                          borderLeft: `4px solid ${
-                            tenantTheme?.accentColor || "#10b981"
-                          }`,
-                        }
-                      : {}
-                  }
                 >
                   {item.icon}
-                  <span className="text-[15px] font-semibold tracking-wide">
-                    {item.label}
-                  </span>
+                  <span className="text-sm font-medium">{item.label}</span>
                 </button>
               );
             })}
           </div>
         </nav>
 
-        {/* FOOTER */}
-        <div className="shrink-0 p-6">
-          <div className="rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-4 border border-white/10 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-none mb-1.5">
-                  Estado del Sistema
-                </span>
-                <span className="text-sm font-semibold text-white/90">
-                  Operativo
+        {/* Card Upgrade PRO - Estilo Figma */}
+        <div className="shrink-0 px-4 pb-4">
+          <div className="rounded-3xl bg-gradient-to-br from-sky-100 to-sky-50 p-5 relative overflow-hidden">
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles size={16} className="text-sky-600" />
+                <span className="text-xs font-bold text-sky-800 uppercase tracking-wider">
+                  Unidad Activa
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_#10b981] animate-pulse" />
-                <span className="text-xs font-medium text-emerald-400">
-                  Online
-                </span>
-              </div>
+              <p className="text-sm font-semibold text-slate-700 mb-1">
+                {unidadNombre}
+              </p>
+              <p className="text-xs text-slate-500">
+                {isAdmin ? "Acceso administrativo" : "Acceso operativo"}
+              </p>
             </div>
+            <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-sky-200/50 rounded-full" />
+            <div className="absolute -right-2 -bottom-2 w-16 h-16 bg-sky-300/30 rounded-full" />
           </div>
-          <div className="mt-5 flex justify-between items-center px-2">
-            <span className="text-[11px] text-white/30 font-semibold tracking-wide">
-              GOODAPPS
-            </span>
-            <span className="text-[11px] text-white/20 font-medium px-2 py-0.5 rounded-full bg-white/5">
-              v1.0 • 2025
-            </span>
-          </div>
+        </div>
+
+        {/* Logout */}
+        <div className="shrink-0 px-4 pb-6">
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-white/60 transition-all hover:bg-white/5 hover:text-white"
+          >
+            <LogOut size={20} />
+            <span className="text-sm font-medium">Cerrar Sesión</span>
+          </button>
         </div>
       </aside>
     </div>

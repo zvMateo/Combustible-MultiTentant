@@ -224,7 +224,7 @@ export default function DriversPage() {
 
   return (
     <div className="space-y-6">
-      <div className="border-b bg-background px-6 py-6">
+      <div className="bg-background px-6 py-6">
         <PageHeader
           title="Choferes"
           description="Administración del personal de conducción"

@@ -201,7 +201,7 @@ export default function BusinessUnitsPage() {
   if (loadingUnits) {
     return (
       <div className="space-y-6">
-        <div className="border-b bg-background px-6 py-6">
+        <div className="px-6 py-6">
           <PageHeader
             title="Unidades de Negocio"
             description="Gestioná las sedes, campos y puntos de carga de la organización"
@@ -230,7 +230,7 @@ export default function BusinessUnitsPage() {
   if (unitsError) {
     return (
       <div className="space-y-6">
-        <div className="border-b bg-background px-6 py-6">
+        <div className="px-6 py-6">
           <PageHeader
             title="Unidades de Negocio"
             description="Gestioná las sedes, campos y puntos de carga de la organización"
@@ -253,7 +253,7 @@ export default function BusinessUnitsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="border-b bg-background px-6 py-6">
+      <div className="bg-background px-6 py-6">
         <PageHeader
           title="Unidades de Negocio"
           description="Gestioná las sedes, campos y puntos de carga de la organización"

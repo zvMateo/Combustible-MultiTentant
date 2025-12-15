@@ -15,7 +15,7 @@ function Card({
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-2xl py-6 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)] transition-all duration-200 hover:shadow-[0_8px_24px_-4px_rgba(0,0,0,0.12)]",
+        "bg-card text-card-foreground flex flex-col gap-4 rounded-3xl p-6 shadow-sm border border-border/50 transition-all duration-200 hover:shadow-md",
         className
       )}
       style={{ ...(style || {}), ...(sx || {}) } as React.CSSProperties}

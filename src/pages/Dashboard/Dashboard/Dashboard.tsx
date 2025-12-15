@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -76,50 +75,43 @@ function KPICard({
   color,
   loading,
 }: KPICardProps) {
-  if (loading) return <Skeleton className="h-36 w-full rounded-2xl" />;
+  if (loading) return <Skeleton className="h-28 w-full rounded-3xl" />;
 
   return (
-    <Card className="group border-0 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-white rounded-2xl overflow-hidden">
-      <CardContent className="p-5">
-        <div className="flex justify-between items-start">
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
-            style={{ backgroundColor: `${color}12`, color: color }}
-          >
-            <Icon size={24} strokeWidth={2} />
-          </div>
-          <Badge
-            variant="outline"
-            className="border-none font-bold text-[10px] px-2.5 py-1 rounded-lg"
-            style={{
-              backgroundColor:
-                trend === "up"
-                  ? "#10b98115"
-                  : trend === "down"
-                  ? "#ef444415"
-                  : "#f1f5f9",
-              color:
-                trend === "up"
-                  ? "#10b981"
-                  : trend === "down"
-                  ? "#ef4444"
-                  : "#64748b",
-            }}
-          >
-            {trend === "up" ? "↑ " : trend === "down" ? "↓ " : ""}
-            {change}
-          </Badge>
-        </div>
-        <div className="mt-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+    <div className="group bg-card rounded-3xl p-5 border border-border/50 shadow-sm transition-all duration-200 hover:shadow-md hover:border-border">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground mb-1">
             {label}
           </p>
           <p className="text-2xl font-bold text-foreground tracking-tight">
             {value}
           </p>
         </div>
-      </CardContent>
-    </Card>
+        <div
+          className="flex h-12 w-12 items-center justify-center rounded-2xl"
+          style={{ backgroundColor: `${color}15`, color: color }}
+        >
+          <Icon size={22} strokeWidth={2} />
+        </div>
+      </div>
+      {change && (
+        <div className="mt-3 flex items-center gap-1.5">
+          <span
+            className={`text-xs font-medium ${
+              trend === "up"
+                ? "text-emerald-600"
+                : trend === "down"
+                ? "text-red-500"
+                : "text-muted-foreground"
+            }`}
+          >
+            {trend === "up" ? "↑" : trend === "down" ? "↓" : ""}
+            {change}
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -183,27 +175,22 @@ export default function Dashboard() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6 animate-fade-in p-6">
         {/* Header Dashboard */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-foreground tracking-tight">
-              Resumen Operativo
-            </h2>
-            <p className="text-sm text-muted-foreground font-medium mt-1">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+              Dashboard
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
               {unidadActiva
                 ? `Visualizando ${unidadNombre}`
-                : "Resumen consolidado de flota"}
+                : "Resumen consolidado de operaciones"}
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleRefresh}
-              className="rounded-xl"
-            >
+            <Button variant="outline" size="icon" onClick={handleRefresh}>
               <RefreshCw
                 className={`h-4 w-4 ${loadingLoads ? "animate-spin" : ""}`}
               />
@@ -212,7 +199,7 @@ export default function Dashboard() {
               value={periodo}
               onValueChange={(value) => setPeriodo(value as PeriodoType)}
             >
-              <SelectTrigger className="w-44 rounded-xl">
+              <SelectTrigger className="w-40">
                 <SelectValue placeholder="Periodo" />
               </SelectTrigger>
               <SelectContent>
@@ -224,8 +211,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* KPIs Principales */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {/* KPIs Principales - Estilo Figma */}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           <KPICard
             label="Litros Totales"
             value={`${totalLiters.toLocaleString()} L`}
@@ -282,57 +269,98 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Gráficos */}
+        {/* Gráficos - Estilo Figma */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* Consumo Line Chart */}
-          <Card className="border-none shadow-sm lg:col-span-8 rounded-xl bg-white overflow-hidden">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold text-slate-800">
-                Histórico de Consumo y Costo
-              </CardTitle>
+          {/* Statistics - Line Chart Principal */}
+          <Card className="lg:col-span-8">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="text-lg font-semibold">
+                  Estadísticas
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Evolución del consumo de combustible
+                </p>
+              </div>
+              <Select defaultValue="mes">
+                <SelectTrigger className="w-32 h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="semana">Semana</SelectItem>
+                  <SelectItem value="mes">Este mes</SelectItem>
+                  <SelectItem value="anio">Este año</SelectItem>
+                </SelectContent>
+              </Select>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px] w-full">
+              <div className="h-[280px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={consumoMensual}
-                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                    margin={{ top: 20, right: 20, left: 0, bottom: 0 }}
                   >
+                    <defs>
+                      <linearGradient
+                        id="colorLitros"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#1E2C56"
+                          stopOpacity={0.1}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#1E2C56"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
-                      stroke="#f1f5f9"
+                      stroke="#e2e8f0"
                     />
                     <XAxis
                       dataKey="mes"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "#94a3b8", fontSize: 12, fontWeight: 500 }}
+                      tick={{ fill: "#64748b", fontSize: 12 }}
                       dy={10}
                     />
                     <YAxis
-                      yAxisId="left"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "#94a3b8", fontSize: 11 }}
+                      tick={{ fill: "#64748b", fontSize: 12 }}
+                      width={50}
                     />
                     <RechartsTooltip
                       contentStyle={{
-                        borderRadius: "12px",
+                        borderRadius: "16px",
                         border: "none",
-                        boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+                        boxShadow: "0 10px 40px -10px rgba(0,0,0,0.15)",
+                        padding: "12px 16px",
                       }}
                     />
                     <Line
-                      yAxisId="left"
                       type="monotone"
                       dataKey="litros"
                       stroke="#1E2C56"
                       strokeWidth={3}
                       dot={{
-                        r: 4,
+                        r: 5,
                         fill: "#1E2C56",
-                        strokeWidth: 2,
+                        strokeWidth: 3,
+                        stroke: "#fff",
+                      }}
+                      activeDot={{
+                        r: 7,
+                        fill: "#1E2C56",
+                        strokeWidth: 3,
                         stroke: "#fff",
                       }}
                     />
@@ -342,24 +370,27 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Consumo por Tipo Pie Chart */}
-          <Card className="border-none shadow-sm lg:col-span-4 rounded-xl bg-white overflow-hidden">
+          {/* Consumo por Tipo - Donut Chart */}
+          <Card className="lg:col-span-4">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold text-slate-800">
-                Consumo por Tipo
+              <CardTitle className="text-lg font-semibold">
+                Distribución
               </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Consumo por tipo de recurso
+              </p>
             </CardHeader>
             <CardContent>
-              <div className="h-[220px] w-full">
+              <div className="h-[200px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={consumoPorTipo}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
+                      innerRadius={55}
                       outerRadius={80}
-                      paddingAngle={8}
+                      paddingAngle={4}
                       dataKey="litros"
                     >
                       {consumoPorTipo.map((_, index) => (
@@ -370,27 +401,30 @@ export default function Dashboard() {
                         />
                       ))}
                     </Pie>
-                    <RechartsTooltip />
+                    <RechartsTooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="mt-4 space-y-2">
-                {consumoPorTipo.slice(0, 3).map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between text-xs"
-                  >
-                    <div className="flex items-center gap-2">
+              <div className="mt-4 space-y-3">
+                {consumoPorTipo.slice(0, 4).map((item, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
                       <div
-                        className="h-2 w-2 rounded-full"
+                        className="h-3 w-3 rounded-full"
                         style={{ backgroundColor: COLORS[i] }}
                       />
-                      <span className="font-medium text-slate-600">
+                      <span className="text-sm text-muted-foreground">
                         {item.tipo}
                       </span>
                     </div>
-                    <span className="font-semibold text-slate-900">
-                      {item.litros} L
+                    <span className="text-sm font-semibold">
+                      {item.litros.toLocaleString()} L
                     </span>
                   </div>
                 ))}
