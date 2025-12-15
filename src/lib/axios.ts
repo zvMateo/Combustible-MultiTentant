@@ -121,8 +121,12 @@ axiosInstance.interceptors.request.use(
         config.data || ""
       );
       if (token && config.headers) {
+        const authHeaderValue = config.headers.Authorization;
+        const authHeaderPreview = authHeaderValue
+          ? String(authHeaderValue).substring(0, 30) + "..."
+          : undefined;
         console.log(`🔐 [API] Headers enviados:`, {
-          Authorization: config.headers.Authorization?.substring(0, 30) + "...",
+          Authorization: authHeaderPreview,
           "Content-Type": config.headers["Content-Type"],
         });
       }

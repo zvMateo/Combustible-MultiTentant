@@ -13,7 +13,7 @@ import VolumeUpIcon from "@mui/icons-material/VolumeUp";
 import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 import DownloadIcon from "@mui/icons-material/Download";
 import GraphicEqIcon from "@mui/icons-material/GraphicEq";
-import type { Evidencia } from "../../../types/reports";
+import type { Evidencia } from "@/types/evidencia";
 
 interface AudioPlayerProps {
   audio: Evidencia;
@@ -152,7 +152,7 @@ export default function AudioPlayer({ audio, onDownload }: AudioPlayerProps) {
               Audio de evidencia
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {audio.filename || `audio_${audio.id}`}
+              {audio.metadata?.originalFilename || `audio_${audio.id}`}
             </Typography>
           </Box>
           {onDownload && (
@@ -196,10 +196,18 @@ export default function AudioPlayer({ audio, onDownload }: AudioPlayerProps) {
               mb: 2,
             }}
           >
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontWeight={600}
+            >
               {formatTime(currentTime)}
             </Typography>
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontWeight={600}
+            >
               {formatTime(duration)}
             </Typography>
           </Box>
@@ -267,4 +275,3 @@ export default function AudioPlayer({ audio, onDownload }: AudioPlayerProps) {
     </Card>
   );
 }
-

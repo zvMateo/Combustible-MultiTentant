@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Fuel, Lock, User } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { AuthShell } from "@/pages/Auth/components/AuthShell";
+import { AuthField } from "@/pages/Auth/components/AuthField";
+import { Fuel, Lock, User } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated, isLoading, error, clearError } = useAuthStore();
+  const { login, isAuthenticated, isLoading, error, clearError } =
+    useAuthStore();
 
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
@@ -44,111 +47,74 @@ export default function LoginPage() {
   const displayError = localError || error;
 
   return (
-    // fixed inset-0 garantiza que el fondo ocupe TODA la pantalla sin barras blancas
-    <div className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900">
-      
-      {/* Fondo con imagen y overlay oscuro para resaltar la card */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-500"
-        style={{ backgroundImage: "url('/images/LoginFondo.png')" }}
-      >
-        <div className="absolute inset-0 bg-black/30" />
-      </div>
-
-      {/* Botón Volver */}
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={() => navigate("/")}
-        className="absolute left-4 top-4 z-20 text-white hover:bg-white/10 hover:text-white"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Volver
-      </Button>
-
-      <div className="relative z-10 w-full max-w-[400px]">
-        {/* Contenedor Principal (Reemplaza a la Card para evitar gaps internos) */}
-        <div 
-          className="flex flex-col overflow-hidden shadow-2xl"
-          style={{
-            borderRadius: "20px",
-            backgroundColor: "rgba(255, 255, 255, 0.98)",
-          }}
-        >
-          {/* Header Azul Sólido - Pegado arriba sin bordes blancos */}
+    <AuthShell onBack={() => navigate("/")}>
+      <div className="mx-auto w-full max-w-[440px] py-8 animate-fade-in">
+        <Card className="overflow-hidden rounded-3xl border-0 bg-white/98 shadow-2xl backdrop-blur-xl">
           <div
-            className="flex flex-col items-center px-8 py-10 text-center text-white"
-            style={{ backgroundColor: primaryColor }}
+            className="relative px-8 py-12 text-center text-white overflow-hidden"
+            style={{
+              background: `linear-gradient(135deg, ${primaryColor} 0%, #2d3f73 100%)`,
+            }}
           >
-            <div
-              className="mb-4 flex h-16 w-16 items-center justify-center rounded-full"
-              style={{
-                background: `linear-gradient(145deg, ${secondaryColor}, ${secondaryColor}CC)`,
-                boxShadow: `0 4px 15px ${secondaryColor}66`,
-                border: "2px solid rgba(255, 255, 255, 0.2)",
-              }}
-            >
-              <Fuel className="h-8 w-8 text-white" />
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtNi42MjcgMC0xMiA1LjM3My0xMiAxMnM1LjM3MyAxMiAxMiAxMiAxMi01LjM3MyAxMi0xMi01LjM3My0xMi0xMi0xMnptMCAxOGMtMy4zMTQgMC02LTIuNjg2LTYtNnMyLjY4Ni02IDYtNiA2IDIuNjg2IDYgNi0yLjY4NiA2LTYgNnoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjAyIi8+PC9nPjwvc3ZnPg==')] opacity-50" />
+            <div className="relative">
+              <div
+                className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl transition-transform duration-300 hover:scale-105"
+                style={{
+                  background: `linear-gradient(145deg, ${secondaryColor}, #0ea5e9)`,
+                  boxShadow: `0 8px 32px ${secondaryColor}50`,
+                  border: "3px solid rgba(255, 255, 255, 0.15)",
+                }}
+              >
+                <Fuel className="h-10 w-10 text-white" />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight">Bienvenido</h1>
+              <p className="mt-2 text-sm font-medium tracking-wide opacity-70">
+                Ingresa a tu cuenta para continuar
+              </p>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Inicio de Sesión</h1>
-            <p className="text-sm opacity-80 mt-1 uppercase tracking-widest font-medium">
-              Gestión de Combustibles
-            </p>
           </div>
 
-          {/* Formulario - Sección Blanca Pegada al Header */}
-          <div className="px-8 py-10 bg-white">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              
-              <div className="space-y-2">
-                <label htmlFor="username" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 ml-1">
-                  Usuario
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="Tu usuario"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    disabled={isLoading}
-                    className="h-12 border-slate-200 bg-slate-50 pl-10 text-sm focus:bg-white transition-all rounded-xl"
-                  />
-                </div>
-              </div>
+          <CardContent className="px-8 py-10">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <AuthField
+                id="username"
+                label="Usuario"
+                placeholder="Tu usuario"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                disabled={isLoading}
+                icon={<User className="h-4 w-4" />}
+              />
 
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 ml-1">
-                  Contraseña
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
-                    className="h-12 border-slate-200 bg-slate-50 pl-10 text-sm focus:bg-white transition-all rounded-xl"
-                  />
-                </div>
-              </div>
+              <AuthField
+                id="password"
+                label="Contraseña"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+                icon={<Lock className="h-4 w-4" />}
+              />
 
-              {displayError && (
-                <Alert variant="destructive" className="py-2 border-none bg-red-50 text-red-600 rounded-lg">
-                  <AlertDescription className="text-xs font-bold text-center">
+              {displayError ? (
+                <Alert
+                  variant="destructive"
+                  className="rounded-xl border-none bg-red-50/80 py-3 text-red-600 animate-scale-in"
+                >
+                  <AlertDescription className="text-center text-xs font-semibold">
                     {displayError}
                   </AlertDescription>
                 </Alert>
-              )}
+              ) : null}
 
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="h-12 w-full text-base font-bold shadow-lg transition-all active:scale-[0.98] uppercase tracking-widest"
-                style={{ backgroundColor: primaryColor, color: "white" }}
+                size="xl"
+                className="w-full font-bold tracking-wide shadow-lg hover:shadow-xl transition-all"
+                style={{ backgroundColor: primaryColor }}
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
@@ -156,31 +122,29 @@ export default function LoginPage() {
                     Ingresando...
                   </span>
                 ) : (
-                  "INGRESAR"
+                  "Iniciar Sesión"
                 )}
               </Button>
             </form>
 
             <div className="mt-8 border-t border-slate-100 pt-6 text-center">
-              <p className="text-xs text-slate-500">
+              <p className="text-sm text-slate-500">
                 ¿No tienes cuenta?{" "}
                 <RouterLink
                   to="/registro"
-                  className="font-bold hover:underline"
-                  style={{ color: secondaryColor }}
+                  className="font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
                   Registra tu empresa
                 </RouterLink>
               </p>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Footer Copyright */}
-        <p className="mt-6 text-center text-[10px] font-medium uppercase tracking-[0.2em] text-white/60">
-          © 2025 GoodApps - V2.0
+        <p className="mt-8 text-center text-xs font-medium tracking-widest text-white/50">
+          © 2025 GOODAPPS · v2.0
         </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }

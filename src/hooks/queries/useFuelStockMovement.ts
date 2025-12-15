@@ -6,7 +6,6 @@ import { fuelStockMovementApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
 import type {
-  FuelStockMovement,
   CreateFuelStockMovementRequest,
   UpdateFuelStockMovementRequest,
 } from "@/types/api.types";
@@ -52,7 +51,9 @@ export function useCreateFuelStockMovement() {
       fuelStockMovementApi.create(data),
     onSuccess: () => {
       toast.success("Movimiento de stock registrado correctamente");
-      queryClient.invalidateQueries({ queryKey: fuelStockMovementKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: fuelStockMovementKeys.lists(),
+      });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -71,7 +72,9 @@ export function useUpdateFuelStockMovement() {
       fuelStockMovementApi.update(data),
     onSuccess: (_, variables) => {
       toast.success("Movimiento de stock actualizado correctamente");
-      queryClient.invalidateQueries({ queryKey: fuelStockMovementKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: fuelStockMovementKeys.lists(),
+      });
       queryClient.invalidateQueries({
         queryKey: fuelStockMovementKeys.detail(variables.id),
       });
@@ -81,4 +84,3 @@ export function useUpdateFuelStockMovement() {
     },
   });
 }
-

@@ -16,7 +16,7 @@ import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import DownloadIcon from "@mui/icons-material/Download";
-import type { Evidencia } from "../../../types/reports";
+import type { Evidencia } from "@/types/evidencia";
 
 interface ImageGalleryProps {
   images: Evidencia[];
@@ -335,4 +335,3 @@ export default function ImageGallery({
     </>
   );
 }
-

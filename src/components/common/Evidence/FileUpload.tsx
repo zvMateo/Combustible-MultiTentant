@@ -16,7 +16,7 @@ import ImageIcon from "@mui/icons-material/Image";
 import AudioFileIcon from "@mui/icons-material/AudioFile";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
-import type { TipoEvidencia } from "../../../types/reports";
+import type { TipoEvidencia } from "@/types/evidencia";
 
 interface FileUploadProps {
   onUpload: (files: File[], tipo: TipoEvidencia) => Promise<void>;
@@ -47,26 +47,26 @@ export default function FileUpload({
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string>("");
 
-  const validateFile = (file: File): string | null => {
-    // Validar tamaño
-    if (file.size > maxSize * 1024 * 1024) {
-      return `El archivo excede el tamaño máximo de ${maxSize}MB`;
-    }
-
-    // Validar tipo
-    if (tipo.startsWith("foto") && !file.type.startsWith("image/")) {
-      return "Solo se permiten imágenes";
-    }
-    if (tipo === "audio" && !file.type.startsWith("audio/")) {
-      return "Solo se permiten archivos de audio";
-    }
-
-    return null;
-  };
-
   const handleFiles = useCallback(
     (newFiles: FileList | null) => {
       if (!newFiles) return;
+
+      const validateFile = (file: File): string | null => {
+        // Validar tamaño
+        if (file.size > maxSize * 1024 * 1024) {
+          return `El archivo excede el tamaño máximo de ${maxSize}MB`;
+        }
+
+        // Validar tipo
+        if (tipo.startsWith("foto") && !file.type.startsWith("image/")) {
+          return "Solo se permiten imágenes";
+        }
+        if (tipo === "audio" && !file.type.startsWith("audio/")) {
+          return "Solo se permiten archivos de audio";
+        }
+
+        return null;
+      };
 
       setError("");
       const fileArray = Array.from(newFiles);
@@ -146,7 +146,9 @@ export default function FileUpload({
     // Actualizar estado a uploading
     setFiles((prev) =>
       prev.map((f) =>
-        f.status === "pending" ? { ...f, status: "uploading", progress: 0 } as FileWithPreview : f
+        f.status === "pending"
+          ? ({ ...f, status: "uploading", progress: 0 } as FileWithPreview)
+          : f
       )
     );
 
@@ -156,7 +158,9 @@ export default function FileUpload({
       // Actualizar a success
       setFiles((prev) =>
         prev.map((f) =>
-          f.status === "uploading" ? { ...f, status: "success", progress: 100 } as FileWithPreview : f
+          f.status === "uploading"
+            ? ({ ...f, status: "success", progress: 100 } as FileWithPreview)
+            : f
         )
       );
     } catch (err) {
@@ -164,11 +168,11 @@ export default function FileUpload({
       setFiles((prev) =>
         prev.map((f) =>
           f.status === "uploading"
-            ? {
+            ? ({
                 ...f,
                 status: "error",
                 error: err instanceof Error ? err.message : "Error al subir",
-              } as FileWithPreview
+              } as FileWithPreview)
             : f
         )
       );
@@ -193,9 +197,7 @@ export default function FileUpload({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         sx={{
-          border: isDragging
-            ? "2px dashed #1E2C56"
-            : "2px dashed #e0e0e0",
+          border: isDragging ? "2px dashed #1E2C56" : "2px dashed #e0e0e0",
           borderRadius: 2,
           p: 4,
           textAlign: "center",
@@ -379,4 +381,3 @@ export default function FileUpload({
     </Box>
   );
 }
-

@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/common/PageHeader";
 import {
   Tooltip,
   TooltipContent,
@@ -494,430 +495,237 @@ export default function ReportsPage() {
   );
 
   return (
-    <div className="p-6">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Sistema de Reportes
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Análisis completo de consumo, costos, eficiencia y desvíos
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div className="border-b bg-background px-6 py-6">
+        <PageHeader
+          title="Sistema de Reportes"
+          description="Análisis completo de consumo, costos, eficiencia y desvíos"
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">Período</span>
+                <Select
+                  value={periodoReporte}
+                  onValueChange={(v) => setPeriodoReporte(v as PeriodoReporte)}
+                >
+                  <SelectTrigger className="h-10 w-[220px]">
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PERIODOS_REPORTE.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-sm">Período</span>
-            <Select
-              value={periodoReporte}
-              onValueChange={(v) => setPeriodoReporte(v as PeriodoReporte)}
-            >
-              <SelectTrigger className="h-9 w-[220px]">
-                <SelectValue placeholder="Seleccionar" />
-              </SelectTrigger>
-              <SelectContent>
-                {PERIODOS_REPORTE.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>
-                    {p.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleRefresh}
+                      disabled={isLoading}
+                      aria-label="Actualizar datos"
+                    >
+                      <RefreshCcw className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Actualizar datos</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
+              {showExportButtons ? (
                 <Button
                   type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={handleRefresh}
-                  disabled={isLoading}
-                  aria-label="Actualizar datos"
+                  onClick={handleExport}
+                  disabled={isLoading || loads.length === 0 || !canExport}
                 >
-                  <RefreshCcw className="size-4" />
+                  <Download className="size-4" />
+                  Exportar a Excel
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>Actualizar datos</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          {showExportButtons ? (
-            <Button
-              type="button"
-              onClick={handleExport}
-              disabled={isLoading || loads.length === 0 || !canExport}
-            >
-              <Download className="size-4" />
-              Exportar a Excel
-            </Button>
-          ) : null}
-        </div>
+              ) : null}
+            </div>
+          }
+        />
       </div>
 
-      {!isLoading && loads.length === 0 ? (
-        <Alert className="mb-4">
-          <AlertTriangle className="size-4" />
-          <AlertTitle>Sin datos</AlertTitle>
-          <AlertDescription>
-            No hay cargas de combustible registradas. Los reportes se
-            actualizarán automáticamente cuando se registren cargas.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      <Tabs
-        value={tipoReporte}
-        onValueChange={(v) => setTipoReporte(v as TipoReporte)}
-        className="w-full"
-      >
-        <TabsList className="mb-4 h-auto w-full flex-wrap justify-start gap-1 rounded-lg border bg-background p-1">
-          <TabsTrigger value="consumo-vehiculos" className="h-10">
-            <Truck className="size-4" />
-            Consumo por Vehículo
-          </TabsTrigger>
-          <TabsTrigger value="litros-surtidor" className="h-10">
-            <Fuel className="size-4" />
-            Litros por Surtidor
-          </TabsTrigger>
-          <TabsTrigger value="litros-operador" className="h-10">
-            <User className="size-4" />
-            Litros por Operador
-          </TabsTrigger>
-          <TabsTrigger value="costo-centro" className="h-10">
-            <Landmark className="size-4" />
-            Costos por Centro
-          </TabsTrigger>
-          <TabsTrigger value="desvios" className="h-10">
+      <div className="p-6 space-y-4">
+        {!isLoading && loads.length === 0 ? (
+          <Alert className="mb-4">
             <AlertTriangle className="size-4" />
-            Análisis de Desvíos
-          </TabsTrigger>
-          <TabsTrigger value="ranking-eficiencia" className="h-10">
-            <Trophy className="size-4" />
-            Ranking Eficiencia
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+            <AlertTitle>Sin datos</AlertTitle>
+            <AlertDescription>
+              No hay cargas de combustible registradas. Los reportes se
+              actualizarán automáticamente cuando se registren cargas.
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
-      <div className="space-y-6">
-        {/* Reporte 1: Consumo por Vehículo */}
-        {tipoReporte === "consumo-vehiculos" && (
-          <>
-            <div className="grid gap-4 lg:grid-cols-3">
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle>Total de Litros por Vehículo</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <Skeleton className="h-[400px] w-full" />
-                  ) : consumoVehiculos.length === 0 ? (
-                    <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-10">
-                      <Truck className="size-10" />
-                      <div className="text-sm">Sin datos de consumo</div>
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={400}>
-                      <BarChart data={consumoVehiculos.slice(0, 10)}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis dataKey="vehiculoPatente" stroke="#64748b" />
-                        <YAxis stroke="#64748b" />
-                        <RechartsTooltip
-                          contentStyle={{
-                            borderRadius: 8,
-                            border: "1px solid #e2e8f0",
-                          }}
-                          formatter={(value) => [`${value} L`, "Litros"]}
-                        />
-                        <Bar
-                          dataKey="litrosTotales"
-                          fill="#1E2C56"
-                          radius={[8, 8, 0, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </CardContent>
-              </Card>
+        <Tabs
+          value={tipoReporte}
+          onValueChange={(v) => setTipoReporte(v as TipoReporte)}
+          className="w-full"
+        >
+          <TabsList className="mb-4 h-auto w-full flex-wrap justify-start gap-1 rounded-lg border bg-background p-1">
+            <TabsTrigger value="consumo-vehiculos" className="h-10">
+              <Truck className="size-4" />
+              Consumo por Vehículo
+            </TabsTrigger>
+            <TabsTrigger value="litros-surtidor" className="h-10">
+              <Fuel className="size-4" />
+              Litros por Surtidor
+            </TabsTrigger>
+            <TabsTrigger value="litros-operador" className="h-10">
+              <User className="size-4" />
+              Litros por Operador
+            </TabsTrigger>
+            <TabsTrigger value="costo-centro" className="h-10">
+              <Landmark className="size-4" />
+              Costos por Centro
+            </TabsTrigger>
+            <TabsTrigger value="desvios" className="h-10">
+              <AlertTriangle className="size-4" />
+              Análisis de Desvíos
+            </TabsTrigger>
+            <TabsTrigger value="ranking-eficiencia" className="h-10">
+              <Trophy className="size-4" />
+              Ranking Eficiencia
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-              <div className="grid gap-4">
-                <Card>
+        <div className="space-y-6">
+          {/* Reporte 1: Consumo por Vehículo */}
+          {tipoReporte === "consumo-vehiculos" && (
+            <>
+              <div className="grid gap-4 lg:grid-cols-3">
+                <Card className="lg:col-span-2">
                   <CardHeader>
-                    <CardDescription>Total Litros</CardDescription>
-                    <CardTitle className="text-xl">
-                      {isLoading ? (
-                        <Skeleton className="h-7 w-32" />
-                      ) : (
-                        `${totales.litros.toLocaleString()} L`
-                      )}
-                    </CardTitle>
+                    <CardTitle>Total de Litros por Vehículo</CardTitle>
                   </CardHeader>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardDescription>Costo Total</CardDescription>
-                    <CardTitle className="text-xl">
-                      {isLoading ? (
-                        <Skeleton className="h-7 w-32" />
-                      ) : (
-                        `$${totales.costo.toLocaleString()}`
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardDescription>Total Eventos</CardDescription>
-                    <CardTitle className="text-xl">
-                      {isLoading ? (
-                        <Skeleton className="h-7 w-20" />
-                      ) : (
-                        totales.eventos
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-              </div>
-            </div>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="overflow-x-auto">
-                  {isLoading ? (
-                    <TableSkeleton rows={5} cols={6} />
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Vehículo</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead className="text-right">
-                            Total Litros
-                          </TableHead>
-                          <TableHead className="text-right">Eventos</TableHead>
-                          <TableHead className="text-right">
-                            Eficiencia (km/L)
-                          </TableHead>
-                          <TableHead className="text-right">
-                            Promedio/Evento
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {consumoVehiculos.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={6} className="text-center">
-                              No hay datos disponibles
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          consumoVehiculos.map((item) => (
-                            <TableRow
-                              key={item.vehiculoId}
-                              className="hover:bg-muted/50"
-                            >
-                              <TableCell className="font-medium">
-                                {item.vehiculoPatente}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-xs">
-                                {item.vehiculoTipo}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {item.litrosTotales.toFixed(2)} L
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {item.numeroEventos}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {item.eficienciaKmPorLitro
-                                  ? item.eficienciaKmPorLitro.toFixed(2)
-                                  : "N/A"}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {item.consumoPromedioPorEvento.toFixed(2)} L
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        )}
-
-        {/* Reporte 2: Litros por Surtidor */}
-        {tipoReporte === "litros-surtidor" && (
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Distribución por Surtidor</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <Skeleton className="h-[300px] w-full" />
-                ) : litrosPorSurtidor.length === 0 ? (
-                  <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-10">
-                    <Fuel className="size-10" />
-                    <div className="text-sm">Sin datos de surtidores</div>
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={litrosPorSurtidor}
-                        dataKey="litrosTotales"
-                        nameKey="surtidorNombre"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={100}
-                        label
-                      >
-                        {litrosPorSurtidor.map((_, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[index % COLORS.length]}
+                  <CardContent>
+                    {isLoading ? (
+                      <Skeleton className="h-[400px] w-full" />
+                    ) : consumoVehiculos.length === 0 ? (
+                      <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-10">
+                        <Truck className="size-10" />
+                        <div className="text-sm">Sin datos de consumo</div>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={400}>
+                        <BarChart data={consumoVehiculos.slice(0, 10)}>
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#e2e8f0"
                           />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip formatter={(value) => `${value} L`} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
+                          <XAxis dataKey="vehiculoPatente" stroke="#64748b" />
+                          <YAxis stroke="#64748b" />
+                          <RechartsTooltip
+                            contentStyle={{
+                              borderRadius: 8,
+                              border: "1px solid #e2e8f0",
+                            }}
+                            formatter={(value) => [`${value} L`, "Litros"]}
+                          />
+                          <Bar
+                            dataKey="litrosTotales"
+                            fill="#1E2C56"
+                            radius={[8, 8, 0, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="overflow-x-auto">
-                  {isLoading ? (
-                    <TableSkeleton rows={4} cols={5} />
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Surtidor</TableHead>
-                          <TableHead>Ubicación</TableHead>
-                          <TableHead className="text-right">
-                            Litros Totales
-                          </TableHead>
-                          <TableHead className="text-right">Eventos</TableHead>
-                          <TableHead className="text-right">
-                            % del Total
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {litrosPorSurtidor.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center">
-                              No hay datos disponibles
-                            </TableCell>
-                          </TableRow>
+                <div className="grid gap-4">
+                  <Card>
+                    <CardHeader>
+                      <CardDescription>Total Litros</CardDescription>
+                      <CardTitle className="text-xl">
+                        {isLoading ? (
+                          <Skeleton className="h-7 w-32" />
                         ) : (
-                          litrosPorSurtidor.map((item) => (
-                            <TableRow
-                              key={item.surtidorId}
-                              className="hover:bg-muted/50"
-                            >
-                              <TableCell className="font-medium">
-                                {item.surtidorNombre}
-                              </TableCell>
-                              <TableCell>{item.surtidorUbicacion}</TableCell>
-                              <TableCell className="text-right">
-                                {item.litrosTotales.toFixed(2)} L
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {item.numeroEventos}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {item.porcentajeTotal.toFixed(2)}%
+                          `${totales.litros.toLocaleString()} L`
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardDescription>Costo Total</CardDescription>
+                      <CardTitle className="text-xl">
+                        {isLoading ? (
+                          <Skeleton className="h-7 w-32" />
+                        ) : (
+                          `$${totales.costo.toLocaleString()}`
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardDescription>Total Eventos</CardDescription>
+                      <CardTitle className="text-xl">
+                        {isLoading ? (
+                          <Skeleton className="h-7 w-20" />
+                        ) : (
+                          totales.eventos
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                </div>
+              </div>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="overflow-x-auto">
+                    {isLoading ? (
+                      <TableSkeleton rows={5} cols={6} />
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Vehículo</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead className="text-right">
+                              Total Litros
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Eventos
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Eficiencia (km/L)
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Promedio/Evento
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {consumoVehiculos.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center">
+                                No hay datos disponibles
                               </TableCell>
                             </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Reporte 3: Litros por Operador */}
-        {tipoReporte === "litros-operador" && (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle>Consumo por Operador</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <Skeleton className="h-[400px] w-full" />
-                ) : litrosPorOperador.length === 0 ? (
-                  <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-10">
-                    <User className="size-10" />
-                    <div className="text-sm">Sin datos de operadores</div>
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={litrosPorOperador.slice(0, 10)}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="choferNombre" stroke="#64748b" />
-                      <YAxis stroke="#64748b" />
-                      <RechartsTooltip
-                        formatter={(value) => [`${value} L`, "Litros"]}
-                      />
-                      <Bar
-                        dataKey="litrosTotales"
-                        fill="#3b82f6"
-                        radius={[8, 8, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="overflow-x-auto">
-                  {isLoading ? (
-                    <TableSkeleton rows={5} cols={4} />
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Operador</TableHead>
-                          <TableHead className="text-right">
-                            Total Litros
-                          </TableHead>
-                          <TableHead className="text-right">Eventos</TableHead>
-                          <TableHead>Vehículos Usados</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {litrosPorOperador.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center">
-                              No hay datos disponibles
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          litrosPorOperador
-                            .sort((a, b) => b.litrosTotales - a.litrosTotales)
-                            .map((item) => (
+                          ) : (
+                            consumoVehiculos.map((item) => (
                               <TableRow
-                                key={item.choferId}
+                                key={item.vehiculoId}
                                 className="hover:bg-muted/50"
                               >
                                 <TableCell className="font-medium">
-                                  {item.choferNombre} {item.choferApellido}
+                                  {item.vehiculoPatente}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-xs">
+                                  {item.vehiculoTipo}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {item.litrosTotales.toFixed(2)} L
@@ -925,203 +733,13 @@ export default function ReportsPage() {
                                 <TableCell className="text-right">
                                   {item.numeroEventos}
                                 </TableCell>
-                                <TableCell>
-                                  <div className="flex flex-wrap gap-1">
-                                    {item.vehiculosMasUsados
-                                      .slice(0, 3)
-                                      .map((v) => (
-                                        <Badge
-                                          key={v}
-                                          variant="secondary"
-                                          className="text-xs"
-                                        >
-                                          {v}
-                                        </Badge>
-                                      ))}
-                                    {item.vehiculosMasUsados.length > 3 ? (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-xs"
-                                      >
-                                        +{item.vehiculosMasUsados.length - 3}
-                                      </Badge>
-                                    ) : null}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        )}
-
-        {/* Reporte 4: Costos por Centro de Costos */}
-        {tipoReporte === "costo-centro" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                Costos por Centro de Costos / Unidad de Negocio
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                {isLoading ? (
-                  <TableSkeleton rows={5} cols={7} />
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Centro de Costo</TableHead>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead className="text-right">
-                          Total Litros
-                        </TableHead>
-                        <TableHead className="text-right">
-                          Costo Total
-                        </TableHead>
-                        <TableHead className="text-right">Eventos</TableHead>
-                        <TableHead className="text-right">Vehículos</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {costosPorCentroCosto.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center">
-                            No hay datos disponibles
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        costosPorCentroCosto
-                          .sort((a, b) => b.litrosTotales - a.litrosTotales)
-                          .map((item) => (
-                            <TableRow
-                              key={item.centroCostoId}
-                              className="hover:bg-muted/50"
-                            >
-                              <TableCell className="font-medium">
-                                {item.centroCostoNombre}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="secondary" className="text-xs">
-                                  {item.centroCostoCodigo}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{item.centroCostoTipo}</TableCell>
-                              <TableCell className="text-right">
-                                {item.litrosTotales.toFixed(2)} L
-                              </TableCell>
-                              <TableCell className="text-right">
-                                ${item.costoTotal.toLocaleString()}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {item.numeroEventos}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {item.vehiculosAsignados}
-                              </TableCell>
-                            </TableRow>
-                          ))
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Reporte 5: Análisis de Desvíos */}
-        {tipoReporte === "desvios" && (
-          <>
-            {desvios.length === 0 && !isLoading ? (
-              <Card>
-                <CardContent className="py-10 text-center">
-                  <div className="text-muted-foreground mx-auto flex max-w-md flex-col items-center gap-2">
-                    <AlertTriangle className="size-12 text-emerald-600" />
-                    <div className="text-base font-semibold text-emerald-700">
-                      ¡Sin desvíos detectados!
-                    </div>
-                    <div className="text-sm">
-                      No se encontraron eventos con anomalías o pendientes de
-                      validación
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="overflow-x-auto">
-                    {isLoading ? (
-                      <TableSkeleton rows={5} cols={7} />
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>Vehículo</TableHead>
-                            <TableHead>Tipo</TableHead>
-                            <TableHead className="text-right">Litros</TableHead>
-                            <TableHead>Severidad</TableHead>
-                            <TableHead>Descripción</TableHead>
-                            <TableHead>Estado</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {desvios.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={7} className="text-center">
-                                No se encontraron desvíos
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            desvios.map((item) => (
-                              <TableRow
-                                key={item.eventoId}
-                                className="hover:bg-muted/50"
-                              >
-                                <TableCell>
-                                  {new Date(item.fecha).toLocaleDateString(
-                                    "es-AR"
-                                  )}
-                                </TableCell>
-                                <TableCell className="font-medium">
-                                  {item.vehiculoPatente}
-                                </TableCell>
-                                <TableCell>{item.tipoDesvio}</TableCell>
                                 <TableCell className="text-right">
-                                  {item.litros.toFixed(2)} L
+                                  {item.eficienciaKmPorLitro
+                                    ? item.eficienciaKmPorLitro.toFixed(2)
+                                    : "N/A"}
                                 </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    className={
-                                      item.severidad === "alta"
-                                        ? "bg-red-600 text-white"
-                                        : item.severidad === "media"
-                                        ? "bg-amber-500 text-white"
-                                        : "bg-emerald-600 text-white"
-                                    }
-                                  >
-                                    {item.severidad}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>{item.descripcion}</TableCell>
-                                <TableCell>
-                                  <Badge
-                                    className={
-                                      item.resuelto
-                                        ? "bg-emerald-600 text-white"
-                                        : "bg-amber-500 text-white"
-                                    }
-                                  >
-                                    {item.resuelto ? "Resuelto" : "Pendiente"}
-                                  </Badge>
+                                <TableCell className="text-right">
+                                  {item.consumoPromedioPorEvento.toFixed(2)} L
                                 </TableCell>
                               </TableRow>
                             ))
@@ -1132,90 +750,490 @@ export default function ReportsPage() {
                   </div>
                 </CardContent>
               </Card>
-            )}
-          </>
-        )}
+            </>
+          )}
 
-        {/* Reporte 6: Ranking de Eficiencia */}
-        {tipoReporte === "ranking-eficiencia" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                Ranking de Eficiencia (Menor consumo promedio por carga)
-              </CardTitle>
-              <CardDescription>
-                Los vehículos con menor consumo promedio por carga se consideran
-                más eficientes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                {isLoading ? (
-                  <TableSkeleton rows={5} cols={6} />
-                ) : rankingEficiencia.length === 0 ? (
-                  <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-10">
-                    <Trophy className="size-10" />
-                    <div className="text-sm">
-                      Sin datos suficientes para ranking
+          {/* Reporte 2: Litros por Surtidor */}
+          {tipoReporte === "litros-surtidor" && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Distribución por Surtidor</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <Skeleton className="h-[300px] w-full" />
+                  ) : litrosPorSurtidor.length === 0 ? (
+                    <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-10">
+                      <Fuel className="size-10" />
+                      <div className="text-sm">Sin datos de surtidores</div>
                     </div>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Posición</TableHead>
-                        <TableHead>Vehículo</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead className="text-right">
-                          Eficiencia (km/L)
-                        </TableHead>
-                        <TableHead className="text-right">
-                          Total Litros
-                        </TableHead>
-                        <TableHead>Tendencia</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {rankingEficiencia.map((item) => (
-                        <TableRow
-                          key={item.vehiculoId}
-                          className="hover:bg-muted/50"
+                  ) : (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={litrosPorSurtidor}
+                          dataKey="litrosTotales"
+                          nameKey="surtidorNombre"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={100}
+                          label
                         >
-                          <TableCell>
-                            <Badge
-                              className={
-                                item.posicion <= 3
-                                  ? "bg-emerald-600 text-white"
-                                  : "bg-slate-500 text-white"
-                              }
-                            >
-                              #{item.posicion}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {item.vehiculoPatente}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-xs">
-                            {item.vehiculoTipo}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-emerald-600">
-                            {item.eficiencia.toFixed(2)} km/L
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {item.litrosTotales.toFixed(2)} L
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{item.tendencia}</Badge>
-                          </TableCell>
+                          {litrosPorSurtidor.map((_, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip formatter={(value) => `${value} L`} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="overflow-x-auto">
+                    {isLoading ? (
+                      <TableSkeleton rows={4} cols={5} />
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Surtidor</TableHead>
+                            <TableHead>Ubicación</TableHead>
+                            <TableHead className="text-right">
+                              Litros Totales
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Eventos
+                            </TableHead>
+                            <TableHead className="text-right">
+                              % del Total
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {litrosPorSurtidor.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center">
+                                No hay datos disponibles
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            litrosPorSurtidor.map((item) => (
+                              <TableRow
+                                key={item.surtidorId}
+                                className="hover:bg-muted/50"
+                              >
+                                <TableCell className="font-medium">
+                                  {item.surtidorNombre}
+                                </TableCell>
+                                <TableCell>{item.surtidorUbicacion}</TableCell>
+                                <TableCell className="text-right">
+                                  {item.litrosTotales.toFixed(2)} L
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {item.numeroEventos}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {item.porcentajeTotal.toFixed(2)}%
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Reporte 3: Litros por Operador */}
+          {tipoReporte === "litros-operador" && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Consumo por Operador</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <Skeleton className="h-[400px] w-full" />
+                  ) : litrosPorOperador.length === 0 ? (
+                    <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-10">
+                      <User className="size-10" />
+                      <div className="text-sm">Sin datos de operadores</div>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={litrosPorOperador.slice(0, 10)}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="choferNombre" stroke="#64748b" />
+                        <YAxis stroke="#64748b" />
+                        <RechartsTooltip
+                          formatter={(value) => [`${value} L`, "Litros"]}
+                        />
+                        <Bar
+                          dataKey="litrosTotales"
+                          fill="#3b82f6"
+                          radius={[8, 8, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="overflow-x-auto">
+                    {isLoading ? (
+                      <TableSkeleton rows={5} cols={4} />
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Operador</TableHead>
+                            <TableHead className="text-right">
+                              Total Litros
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Eventos
+                            </TableHead>
+                            <TableHead>Vehículos Usados</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {litrosPorOperador.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center">
+                                No hay datos disponibles
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            litrosPorOperador
+                              .sort((a, b) => b.litrosTotales - a.litrosTotales)
+                              .map((item) => (
+                                <TableRow
+                                  key={item.choferId}
+                                  className="hover:bg-muted/50"
+                                >
+                                  <TableCell className="font-medium">
+                                    {item.choferNombre} {item.choferApellido}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {item.litrosTotales.toFixed(2)} L
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {item.numeroEventos}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex flex-wrap gap-1">
+                                      {item.vehiculosMasUsados
+                                        .slice(0, 3)
+                                        .map((v) => (
+                                          <Badge
+                                            key={v}
+                                            variant="secondary"
+                                            className="text-xs"
+                                          >
+                                            {v}
+                                          </Badge>
+                                        ))}
+                                      {item.vehiculosMasUsados.length > 3 ? (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
+                                          +{item.vehiculosMasUsados.length - 3}
+                                        </Badge>
+                                      ) : null}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {/* Reporte 4: Costos por Centro de Costos */}
+          {tipoReporte === "costo-centro" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  Costos por Centro de Costos / Unidad de Negocio
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  {isLoading ? (
+                    <TableSkeleton rows={5} cols={7} />
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Centro de Costo</TableHead>
+                          <TableHead>Código</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead className="text-right">
+                            Total Litros
+                          </TableHead>
+                          <TableHead className="text-right">
+                            Costo Total
+                          </TableHead>
+                          <TableHead className="text-right">Eventos</TableHead>
+                          <TableHead className="text-right">
+                            Vehículos
+                          </TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                      </TableHeader>
+                      <TableBody>
+                        {costosPorCentroCosto.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center">
+                              No hay datos disponibles
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          costosPorCentroCosto
+                            .sort((a, b) => b.litrosTotales - a.litrosTotales)
+                            .map((item) => (
+                              <TableRow
+                                key={item.centroCostoId}
+                                className="hover:bg-muted/50"
+                              >
+                                <TableCell className="font-medium">
+                                  {item.centroCostoNombre}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    {item.centroCostoCodigo}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>{item.centroCostoTipo}</TableCell>
+                                <TableCell className="text-right">
+                                  {item.litrosTotales.toFixed(2)} L
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  ${item.costoTotal.toLocaleString()}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {item.numeroEventos}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {item.vehiculosAsignados}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Reporte 5: Análisis de Desvíos */}
+          {tipoReporte === "desvios" && (
+            <>
+              {desvios.length === 0 && !isLoading ? (
+                <Card>
+                  <CardContent className="py-10 text-center">
+                    <div className="text-muted-foreground mx-auto flex max-w-md flex-col items-center gap-2">
+                      <AlertTriangle className="size-12 text-emerald-600" />
+                      <div className="text-base font-semibold text-emerald-700">
+                        ¡Sin desvíos detectados!
+                      </div>
+                      <div className="text-sm">
+                        No se encontraron eventos con anomalías o pendientes de
+                        validación
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="overflow-x-auto">
+                      {isLoading ? (
+                        <TableSkeleton rows={5} cols={7} />
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Fecha</TableHead>
+                              <TableHead>Vehículo</TableHead>
+                              <TableHead>Tipo</TableHead>
+                              <TableHead className="text-right">
+                                Litros
+                              </TableHead>
+                              <TableHead>Severidad</TableHead>
+                              <TableHead>Descripción</TableHead>
+                              <TableHead>Estado</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {desvios.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={7} className="text-center">
+                                  No se encontraron desvíos
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              desvios.map((item) => (
+                                <TableRow
+                                  key={item.eventoId}
+                                  className="hover:bg-muted/50"
+                                >
+                                  <TableCell>
+                                    {new Date(item.fecha).toLocaleDateString(
+                                      "es-AR"
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="font-medium">
+                                    {item.vehiculoPatente}
+                                  </TableCell>
+                                  <TableCell>{item.tipoDesvio}</TableCell>
+                                  <TableCell className="text-right">
+                                    {item.litros.toFixed(2)} L
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      className={
+                                        item.severidad === "alta"
+                                          ? "bg-red-600 text-white"
+                                          : item.severidad === "media"
+                                          ? "bg-amber-500 text-white"
+                                          : "bg-emerald-600 text-white"
+                                      }
+                                    >
+                                      {item.severidad}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>{item.descripcion}</TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      className={
+                                        item.resuelto
+                                          ? "bg-emerald-600 text-white"
+                                          : "bg-amber-500 text-white"
+                                      }
+                                    >
+                                      {item.resuelto ? "Resuelto" : "Pendiente"}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+
+          {/* Reporte 6: Ranking de Eficiencia */}
+          {tipoReporte === "ranking-eficiencia" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  Ranking de Eficiencia (Menor consumo promedio por carga)
+                </CardTitle>
+                <CardDescription>
+                  Los vehículos con menor consumo promedio por carga se
+                  consideran más eficientes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  {isLoading ? (
+                    <TableSkeleton rows={5} cols={6} />
+                  ) : rankingEficiencia.length === 0 ? (
+                    <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-10">
+                      <Trophy className="size-10" />
+                      <div className="text-sm">
+                        Sin datos suficientes para ranking
+                      </div>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Posición</TableHead>
+                          <TableHead>Vehículo</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead className="text-right">
+                            Eficiencia (km/L)
+                          </TableHead>
+                          <TableHead className="text-right">
+                            Total Litros
+                          </TableHead>
+                          <TableHead>Tendencia</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rankingEficiencia.map((item) => (
+                          <TableRow
+                            key={item.vehiculoId}
+                            className="hover:bg-muted/50"
+                          >
+                            <TableCell>
+                              <Badge
+                                className={
+                                  item.posicion <= 3
+                                    ? "bg-emerald-600 text-white"
+                                    : "bg-slate-500 text-white"
+                                }
+                              >
+                                #{item.posicion}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {item.vehiculoPatente}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-xs">
+                              {item.vehiculoTipo}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold text-emerald-600">
+                              {item.eficiencia.toFixed(2)} km/L
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {item.litrosTotales.toFixed(2)} L
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {item.tendencia}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );

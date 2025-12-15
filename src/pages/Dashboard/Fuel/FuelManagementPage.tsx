@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowUpDown, Droplet, Layers, Shuffle, Car } from "lucide-react";
+import { PageHeader } from "@/components/common/PageHeader";
 
 // Importar los componentes de cada tab
 import StockMovementsTab from "../Fuel/tabs/StockMovementsTab";
@@ -14,57 +15,56 @@ export default function FuelManagementPage() {
   const [tab, setTab] = useState("stock");
 
   return (
-    <div className="p-6">
-      <div className="mb-6 -mt-6">
-        <h1 className="text-2xl font-bold tracking-tight">
-          Gestión de Combustible
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Administración completa de stock, cargas, tipos de combustible,
-          movimientos y viajes
-        </p>
+    <div className="space-y-6">
+      <div className="border-b bg-background px-6 py-6">
+        <PageHeader
+          title="Gestión de Combustible"
+          description="Administración completa de stock, cargas, tipos de combustible, movimientos y viajes"
+        />
       </div>
 
-      <Tabs value={tab} onValueChange={setTab} className="w-full">
-        <TabsList className="mb-6 h-auto w-full flex-wrap justify-start gap-1 rounded-lg border bg-background p-1">
-          <TabsTrigger value="stock" className="h-10">
-            <ArrowUpDown className="size-4" />
-            Movimientos de Stock
-          </TabsTrigger>
-          <TabsTrigger value="loads" className="h-10">
-            <Droplet className="size-4" />
-            Cargas de Litros
-          </TabsTrigger>
-          <TabsTrigger value="fuelTypes" className="h-10">
-            <Layers className="size-4" />
-            Tipos de Combustible
-          </TabsTrigger>
-          <TabsTrigger value="movementTypes" className="h-10">
-            <Shuffle className="size-4" />
-            Tipos de Movimiento
-          </TabsTrigger>
-          <TabsTrigger value="trips" className="h-10">
-            <Car className="size-4" />
-            Viajes
-          </TabsTrigger>
-        </TabsList>
+      <div className="p-6">
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
+          <TabsList className="mb-6 h-auto w-full flex-wrap justify-start gap-1 rounded-lg border bg-background p-1">
+            <TabsTrigger value="stock" className="h-10">
+              <ArrowUpDown className="size-4" />
+              Movimientos de Stock
+            </TabsTrigger>
+            <TabsTrigger value="loads" className="h-10">
+              <Droplet className="size-4" />
+              Cargas de Litros
+            </TabsTrigger>
+            <TabsTrigger value="fuelTypes" className="h-10">
+              <Layers className="size-4" />
+              Tipos de Combustible
+            </TabsTrigger>
+            <TabsTrigger value="movementTypes" className="h-10">
+              <Shuffle className="size-4" />
+              Tipos de Movimiento
+            </TabsTrigger>
+            <TabsTrigger value="trips" className="h-10">
+              <Car className="size-4" />
+              Viajes
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="stock">
-          <StockMovementsTab />
-        </TabsContent>
-        <TabsContent value="loads">
-          <LoadLitersTab />
-        </TabsContent>
-        <TabsContent value="fuelTypes">
-          <FuelTypesTab />
-        </TabsContent>
-        <TabsContent value="movementTypes">
-          <MovementTypesTab />
-        </TabsContent>
-        <TabsContent value="trips">
-          <TripsTab />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="stock">
+            <StockMovementsTab />
+          </TabsContent>
+          <TabsContent value="loads">
+            <LoadLitersTab />
+          </TabsContent>
+          <TabsContent value="fuelTypes">
+            <FuelTypesTab />
+          </TabsContent>
+          <TabsContent value="movementTypes">
+            <MovementTypesTab />
+          </TabsContent>
+          <TabsContent value="trips">
+            <TripsTab />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

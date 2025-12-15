@@ -7,7 +7,6 @@ import { iaWhiteListApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
 import type {
-  IaWhiteListContact,
   CreateIaWhiteListRequest,
   UpdateIaWhiteListRequest,
 } from "@/services/api/ia-whitelist.api";

@@ -3,13 +3,9 @@ import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { EmptyState } from "@/components/common/EmptyState";
+import { SectionCard } from "@/components/common/SectionCard";
 import {
   Dialog,
   DialogContent,
@@ -49,7 +45,9 @@ import type {
 
 export default function FuelTypesTab() {
   const [openDialog, setOpenDialog] = useState(false);
+  const [openToggleDialog, setOpenToggleDialog] = useState(false);
   const [editingType, setEditingType] = useState<FuelType | null>(null);
+  const [toggleType, setToggleType] = useState<FuelType | null>(null);
   const [formData, setFormData] = useState<CreateFuelTypeRequest>({
     name: "",
   });
@@ -113,133 +111,136 @@ export default function FuelTypesTab() {
     }
   };
 
+  const handleToggleClick = (type: FuelType) => {
+    setToggleType(type);
+    setOpenToggleDialog(true);
+  };
+
   if (isLoading) {
     return (
-      <Card className="border-border">
-        <CardContent className="flex items-center gap-2 pt-6">
+      <SectionCard>
+        <div className="flex items-center gap-2">
           <Spinner className="size-4" />
           <span className="text-sm text-muted-foreground">
             Cargando tipos de combustible...
           </span>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
     );
   }
 
   if (error) {
     return (
-      <Card className="border-border">
-        <CardContent className="pt-6">
-          <Alert variant="destructive">
-            <TriangleAlert className="size-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              Error al cargar tipos de combustible:{" "}
-              {error instanceof Error ? error.message : "Error desconocido"}
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      <SectionCard>
+        <Alert variant="destructive">
+          <TriangleAlert className="size-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Error al cargar tipos de combustible:{" "}
+            {error instanceof Error ? error.message : "Error desconocido"}
+          </AlertDescription>
+        </Alert>
+      </SectionCard>
     );
   }
 
   return (
-    <Card className="border-border">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div>
-          <CardTitle>Tipos de Combustible</CardTitle>
-          <CardDescription>
-            Maestro de tipos de combustible disponibles
-          </CardDescription>
-        </div>
-        <Button
-          onClick={handleNew}
-          disabled={createMutation.isPending}
-          size="sm"
-        >
-          <Plus className="size-4" />
-          Nuevo Tipo
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[80px]">ID</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead className="w-[120px]">Estado</TableHead>
-                <TableHead className="w-[140px] text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {fuelTypes.map((type) => (
-                <TableRow key={type.id}>
-                  <TableCell className="font-mono text-xs">{type.id}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Layers className="size-4 text-amber-500" />
-                      <span className="font-medium">{type.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        type.isActive !== false ? "secondary" : "outline"
-                      }
-                    >
-                      {type.isActive !== false ? "Activo" : "Inactivo"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="inline-flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={() => handleEdit(type)}
-                        disabled={updateMutation.isPending}
-                        aria-label="Editar"
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={
-                          type.isActive !== false ? "destructive" : "secondary"
-                        }
-                        size="icon-sm"
-                        onClick={() => handleToggleActive(type.id)}
-                        disabled={deactivateMutation.isPending}
-                        aria-label={
-                          type.isActive !== false ? "Desactivar" : "Activar"
-                        }
-                      >
-                        {type.isActive !== false ? (
-                          <ToggleLeft className="size-4" />
-                        ) : (
-                          <ToggleRight className="size-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-
-              {fuelTypes.length === 0 && (
+    <>
+      <SectionCard
+        title="Tipos de Combustible"
+        description="Maestro de tipos de combustible disponibles"
+        actions={
+          <Button
+            onClick={handleNew}
+            disabled={createMutation.isPending}
+            size="sm"
+          >
+            <Plus className="size-4" />
+            Nuevo Tipo
+          </Button>
+        }
+      >
+        {fuelTypes.length === 0 ? (
+          <EmptyState
+            icon={<Layers className="size-10" />}
+            title="No hay tipos de combustible configurados"
+            description='Haz clic en "Nuevo Tipo" para crear el primero'
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="py-10 text-center">
-                    <div className="text-muted-foreground flex flex-col items-center gap-2">
-                      <Layers className="size-8" />
-                      <span>No hay tipos de combustible configurados</span>
-                    </div>
-                  </TableCell>
+                  <TableHead className="w-[80px]">ID</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead className="w-[120px]">Estado</TableHead>
+                  <TableHead className="w-[140px] text-right">
+                    Acciones
+                  </TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+              </TableHeader>
+              <TableBody>
+                {fuelTypes.map((type) => (
+                  <TableRow key={type.id}>
+                    <TableCell className="font-mono text-xs">
+                      {type.id}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Layers className="size-4 text-amber-500" />
+                        <span className="font-medium">{type.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          type.isActive !== false ? "secondary" : "outline"
+                        }
+                      >
+                        {type.isActive !== false ? "Activo" : "Inactivo"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="inline-flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleEdit(type)}
+                          disabled={updateMutation.isPending}
+                          aria-label="Editar"
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={
+                            type.isActive !== false
+                              ? "destructive"
+                              : "secondary"
+                          }
+                          size="icon"
+                          onClick={() => handleToggleClick(type)}
+                          disabled={deactivateMutation.isPending}
+                          aria-label={
+                            type.isActive !== false ? "Desactivar" : "Activar"
+                          }
+                        >
+                          {type.isActive !== false ? (
+                            <ToggleLeft className="size-4" />
+                          ) : (
+                            <ToggleRight className="size-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </SectionCard>
 
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent>
@@ -289,6 +290,39 @@ export default function FuelTypesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+      <ConfirmDialog
+        open={openToggleDialog}
+        onOpenChange={(open) => {
+          setOpenToggleDialog(open);
+          if (!open) setToggleType(null);
+        }}
+        title={
+          toggleType?.isActive !== false
+            ? "Confirmar desactivación"
+            : "Confirmar activación"
+        }
+        description={
+          <>
+            ¿Estás seguro de{" "}
+            {toggleType?.isActive !== false ? "desactivar" : "activar"} el tipo
+            de combustible <strong>{toggleType?.name}</strong>?
+          </>
+        }
+        confirmLabel={
+          deactivateMutation.isPending
+            ? "Procesando..."
+            : toggleType?.isActive !== false
+            ? "Desactivar"
+            : "Activar"
+        }
+        onConfirm={async () => {
+          if (!toggleType) return;
+          await handleToggleActive(toggleType.id);
+          setOpenToggleDialog(false);
+          setToggleType(null);
+        }}
+        confirmDisabled={deactivateMutation.isPending}
+      />
+    </>
   );
 }

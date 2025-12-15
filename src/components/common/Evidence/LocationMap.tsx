@@ -1,7 +1,7 @@
 import { Box, Card, CardContent, Typography, Chip } from "@mui/material";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
-import type { Evidencia } from "../../../types/reports";
+import type { Evidencia } from "@/types/evidencia";
 
 interface LocationMapProps {
   location: Evidencia;
@@ -12,8 +12,12 @@ export default function LocationMap({
   location,
   height = 400,
 }: LocationMapProps) {
-  const latitude = location.metadata?.latitude;
-  const longitude = location.metadata?.longitude;
+  const latitude =
+    location.latitud ??
+    (location.metadata as { latitude?: number } | undefined)?.latitude;
+  const longitude =
+    location.longitud ??
+    (location.metadata as { longitude?: number } | undefined)?.longitude;
   const accuracy = location.metadata?.accuracy;
 
   if (!latitude || !longitude) {
@@ -48,9 +52,12 @@ export default function LocationMap({
     );
   }
 
-
   // Alternativa sin API key usando iframe simple de OpenStreetMap
-  const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.01},${latitude - 0.01},${longitude + 0.01},${latitude + 0.01}&layer=mapnik&marker=${latitude},${longitude}`;
+  const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${
+    longitude - 0.01
+  },${latitude - 0.01},${longitude + 0.01},${
+    latitude + 0.01
+  }&layer=mapnik&marker=${latitude},${longitude}`;
 
   return (
     <Card

@@ -2,13 +2,8 @@
 import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { EmptyState } from "@/components/common/EmptyState";
+import { SectionCard } from "@/components/common/SectionCard";
 import {
   Dialog,
   DialogContent,
@@ -162,109 +157,110 @@ export default function TripsTab() {
 
   if (isLoading) {
     return (
-      <Card className="border-border">
-        <CardContent className="flex items-center gap-2 pt-6">
+      <SectionCard>
+        <div className="flex items-center gap-2">
           <Spinner className="size-4" />
           <span className="text-sm text-muted-foreground">
             Cargando viajes...
           </span>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
     );
   }
 
   if (error) {
     return (
-      <Card className="border-border">
-        <CardContent className="pt-6">
-          <Alert variant="destructive">
-            <TriangleAlert className="size-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              Error al cargar viajes:{" "}
-              {error instanceof Error ? error.message : "Error desconocido"}
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      <SectionCard>
+        <Alert variant="destructive">
+          <TriangleAlert className="size-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Error al cargar viajes:{" "}
+            {error instanceof Error ? error.message : "Error desconocido"}
+          </AlertDescription>
+        </Alert>
+      </SectionCard>
     );
   }
 
   return (
-    <Card className="border-border">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div>
-          <CardTitle>Viajes</CardTitle>
-          <CardDescription>Gestión de viajes y recorridos</CardDescription>
-        </div>
-        {showCreateButtons ? (
-          <Button
-            onClick={handleNew}
-            disabled={createMutation.isPending || isReadOnly}
-            size="sm"
-          >
-            <Plus className="size-4" />
-            Nuevo Viaje
-          </Button>
-        ) : null}
-      </CardHeader>
-
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[80px]">ID</TableHead>
-                <TableHead>Conductor</TableHead>
-                <TableHead>Origen</TableHead>
-                <TableHead>Destino</TableHead>
-                <TableHead className="w-[140px]">Distancia (km)</TableHead>
-                <TableHead className="w-[120px] text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {trips.map((trip) => (
-                <TableRow key={trip.id}>
-                  <TableCell className="font-mono text-xs">{trip.id}</TableCell>
-                  <TableCell>
-                    {trip.nameDriver ||
-                      drivers.find((d) => d.id === trip.idDriver)?.name ||
-                      `Driver #${trip.idDriver}`}
-                  </TableCell>
-                  <TableCell>{trip.initialLocation || "-"}</TableCell>
-                  <TableCell>{trip.finalLocation || "-"}</TableCell>
-                  <TableCell>{trip.totalKm || "-"}</TableCell>
-                  <TableCell className="text-right">
-                    {!isReadOnly && showEditButtons ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={() => handleEdit(trip)}
-                        disabled={updateMutation.isPending || !canEdit}
-                        aria-label="Editar"
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              ))}
-
-              {trips.length === 0 ? (
+    <>
+      <SectionCard
+        title="Viajes"
+        description="Gestión de viajes y recorridos"
+        actions={
+          showCreateButtons ? (
+            <Button
+              onClick={handleNew}
+              disabled={createMutation.isPending || isReadOnly}
+              size="sm"
+            >
+              <Plus className="size-4" />
+              Nuevo Viaje
+            </Button>
+          ) : null
+        }
+      >
+        {trips.length === 0 ? (
+          <EmptyState
+            icon={<Car className="size-10" />}
+            title="No hay viajes registrados"
+            description={
+              showCreateButtons && !isReadOnly
+                ? 'Haz clic en "Nuevo Viaje" para agregar uno'
+                : "No hay datos para mostrar"
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center">
-                    <div className="text-muted-foreground flex flex-col items-center gap-2">
-                      <Car className="size-8" />
-                      <span>No hay viajes registrados</span>
-                    </div>
-                  </TableCell>
+                  <TableHead className="w-[80px]">ID</TableHead>
+                  <TableHead>Conductor</TableHead>
+                  <TableHead>Origen</TableHead>
+                  <TableHead>Destino</TableHead>
+                  <TableHead className="w-[140px]">Distancia (km)</TableHead>
+                  <TableHead className="w-[120px] text-right">
+                    Acciones
+                  </TableHead>
                 </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+              </TableHeader>
+              <TableBody>
+                {trips.map((trip) => (
+                  <TableRow key={trip.id}>
+                    <TableCell className="font-mono text-xs">
+                      {trip.id}
+                    </TableCell>
+                    <TableCell>
+                      {trip.nameDriver ||
+                        drivers.find((d) => d.id === trip.idDriver)?.name ||
+                        `Driver #${trip.idDriver}`}
+                    </TableCell>
+                    <TableCell>{trip.initialLocation || "-"}</TableCell>
+                    <TableCell>{trip.finalLocation || "-"}</TableCell>
+                    <TableCell>{trip.totalKm || "-"}</TableCell>
+                    <TableCell className="text-right">
+                      {!isReadOnly && showEditButtons ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleEdit(trip)}
+                          disabled={updateMutation.isPending || !canEdit}
+                          aria-label="Editar"
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </SectionCard>
 
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent>
@@ -393,6 +389,6 @@ export default function TripsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   );
 }

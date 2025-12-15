@@ -3,13 +3,8 @@ import { useState, useMemo } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { SectionCard } from "@/components/common/SectionCard";
+import { EmptyState } from "@/components/common/EmptyState";
 import {
   Dialog,
   DialogContent,
@@ -265,46 +260,39 @@ export default function LoadLitersTab() {
 
   if (isLoading) {
     return (
-      <Card className="border-border">
-        <CardContent className="flex items-center gap-2 pt-6">
+      <SectionCard>
+        <div className="flex items-center gap-2">
           <Spinner className="size-4" />
           <span className="text-sm text-muted-foreground">
             Cargando cargas...
           </span>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
     );
   }
 
   if (error) {
     return (
-      <Card className="border-border">
-        <CardContent className="pt-6">
-          <Alert variant="destructive">
-            <TriangleAlert className="size-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              Error al cargar cargas de litros:{" "}
-              {error instanceof Error ? error.message : "Error desconocido"}
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      <SectionCard>
+        <Alert variant="destructive">
+          <TriangleAlert className="size-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Error al cargar cargas de litros:{" "}
+            {error instanceof Error ? error.message : "Error desconocido"}
+          </AlertDescription>
+        </Alert>
+      </SectionCard>
     );
   }
 
   return (
-    <Card className="border-border">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div>
-          <CardTitle>Cargas de Litros</CardTitle>
-          <CardDescription>
-            {filteredLoads.length}{" "}
-            {filteredLoads.length === 1
-              ? "carga registrada"
-              : "cargas registradas"}
-          </CardDescription>
-        </div>
+    <SectionCard
+      title="Cargas de Litros"
+      description={`${filteredLoads.length} ${
+        filteredLoads.length === 1 ? "carga registrada" : "cargas registradas"
+      }`}
+      actions={
         <div className="flex gap-2">
           {showExportButtons ? (
             <Button
@@ -330,9 +318,9 @@ export default function LoadLitersTab() {
             </Button>
           ) : null}
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
+      }
+    >
+      <div className="space-y-4">
         <div className="relative">
           <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
           <Input
@@ -342,70 +330,70 @@ export default function LoadLitersTab() {
             className="pl-9"
           />
         </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Recurso</TableHead>
-                <TableHead className="text-right">L. Iniciales</TableHead>
-                <TableHead className="text-right">L. Finales</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead>Combustible</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLoads.map((load) => (
-                <TableRow key={load.id}>
-                  <TableCell>
-                    {new Date(load.loadDate).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    {load.nameResource || load.resource?.name || "-"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {load.initialLiters} L
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {load.finalLiters} L
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="secondary">{load.totalLiters} L</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {load.nameFuelType || load.fuelType?.name || "-"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      onClick={() => handleEdit(load)}
-                      disabled={updateMutation.isPending}
-                      aria-label="Editar"
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-
-              {filteredLoads.length === 0 ? (
+        {filteredLoads.length === 0 ? (
+          <EmptyState
+            icon={<Droplet className="size-10" />}
+            title="No hay cargas registradas"
+            description={
+              showCreateButtons && !isReadOnly
+                ? 'Haz clic en "Nueva Carga" para agregar una'
+                : "No hay datos para mostrar"
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center">
-                    <div className="text-muted-foreground flex flex-col items-center gap-2">
-                      <Droplet className="size-8" />
-                      <span>No hay cargas registradas</span>
-                    </div>
-                  </TableCell>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Recurso</TableHead>
+                  <TableHead className="text-right">L. Iniciales</TableHead>
+                  <TableHead className="text-right">L. Finales</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead>Combustible</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+              </TableHeader>
+              <TableBody>
+                {filteredLoads.map((load) => (
+                  <TableRow key={load.id}>
+                    <TableCell>
+                      {new Date(load.loadDate).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {load.nameResource || load.resource?.name || "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {load.initialLiters} L
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {load.finalLiters} L
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant="secondary">{load.totalLiters} L</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {load.nameFuelType || load.fuelType?.name || "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleEdit(load)}
+                        disabled={updateMutation.isPending}
+                        aria-label="Editar"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
 
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent className="sm:max-w-3xl">
@@ -577,6 +565,6 @@ export default function LoadLitersTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </SectionCard>
   );
 }

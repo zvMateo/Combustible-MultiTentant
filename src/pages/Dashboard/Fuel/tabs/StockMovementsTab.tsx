@@ -3,13 +3,8 @@ import { useState, useMemo } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { SectionCard } from "@/components/common/SectionCard";
+import { EmptyState } from "@/components/common/EmptyState";
 import {
   Dialog,
   DialogContent,
@@ -241,45 +236,39 @@ export default function StockMovementsTab() {
 
   if (isLoading) {
     return (
-      <Card className="border-border">
-        <CardContent className="flex items-center gap-2 pt-6">
+      <SectionCard>
+        <div className="flex items-center gap-2">
           <Spinner className="size-4" />
           <span className="text-sm text-muted-foreground">
             Cargando movimientos de stock...
           </span>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
     );
   }
 
   if (error) {
     return (
-      <Card className="border-border">
-        <CardContent className="pt-6">
-          <Alert variant="destructive">
-            <TriangleAlert className="size-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              Error al cargar movimientos:{" "}
-              {error instanceof Error ? error.message : "Error desconocido"}
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      <SectionCard>
+        <Alert variant="destructive">
+          <TriangleAlert className="size-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Error al cargar movimientos:{" "}
+            {error instanceof Error ? error.message : "Error desconocido"}
+          </AlertDescription>
+        </Alert>
+      </SectionCard>
     );
   }
 
   return (
-    <Card className="border-border">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div>
-          <CardTitle>Movimientos de Stock</CardTitle>
-          <CardDescription>
-            {filteredMovements.length}{" "}
-            {filteredMovements.length === 1 ? "movimiento" : "movimientos"}{" "}
-            registrados
-          </CardDescription>
-        </div>
+    <SectionCard
+      title="Movimientos de Stock"
+      description={`${filteredMovements.length} ${
+        filteredMovements.length === 1 ? "movimiento" : "movimientos"
+      } registrados`}
+      actions={
         <div className="flex gap-2">
           <Button
             type="button"
@@ -301,9 +290,9 @@ export default function StockMovementsTab() {
             Nuevo Movimiento
           </Button>
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
+      }
+    >
+      <div className="space-y-4">
         <div className="relative">
           <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
           <Input
@@ -313,82 +302,78 @@ export default function StockMovementsTab() {
             className="pl-9"
           />
         </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Combustible</TableHead>
-                <TableHead>Recurso</TableHead>
-                <TableHead>Tipo Movimiento</TableHead>
-                <TableHead>Empresa</TableHead>
-                <TableHead className="text-right">Litros</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredMovements.map((movement) => (
-                <TableRow key={movement.id}>
-                  <TableCell>
-                    {new Date(movement.date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    {movement.fuelType?.name ||
-                      fuelTypes.find((ft) => ft.id === movement.idFuelType)
-                        ?.name ||
-                      "-"}
-                  </TableCell>
-                  <TableCell>
-                    {movement.resource?.name ||
-                      resources.find((r) => r.id === movement.idResource)
-                        ?.name ||
-                      "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {movement.movementType?.name ||
-                        movementTypes.find(
-                          (mt) => mt.id === movement.idMovementType
-                        )?.name ||
-                        "Sin tipo"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {movement.resource?.company?.[0] || "-"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="secondary">{movement.liters} L</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      onClick={() => handleEdit(movement)}
-                      disabled={updateMutation.isPending}
-                      aria-label="Editar"
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-
-              {filteredMovements.length === 0 ? (
+        {filteredMovements.length === 0 ? (
+          <EmptyState
+            icon={<ArrowUpDown className="size-10" />}
+            title="No hay movimientos registrados"
+            description='Haz clic en "Nuevo Movimiento" para agregar uno'
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center">
-                    <div className="text-muted-foreground flex flex-col items-center gap-2">
-                      <ArrowUpDown className="size-8" />
-                      <span>No hay movimientos registrados</span>
-                    </div>
-                  </TableCell>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Combustible</TableHead>
+                  <TableHead>Recurso</TableHead>
+                  <TableHead>Tipo Movimiento</TableHead>
+                  <TableHead>Empresa</TableHead>
+                  <TableHead className="text-right">Litros</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+              </TableHeader>
+              <TableBody>
+                {filteredMovements.map((movement) => (
+                  <TableRow key={movement.id}>
+                    <TableCell>
+                      {new Date(movement.date).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {movement.fuelType?.name ||
+                        fuelTypes.find((ft) => ft.id === movement.idFuelType)
+                          ?.name ||
+                        "-"}
+                    </TableCell>
+                    <TableCell>
+                      {movement.resource?.name ||
+                        resources.find((r) => r.id === movement.idResource)
+                          ?.name ||
+                        "-"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">
+                        {movement.movementType?.name ||
+                          movementTypes.find(
+                            (mt) => mt.id === movement.idMovementType
+                          )?.name ||
+                          "Sin tipo"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {movement.resource?.company?.[0] || "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant="secondary">{movement.liters} L</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleEdit(movement)}
+                        disabled={updateMutation.isPending}
+                        aria-label="Editar"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
 
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent>
@@ -536,6 +521,6 @@ export default function StockMovementsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </SectionCard>
   );
 }

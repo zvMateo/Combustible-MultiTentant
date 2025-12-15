@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { PageHeader } from "@/components/common/PageHeader";
 import {
   Table,
   TableBody,
@@ -1472,60 +1473,62 @@ export default function SettingsPage() {
   const canEdit = hasPermission("configuracion:editar") && canManageSettings;
 
   return (
-    <div className="p-6">
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold tracking-tight">Configuración</h1>
-        <p className="text-muted-foreground text-sm">
-          Gestión de políticas, precios, umbrales, alertas y personalización
-        </p>
+    <div className="space-y-6">
+      <div className="border-b bg-background px-6 py-6">
+        <PageHeader
+          title="Configuración"
+          description="Gestión de políticas, precios, umbrales, alertas y personalización"
+        />
       </div>
 
-      {!canEdit ? (
-        <Alert className="mb-4" variant="destructive">
-          <TriangleAlert className="size-4" />
-          <AlertTitle>Sin permisos</AlertTitle>
-          <AlertDescription>
-            No tienes permisos para editar la configuración. Los cambios no se
-            guardarán.
-          </AlertDescription>
-        </Alert>
-      ) : null}
+      <div className="p-6 space-y-4">
+        {!canEdit ? (
+          <Alert variant="destructive">
+            <TriangleAlert className="size-4" />
+            <AlertTitle>Sin permisos</AlertTitle>
+            <AlertDescription>
+              No tienes permisos para editar la configuración. Los cambios no se
+              guardarán.
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
-      <Tabs value={tab} onValueChange={setTab} className="w-full">
-        <TabsList className="mb-4 h-auto w-full flex-wrap justify-start gap-1 rounded-lg border bg-background p-1">
-          <TabsTrigger value="politicas" className="h-10">
-            <Shield className="size-4" />
-            Políticas
-          </TabsTrigger>
-          <TabsTrigger value="precios" className="h-10">
-            <Fuel className="size-4" />
-            Precios
-          </TabsTrigger>
-          <TabsTrigger value="umbrales" className="h-10">
-            <Car className="size-4" />
-            Umbrales
-          </TabsTrigger>
-          <TabsTrigger value="whitelist" className="h-10">
-            <Users className="size-4" />
-            WhiteList IA
-          </TabsTrigger>
-          <TabsTrigger value="alertas" className="h-10">
-            <Bell className="size-4" />
-            Alertas
-          </TabsTrigger>
-          <TabsTrigger value="personalizacion" className="h-10">
-            <Palette className="size-4" />
-            Personalización
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
+          <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-lg border bg-background p-1">
+            <TabsTrigger value="politicas" className="h-10">
+              <Shield className="size-4" />
+              Políticas
+            </TabsTrigger>
+            <TabsTrigger value="precios" className="h-10">
+              <Fuel className="size-4" />
+              Precios
+            </TabsTrigger>
+            <TabsTrigger value="umbrales" className="h-10">
+              <Car className="size-4" />
+              Umbrales
+            </TabsTrigger>
+            <TabsTrigger value="whitelist" className="h-10">
+              <Users className="size-4" />
+              WhiteList IA
+            </TabsTrigger>
+            <TabsTrigger value="alertas" className="h-10">
+              <Bell className="size-4" />
+              Alertas
+            </TabsTrigger>
+            <TabsTrigger value="personalizacion" className="h-10">
+              <Palette className="size-4" />
+              Personalización
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-      {tab === "politicas" && <PoliticasTab />}
-      {tab === "precios" && <PreciosTab />}
-      {tab === "umbrales" && <UmbralesTab />}
-      {tab === "whitelist" && <WhiteListTab />}
-      {tab === "alertas" && <AlertasTab />}
-      {tab === "personalizacion" && <PersonalizacionTab />}
+        {tab === "politicas" && <PoliticasTab />}
+        {tab === "precios" && <PreciosTab />}
+        {tab === "umbrales" && <UmbralesTab />}
+        {tab === "whitelist" && <WhiteListTab />}
+        {tab === "alertas" && <AlertasTab />}
+        {tab === "personalizacion" && <PersonalizacionTab />}
+      </div>
     </div>
   );
 }

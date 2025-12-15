@@ -1,7 +1,7 @@
 // src/stores/unidad.store.ts
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { UnidadNegocio, UnidadNegocioResumen } from "@/types";
+import type { UnidadNegocioResumen } from "@/types";
 
 /**
  * Estado del store de Unidades de Negocio
@@ -9,14 +9,14 @@ import type { UnidadNegocio, UnidadNegocioResumen } from "@/types";
 interface UnidadState {
   // Lista de unidades disponibles para el usuario
   unidades: UnidadNegocioResumen[];
-  
+
   // Unidad actualmente seleccionada (null = "Todas" para admin)
   unidadActiva: UnidadNegocioResumen | null;
-  
+
   // Estado de carga
   isLoading: boolean;
   error: string | null;
-  
+
   // Acciones
   setUnidades: (unidades: UnidadNegocioResumen[]) => void;
   setUnidadActiva: (unidad: UnidadNegocioResumen | null) => void;
@@ -37,7 +37,7 @@ export const useUnidadStore = create<UnidadState>()(
       // Setear lista de unidades
       setUnidades: (unidades) => {
         set({ unidades, isLoading: false, error: null });
-        
+
         // Si hay una sola unidad, seleccionarla automáticamente
         if (unidades.length === 1) {
           set({ unidadActiva: unidades[0] });
@@ -82,31 +82,31 @@ export const useUnidadStore = create<UnidadState>()(
 /**
  * Obtener la unidad activa
  */
-export const useUnidadActiva = () => 
+export const useUnidadActiva = () =>
   useUnidadStore((state) => state.unidadActiva);
 
 /**
  * Obtener todas las unidades disponibles
  */
-export const useUnidadesDisponibles = () => 
+export const useUnidadesDisponibles = () =>
   useUnidadStore((state) => state.unidades);
 
 /**
  * Obtener el ID de la unidad activa (o null si es "Todas")
  */
-export const useUnidadActivaId = () => 
+export const useUnidadActivaId = () =>
   useUnidadStore((state) => state.unidadActiva?.id ?? null);
 
 /**
  * Verificar si el usuario tiene múltiples unidades
  */
-export const useHasMultipleUnidades = () => 
+export const useHasMultipleUnidades = () =>
   useUnidadStore((state) => state.unidades.length > 1);
 
 /**
  * Verificar si está mostrando "Todas las unidades"
  */
-export const useIsAllUnidades = () => 
+export const useIsAllUnidades = () =>
   useUnidadStore((state) => state.unidadActiva === null);
 
 // ============================================
@@ -129,4 +129,3 @@ export function useUnidadActivaNombre(): string {
   const unidadActiva = useUnidadStore((state) => state.unidadActiva);
   return unidadActiva?.nombre ?? "Todas las unidades";
 }
-

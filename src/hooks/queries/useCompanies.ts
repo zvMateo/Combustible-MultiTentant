@@ -6,7 +6,6 @@ import { companiesApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
 import type {
-  Company,
   CreateCompanyRequest,
   UpdateCompanyRequest,
 } from "@/types/api.types";
@@ -27,9 +26,14 @@ export function useCompanies() {
     queryFn: async () => {
       try {
         return await companiesApi.getAll();
-      } catch (error: any) {
+      } catch (error: unknown) {
         // ✅ Si es 403 (sin permisos), devolver array vacío sin romper la app
-        if (error.response?.status === 403) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "response" in error &&
+          (error as { response?: { status?: number } }).response?.status === 403
+        ) {
           console.warn("⚠️ Sin permisos para ver empresas, usando array vacío");
           return [];
         }
@@ -82,7 +86,9 @@ export function useUpdateCompany() {
     onSuccess: (_, variables) => {
       toast.success("Empresa actualizada correctamente");
       queryClient.invalidateQueries({ queryKey: companiesKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: companiesKeys.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: companiesKeys.detail(variables.id),
+      });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));

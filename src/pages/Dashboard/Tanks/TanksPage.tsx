@@ -1,34 +1,39 @@
 // src/pages/Dashboard/Tanks/TanksPage.tsx
 import { useState, useMemo } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Box,
-  Button,
-  TextField,
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Typography,
-  InputAdornment,
-  Card,
-  CardContent,
-  Chip,
-  IconButton,
-  LinearProgress,
-  Alert,
-  Skeleton,
-  FormControl,
-  InputLabel,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
   Select,
-  MenuItem,
-  Grid,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import PropaneTankIcon from "@mui/icons-material/PropaneTank";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { PageHeader } from "@/components/common/PageHeader";
+import { EmptyState } from "@/components/common/EmptyState";
+import { SectionCard } from "@/components/common/SectionCard";
+import {
+  Download,
+  Fuel,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
@@ -215,428 +220,367 @@ export default function TanksPage() {
   // Loading state
   if (isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
-        <LinearProgress sx={{ mb: 2 }} />
-        <Grid container spacing={3}>
-          {[1, 2, 3, 4].map((i) => (
-            // @ts-expect-error - MUI v7 Grid type incompatibility
-            <Grid xs={12} sm={6} md={4} lg={3} key={i}>
-              <Skeleton variant="rounded" height={200} />
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
+      <div className="space-y-6">
+        <div className="border-b bg-background px-6 py-6">
+          <PageHeader title="Tanques" description="Cargando tanques..." />
+        </div>
+
+        <div className="p-6">
+          <SectionCard>
+            <div className="flex items-center gap-2">
+              <Spinner className="size-4" />
+              <span className="text-sm text-muted-foreground">
+                Cargando tanques...
+              </span>
+            </div>
+          </SectionCard>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-[200px] w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          Error al cargar tanques:{" "}
-          {error instanceof Error ? error.message : "Error desconocido"}
-        </Alert>
-      </Box>
+      <div className="space-y-6">
+        <div className="border-b bg-background px-6 py-6">
+          <PageHeader title="Tanques" description="No se pudieron cargar" />
+        </div>
+
+        <div className="p-6">
+          <SectionCard>
+            <Alert variant="destructive">
+              <TriangleAlert className="size-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>
+                Error al cargar tanques:{" "}
+                {error instanceof Error ? error.message : "Error desconocido"}
+              </AlertDescription>
+            </Alert>
+          </SectionCard>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 1.5,
-          mt: -3,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 700, lineHeight: 1.1, mb: 0.5 }}
-          >
-            Tank Management
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {filteredTanks.length}{" "}
-            {filteredTanks.length === 1 ? "tank" : "tanks"} registrados
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExport}
-            disabled={filteredTanks.length === 0}
-            sx={{
-              borderColor: "#10b981",
-              color: "#10b981",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { borderColor: "#059669", bgcolor: "#10b98110" },
-            }}
-          >
-            Export
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleNew}
-            disabled={createMutation.isPending}
-            sx={{
-              bgcolor: "#1E2C56",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": { bgcolor: "#16213E" },
-            }}
-          >
-            New Tank
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Filtros */}
-      <Box
-        sx={{
-          mb: 3,
-          background: "white",
-          borderRadius: 2,
-          border: "1px solid #e2e8f0",
-          p: 2,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 2,
-          alignItems: "center",
-        }}
-      >
-        <TextField
-          placeholder="Buscar por nombre o identificador..."
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ flexGrow: 1, minWidth: 220 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: "#9ca3af" }} />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
-
-      {/* Grid de tanques */}
-      <Grid container spacing={3}>
-        {filteredTanks.map((tank) => {
-          const company = companies.find((c) => c.id === tank.idCompany);
-          const businessUnit = businessUnits.find(
-            (bu) => bu.id === tank.idBusinessUnit
-          );
-          return (
-            // @ts-expect-error - MUI v7 Grid type incompatibility
-            <Grid xs={12} sm={6} md={4} lg={3} key={tank.id}>
-              <Card
-                elevation={0}
-                sx={{
-                  background: "white",
-                  borderRadius: 3,
-                  border: "1px solid #e2e8f0",
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  transition: "all 0.25s ease",
-                  opacity: tank.isActive !== false ? 1 : 0.7,
-                  "&:hover": {
-                    boxShadow: "0 8px 18px rgba(15,23,42,0.10)",
-                    transform: "translateY(-3px)",
-                    borderColor: "#10b981",
-                  },
-                }}
+    <div className="space-y-6">
+      <div className="border-b bg-background px-6 py-6">
+        <PageHeader
+          title="Tanques"
+          description={`${filteredTanks.length} ${
+            filteredTanks.length === 1 ? "tanque" : "tanques"
+          } registrados`}
+          actions={
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExport}
+                disabled={filteredTanks.length === 0}
+                className="h-10 rounded-xl border-slate-200 bg-white font-bold text-slate-700 shadow-sm hover:bg-slate-50"
               >
-                <CardContent
-                  sx={{
-                    p: 2.5,
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
+                <Download className="mr-2 h-4 w-4 text-slate-400" />
+                Exportar
+              </Button>
+
+              <Button
+                type="button"
+                onClick={handleNew}
+                disabled={createMutation.isPending}
+                className="h-10 rounded-xl bg-[#1E2C56] px-6 font-bold text-white shadow-lg shadow-blue-900/20 hover:bg-[#2a3c74] active:scale-95"
+              >
+                <Plus className="mr-2 h-4 w-4 text-white" />
+                Nuevo Tanque
+              </Button>
+            </>
+          }
+        />
+      </div>
+
+      <div className="p-6 space-y-4">
+        {/* Filtros */}
+        <SectionCard>
+          <div className="relative max-w-md">
+            <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+            <Input
+              placeholder="Buscar por nombre o identificador..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-11 rounded-2xl border-slate-200 bg-white pl-9 shadow-sm"
+            />
+          </div>
+        </SectionCard>
+
+        {/* Grid de tanques */}
+        <SectionCard>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {filteredTanks.map((tank) => {
+              const company = companies.find((c) => c.id === tank.idCompany);
+              const businessUnit = businessUnits.find(
+                (bu) => bu.id === tank.idBusinessUnit
+              );
+
+              return (
+                <Card
+                  key={tank.id}
+                  className="border-border transition-shadow hover:shadow-md"
                 >
-                  {/* Header */}
-                  <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-                    <Box
-                      sx={{
-                        p: 1.5,
-                        borderRadius: 2,
-                        bgcolor: "#10b98115",
-                        color: "#10b981",
-                      }}
-                    >
-                      <PropaneTankIcon />
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="subtitle1" fontWeight={700}>
-                        {tank.name}
-                      </Typography>
-                      <Chip
-                        label={tank.identifier}
-                        size="small"
-                        sx={{
-                          bgcolor: "#f1f5f9",
-                          color: "#475569",
-                          fontWeight: 600,
-                          fontSize: 11,
-                          mt: 0.5,
-                        }}
-                      />
-                    </Box>
-                  </Box>
+                  <CardContent className="flex h-full flex-col gap-3 pt-6">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
+                        <Fuel className="size-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-semibold">
+                          {tank.name}
+                        </div>
+                        <Badge variant="outline" className="mt-1">
+                          {tank.identifier}
+                        </Badge>
+                      </div>
+                    </div>
 
-                  {/* Capacidad */}
-                  {tank.nativeLiters && (
-                    <Box sx={{ mb: 1.5 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Capacidad: {tank.nativeLiters} L
-                      </Typography>
-                    </Box>
-                  )}
+                    <div className="flex flex-wrap gap-2">
+                      {tank.nativeLiters ? (
+                        <Badge variant="secondary">{tank.nativeLiters} L</Badge>
+                      ) : null}
+                      <Badge
+                        variant="secondary"
+                        className={
+                          tank.isActive !== false
+                            ? "text-emerald-700 bg-emerald-100"
+                            : "text-amber-700 bg-amber-100"
+                        }
+                      >
+                        {tank.isActive !== false ? "Activo" : "Inactivo"}
+                      </Badge>
+                    </div>
 
-                  {/* Empresa y Unidad */}
-                  {company && (
-                    <Box sx={{ mb: 1 }}>
-                      <Chip
-                        label={company.name}
-                        size="small"
-                        sx={{ bgcolor: "#3b82f615", color: "#3b82f6" }}
-                      />
-                    </Box>
-                  )}
+                    <div className="text-muted-foreground space-y-1 text-xs">
+                      {company ? (
+                        <div className="truncate">{company.name}</div>
+                      ) : null}
+                      {businessUnit ? (
+                        <div className="truncate">{businessUnit.name}</div>
+                      ) : null}
+                    </div>
 
-                  {businessUnit && (
-                    <Box sx={{ mb: 1.5 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        {businessUnit.name}
-                      </Typography>
-                    </Box>
-                  )}
+                    <div className="mt-auto flex gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleEdit(tank)}
+                        disabled={updateMutation.isPending}
+                        aria-label="Editar"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => handleDeleteClick(tank)}
+                        disabled={deactivateMutation.isPending}
+                        aria-label="Desactivar"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
 
-                  {/* Estado */}
-                  <Box
-                    sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}
+          {/* Empty state */}
+          {filteredTanks.length === 0 ? (
+            <EmptyState
+              icon={<Fuel className="size-10" />}
+              title="No hay tanques registrados"
+              description='Haz clic en "Nuevo Tanque" para agregar uno'
+            />
+          ) : null}
+        </SectionCard>
+
+        {/* Diálogo de crear/editar */}
+        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+          <DialogContent className="sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle>
+                {editingTank ? "Editar Tanque" : "Nuevo Tanque"}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {companies.length > 1 ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Empresa *</label>
+                  <Select
+                    value={String(formData.idCompany)}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, idCompany: Number(value) })
+                    }
                   >
-                    <Chip
-                      label={tank.isActive !== false ? "Activo" : "Inactivo"}
-                      size="small"
-                      sx={{
-                        bgcolor:
-                          tank.isActive !== false ? "#10b98115" : "#f59e0b15",
-                        color: tank.isActive !== false ? "#10b981" : "#f59e0b",
-                        fontWeight: 600,
-                      }}
-                    />
-                  </Box>
+                    <SelectTrigger aria-invalid={!!errors.idCompany}>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.idCompany ? (
+                    <p className="text-destructive text-xs">
+                      {errors.idCompany}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
 
-                  {/* Acciones */}
-                  <Box sx={{ display: "flex", gap: 1, mt: "auto", pt: 1 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEdit(tank)}
-                      disabled={updateMutation.isPending}
-                      sx={{
-                        bgcolor: "#f3f4f6",
-                        "&:hover": { bgcolor: "#e5e7eb" },
-                      }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDeleteClick(tank)}
-                      disabled={deactivateMutation.isPending}
-                      sx={{
-                        bgcolor: "#fee2e2",
-                        color: "#dc2626",
-                        "&:hover": { bgcolor: "#fecaca" },
-                      }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
-
-      {/* Empty state */}
-      {filteredTanks.length === 0 && !isLoading && (
-        <Box sx={{ textAlign: "center", py: 8 }}>
-          <PropaneTankIcon sx={{ fontSize: 64, color: "#ddd", mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
-            No hay tanques registrados
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Haz clic en 'Nuevo Tanque' para agregar uno
-          </Typography>
-        </Box>
-      )}
-
-      {/* Diálogo de crear/editar */}
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {editingTank ? "Editar Tanque" : "Nuevo Tanque"}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
-            {/* Empresa (solo si hay múltiples empresas) */}
-            {companies.length > 1 && (
-              <FormControl fullWidth error={!!errors.idCompany}>
-                <InputLabel>Empresa *</InputLabel>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Unidad de Negocio (opcional)
+                </label>
                 <Select
-                  value={formData.idCompany}
-                  label="Empresa *"
-                  onChange={(e) =>
+                  value={
+                    formData.idBusinessUnit
+                      ? String(formData.idBusinessUnit)
+                      : "none"
+                  }
+                  onValueChange={(value) =>
                     setFormData({
                       ...formData,
-                      idCompany: Number(e.target.value),
+                      idBusinessUnit:
+                        value === "none" ? undefined : Number(value),
                     })
                   }
                 >
-                  {companies.map((c) => (
-                    <MenuItem key={c.id} value={c.id}>
-                      {c.name}
-                    </MenuItem>
-                  ))}
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sin asignar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin asignar</SelectItem>
+                    {businessUnits
+                      .filter((bu) => bu.idCompany === formData.idCompany)
+                      .map((bu) => (
+                        <SelectItem key={bu.id} value={String(bu.id)}>
+                          {bu.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
                 </Select>
-                {errors.idCompany && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                    {errors.idCompany}
-                  </Typography>
-                )}
-              </FormControl>
-            )}
+              </div>
 
-            {/* Unidad de Negocio */}
-            <FormControl fullWidth>
-              <InputLabel>Unidad de Negocio (opcional)</InputLabel>
-              <Select
-                value={formData.idBusinessUnit || ""}
-                label="Unidad de Negocio (opcional)"
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    idBusinessUnit: e.target.value
-                      ? Number(e.target.value)
-                      : undefined,
-                  })
-                }
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Nombre del Tanque *
+                </label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  aria-invalid={!!errors.name}
+                  autoFocus
+                />
+                {errors.name ? (
+                  <p className="text-destructive text-xs">{errors.name}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Identificador *</label>
+                <Input
+                  value={formData.identifier}
+                  onChange={(e) =>
+                    setFormData({ ...formData, identifier: e.target.value })
+                  }
+                  aria-invalid={!!errors.identifier}
+                />
+                {errors.identifier ? (
+                  <p className="text-destructive text-xs">
+                    {errors.identifier}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Capacidad (Litros)
+                </label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={formData.nativeLiters ?? ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        nativeLiters: e.target.value
+                          ? Number(e.target.value)
+                          : undefined,
+                      })
+                    }
+                  />
+                  <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                    L
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpenDialog(false)}
               >
-                <MenuItem value="">Sin asignar</MenuItem>
-                {businessUnits
-                  .filter((bu) => bu.idCompany === formData.idCompany)
-                  .map((bu) => (
-                    <MenuItem key={bu.id} value={bu.id}>
-                      {bu.name}
-                    </MenuItem>
-                  ))}
-              </Select>
-            </FormControl>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {createMutation.isPending || updateMutation.isPending
+                  ? "Guardando..."
+                  : editingTank
+                  ? "Guardar Cambios"
+                  : "Crear Tanque"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-            <TextField
-              label="Nombre del Tanque"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              error={!!errors.name}
-              helperText={errors.name}
-              required
-              fullWidth
-            />
-
-            <TextField
-              label="Identificador"
-              value={formData.identifier}
-              onChange={(e) =>
-                setFormData({ ...formData, identifier: e.target.value })
-              }
-              error={!!errors.identifier}
-              helperText={errors.identifier}
-              required
-              fullWidth
-            />
-
-            <TextField
-              label="Capacidad (Litros)"
-              type="number"
-              value={formData.nativeLiters || ""}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  nativeLiters: e.target.value
-                    ? Number(e.target.value)
-                    : undefined,
-                })
-              }
-              fullWidth
-              InputProps={{
-                endAdornment: <InputAdornment position="end">L</InputAdornment>,
-              }}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={createMutation.isPending || updateMutation.isPending}
-            sx={{ bgcolor: "#1E2C56", "&:hover": { bgcolor: "#16213E" } }}
-          >
-            {createMutation.isPending || updateMutation.isPending
-              ? "Guardando..."
-              : editingTank
-              ? "Guardar Cambios"
-              : "Crear Tanque"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Confirmación de eliminación */}
-      <Dialog
-        open={openDeleteDialog}
-        onClose={() => setOpenDeleteDialog(false)}
-      >
-        <DialogTitle>Confirmar Desactivación</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¿Estás seguro de desactivar el tanque{" "}
-            <strong>{deleteTank?.name}</strong>?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Esta acción no se puede deshacer.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)}>Cancelar</Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleDelete}
-            disabled={deactivateMutation.isPending}
-          >
-            {deactivateMutation.isPending ? "Desactivando..." : "Desactivar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        {/* Confirmación de eliminación */}
+        <ConfirmDialog
+          open={openDeleteDialog}
+          onOpenChange={setOpenDeleteDialog}
+          title="Confirmar Desactivación"
+          description={
+            <>
+              ¿Estás seguro de desactivar el tanque{" "}
+              <strong>{deleteTank?.name}</strong>? Esta acción no se puede
+              deshacer.
+            </>
+          }
+          confirmLabel={
+            deactivateMutation.isPending ? "Desactivando..." : "Desactivar"
+          }
+          onConfirm={handleDelete}
+          confirmDisabled={deactivateMutation.isPending}
+        />
+      </div>
+    </div>
   );
 }
