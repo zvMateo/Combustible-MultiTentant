@@ -11,6 +11,7 @@ import { useAuthStore } from "./stores/auth.store";
 import { queryClient } from "./lib/query-client";
 import { Spinner } from "./components/ui/spinner";
 import { setUnauthorizedHandler } from "./lib/axios";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { checkAuth, isLoading } = useAuthStore();
@@ -28,8 +29,8 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFB]">
-        <Spinner className="size-7 text-[#284057]" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Spinner className="size-7 text-primary" />
       </div>
     );
   }
@@ -39,21 +40,23 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthInitializer>
-          <ThemeProvider
-            defaultTheme="system"
-            storageKey="multitenant-ui-theme"
-          >
-            <AppRoutes />
-            <Toaster richColors position="top-right" />
-          </ThemeProvider>
-        </AuthInitializer>
-      </BrowserRouter>
-      {/* DevTools solo en desarrollo */}
-      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthInitializer>
+            <ThemeProvider
+              defaultTheme="system"
+              storageKey="multitenant-ui-theme"
+            >
+              <AppRoutes />
+              <Toaster richColors position="top-right" />
+            </ThemeProvider>
+          </AuthInitializer>
+        </BrowserRouter>
+        {/* DevTools solo en desarrollo */}
+        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -446,7 +446,7 @@ export default function BusinessUnitsPage() {
       {/* Dialogo Guardar/Editar - Refactorizado */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
-          <div className="bg-[#1E2C56] px-6 py-8 text-white">
+          <div className="bg-primary px-6 py-8 text-primary-foreground">
             <DialogTitle className="text-xl font-bold">
               {editingUnit ? "Editar Unidad" : "Nueva Unidad de Negocio"}
             </DialogTitle>
@@ -520,7 +520,7 @@ export default function BusinessUnitsPage() {
             <Button
               onClick={handleSave}
               disabled={isSaving || loadingCompanies || !effectiveCompanyId}
-              className="rounded-xl bg-[#1E2C56] font-bold px-6 shadow-lg shadow-blue-900/10 hover:bg-[#2a3c74]"
+              className="rounded-xl bg-primary font-bold px-6 shadow-lg hover:bg-primary/90"
             >
               {editingUnit ? "Guardar Cambios" : "Crear Unidad"}
             </Button>

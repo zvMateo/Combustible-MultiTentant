@@ -1,18 +1,15 @@
 import { useState, useRef, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import {
-  Box,
-  IconButton,
-  Slider,
-  Typography,
-  Card,
-  CardContent,
-} from "@mui/material";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import PauseIcon from "@mui/icons-material/Pause";
-import VolumeUpIcon from "@mui/icons-material/VolumeUp";
-import VolumeOffIcon from "@mui/icons-material/VolumeOff";
-import DownloadIcon from "@mui/icons-material/Download";
-import GraphicEqIcon from "@mui/icons-material/GraphicEq";
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Download,
+  AudioWaveform,
+} from "lucide-react";
 import type { Evidencia } from "@/types/evidencia";
 
 interface AudioPlayerProps {
@@ -68,27 +65,23 @@ export default function AudioPlayer({ audio, onDownload }: AudioPlayerProps) {
     setPlaying(!playing);
   };
 
-  const handleSeek = (_event: Event, newValue: number | number[]) => {
+  const handleSeek = (value: number[]) => {
     const audioElement = audioRef.current;
     if (!audioElement) return;
 
-    const time = newValue as number;
+    const time = value[0];
     audioElement.currentTime = time;
     setCurrentTime(time);
   };
 
-  const handleVolumeChange = (_event: Event, newValue: number | number[]) => {
+  const handleVolumeChange = (value: number[]) => {
     const audioElement = audioRef.current;
     if (!audioElement) return;
 
-    const vol = newValue as number;
+    const vol = value[0];
     audioElement.volume = vol;
     setVolume(vol);
-    if (vol === 0) {
-      setMuted(true);
-    } else {
-      setMuted(false);
-    }
+    setMuted(vol === 0);
   };
 
   const toggleMute = () => {
@@ -113,164 +106,94 @@ export default function AudioPlayer({ audio, onDownload }: AudioPlayerProps) {
   };
 
   return (
-    <Card
-      elevation={0}
-      sx={{
-        border: "1px solid #e0e0e0",
-        borderRadius: 2,
-        bgcolor: "#f8f9fa",
-      }}
-    >
-      <CardContent sx={{ p: 3 }}>
+    <Card className="bg-muted/30">
+      <CardContent className="p-4">
         <audio ref={audioRef} src={audio.url} preload="metadata" />
 
         {/* Header */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1.5,
-            mb: 3,
-          }}
-        >
-          <Box
-            sx={{
-              width: 48,
-              height: 48,
-              borderRadius: 2,
-              bgcolor: "#1E2C56",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-            }}
-          >
-            <GraphicEqIcon />
-          </Box>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="subtitle1" fontWeight={600}>
-              Audio de evidencia
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground">
+            <AudioWaveform className="size-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-foreground">Audio de evidencia</p>
+            <p className="text-xs text-muted-foreground truncate">
               {audio.metadata?.originalFilename || `audio_${audio.id}`}
-            </Typography>
-          </Box>
+            </p>
+          </div>
           {onDownload && (
-            <IconButton
+            <Button
+              variant="outline"
+              size="icon"
               onClick={() => onDownload(audio)}
-              sx={{
-                bgcolor: "white",
-                "&:hover": {
-                  bgcolor: "#f5f5f5",
-                },
-              }}
+              className="shrink-0"
             >
-              <DownloadIcon />
-            </IconButton>
+              <Download className="size-4" />
+            </Button>
           )}
-        </Box>
+        </div>
 
-        {/* Player Controls */}
-        <Box>
-          {/* Progress Bar */}
-          <Box sx={{ mb: 1 }}>
-            <Slider
-              value={currentTime}
-              max={duration || 100}
-              onChange={handleSeek}
-              sx={{
-                color: "#1E2C56",
-                "& .MuiSlider-thumb": {
-                  width: 14,
-                  height: 14,
-                },
-              }}
-            />
-          </Box>
+        {/* Progress Bar */}
+        <div className="mb-2">
+          <Slider
+            value={[currentTime]}
+            max={duration || 100}
+            step={0.1}
+            onValueChange={handleSeek}
+            className="w-full"
+          />
+        </div>
 
-          {/* Time Display */}
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              mb: 2,
-            }}
+        {/* Time Display */}
+        <div className="flex justify-between mb-3">
+          <span className="text-xs font-medium text-muted-foreground">
+            {formatTime(currentTime)}
+          </span>
+          <span className="text-xs font-medium text-muted-foreground">
+            {formatTime(duration)}
+          </span>
+        </div>
+
+        {/* Control Buttons */}
+        <div className="flex items-center gap-3">
+          {/* Play/Pause */}
+          <Button
+            onClick={togglePlay}
+            size="icon"
+            className="h-12 w-12 rounded-full"
           >
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              fontWeight={600}
-            >
-              {formatTime(currentTime)}
-            </Typography>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              fontWeight={600}
-            >
-              {formatTime(duration)}
-            </Typography>
-          </Box>
-
-          {/* Control Buttons */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-            }}
-          >
-            {/* Play/Pause */}
-            <IconButton
-              onClick={togglePlay}
-              sx={{
-                bgcolor: "#1E2C56",
-                color: "white",
-                width: 48,
-                height: 48,
-                "&:hover": {
-                  bgcolor: "#16213E",
-                },
-              }}
-            >
-              {playing ? <PauseIcon /> : <PlayArrowIcon />}
-            </IconButton>
-
-            {/* Volume Controls */}
-            <IconButton onClick={toggleMute} size="small">
-              {muted || volume === 0 ? <VolumeOffIcon /> : <VolumeUpIcon />}
-            </IconButton>
-
-            <Slider
-              value={muted ? 0 : volume}
-              max={1}
-              step={0.1}
-              onChange={handleVolumeChange}
-              sx={{
-                maxWidth: 100,
-                color: "#1E2C56",
-              }}
-            />
-
-            {/* Duration Badge */}
-            <Box sx={{ flexGrow: 1 }} />
-            {audio.metadata?.duration && (
-              <Typography
-                variant="caption"
-                sx={{
-                  bgcolor: "white",
-                  px: 1.5,
-                  py: 0.5,
-                  borderRadius: 1,
-                  fontWeight: 600,
-                  color: "#1E2C56",
-                }}
-              >
-                {formatTime(audio.metadata.duration)}
-              </Typography>
+            {playing ? (
+              <Pause className="size-5" />
+            ) : (
+              <Play className="size-5 ml-0.5" />
             )}
-          </Box>
-        </Box>
+          </Button>
+
+          {/* Volume Controls */}
+          <Button variant="ghost" size="icon" onClick={toggleMute}>
+            {muted || volume === 0 ? (
+              <VolumeX className="size-4" />
+            ) : (
+              <Volume2 className="size-4" />
+            )}
+          </Button>
+
+          <Slider
+            value={[muted ? 0 : volume]}
+            max={1}
+            step={0.1}
+            onValueChange={handleVolumeChange}
+            className="w-24"
+          />
+
+          {/* Duration Badge */}
+          <div className="flex-1" />
+          {audio.metadata?.duration && (
+            <span className="text-xs font-semibold bg-background px-2 py-1 rounded text-primary">
+              {formatTime(audio.metadata.duration)}
+            </span>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

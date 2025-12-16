@@ -3,19 +3,20 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  TablePagination,
-  Paper,
-  IconButton,
-  Chip,
-  Box,
-  Typography,
-} from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import VisibilityIcon from "@mui/icons-material/Visibility";
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface DataTableColumn<T> {
   field: keyof T | string;
@@ -33,7 +34,6 @@ export interface DataTableColumn<T> {
     | "success"
     | "warning";
 }
-// Eliminado: no es necesario
 
 export interface DataTableProps<T extends { id: number | string }> {
   columns: DataTableColumn<T>[];
@@ -56,167 +56,115 @@ export default function VirtualizedTable<T extends { id: number | string }>(
     onDelete,
     onView,
     emptyMessage = "No hay datos para mostrar",
-    // rowHeight = 48,
-    // height = 400,
   } = props;
 
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(20);
 
-  const columnWidths = [140, 140, 120, 80, 80, 100, 100, 180, 120];
-  const hasEmpresa = columns.some((col) => col.field === "empresaNombre");
-  const widths = hasEmpresa ? [...columnWidths, 140] : columnWidths;
-
-  const handleChangePage = (_: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+  const totalPages = Math.ceil(data.length / rowsPerPage);
 
   const paginatedData = data.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
 
+  const getBadgeVariant = (color: string) => {
+    if (color === "success") return "default";
+    if (color === "error") return "destructive";
+    return "secondary";
+  };
+
   const renderCellContent = (row: T, column: DataTableColumn<T>) => {
     const value = row[column.field as keyof T];
     if (column.render) return column.render(row);
     if (column.type === "badge") {
       const color = column.getColor ? column.getColor(value) : "default";
-      return <Chip label={String(value)} color={color} size="small" />;
+      return <Badge variant={getBadgeVariant(color)}>{String(value)}</Badge>;
     }
     if (column.type === "boolean") {
       const boolValue = Boolean(value);
       return (
-        <Chip
-          label={boolValue ? "Sí" : "No"}
-          color={boolValue ? "success" : "default"}
-          size="small"
-        />
+        <Badge variant={boolValue ? "default" : "secondary"}>
+          {boolValue ? "Sí" : "No"}
+        </Badge>
       );
     }
     return String(value ?? "");
   };
 
   return (
-    <Paper elevation={2} sx={{ borderRadius: 2, overflowX: "auto", mb: 2 }}>
-      <TableContainer>
-        <Table
-          sx={{
-            tableLayout: "fixed",
-            minWidth: widths.reduce((a, b) => a + b, 0),
-          }}
-        >
-          <TableHead sx={{ bgcolor: "#f5f5f5" }}>
-            <TableRow>
-              {columns.map((column, idx) => (
-                <TableCell
-                  key={String(column.field)}
-                  sx={{
-                    fontWeight: "bold",
-                    width: widths[idx],
-                    maxWidth: widths[idx],
-                    minWidth: widths[idx],
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
+    <div className="rounded-2xl border bg-card overflow-hidden">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              {columns.map((column) => (
+                <TableHead key={String(column.field)} className="font-semibold">
                   {column.headerName}
-                </TableCell>
+                </TableHead>
               ))}
               {(onEdit || onDelete || onView) && (
-                <TableCell
-                  sx={{
-                    fontWeight: "bold",
-                    width: 100,
-                    maxWidth: 100,
-                    minWidth: 100,
-                  }}
-                >
+                <TableHead className="font-semibold w-[100px]">
                   Acciones
-                </TableCell>
+                </TableHead>
               )}
             </TableRow>
-          </TableHead>
+          </TableHeader>
           <TableBody>
             {paginatedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length + 1} align="center">
-                  <Box sx={{ py: 4 }}>
-                    <Typography color="text.secondary">
-                      {emptyMessage}
-                    </Typography>
-                  </Box>
+                <TableCell
+                  colSpan={columns.length + 1}
+                  className="text-center py-8 text-muted-foreground"
+                >
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             ) : (
               paginatedData.map((row) => (
-                <TableRow key={row.id} hover>
-                  {columns.map((column, idx) => (
+                <TableRow key={row.id} className="hover:bg-muted/30">
+                  {columns.map((column) => (
                     <TableCell
                       key={String(column.field)}
-                      sx={{
-                        width: widths[idx],
-                        maxWidth: widths[idx],
-                        minWidth: widths[idx],
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        p: 0,
-                      }}
+                      className="truncate max-w-[200px]"
                     >
-                      <Box
-                        sx={{
-                          display: "block",
-                          width: "100%",
-                          textAlign: "left",
-                          px: 2,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {renderCellContent(row, column)}
-                      </Box>
+                      {renderCellContent(row, column)}
                     </TableCell>
                   ))}
                   {(onEdit || onDelete || onView) && (
-                    <TableCell
-                      sx={{ width: 100, maxWidth: 100, minWidth: 100 }}
-                    >
-                      <Box sx={{ display: "flex", gap: 0.5 }}>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
                         {onView && (
-                          <IconButton
-                            size="small"
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => onView(row)}
-                            color="info"
+                            className="h-8 w-8"
                           >
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
+                            <Eye className="size-4 text-blue-500" />
+                          </Button>
                         )}
                         {onEdit && (
-                          <IconButton
-                            size="small"
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => onEdit(row)}
-                            color="primary"
+                            className="h-8 w-8"
                           >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
+                            <Pencil className="size-4 text-primary" />
+                          </Button>
                         )}
                         {onDelete && (
-                          <IconButton
-                            size="small"
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => onDelete(row)}
-                            color="error"
+                            className="h-8 w-8"
                           >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
                         )}
-                      </Box>
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
@@ -224,19 +172,59 @@ export default function VirtualizedTable<T extends { id: number | string }>(
             )}
           </TableBody>
         </Table>
-      </TableContainer>
-      <TablePagination
-        component="div"
-        count={data.length}
-        page={page}
-        onPageChange={handleChangePage}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-        rowsPerPageOptions={[10, 20, 50, 100]}
-        labelRowsPerPage="Filas por página"
-      />
-    </Paper>
-  );
-  // Fin del componente
-}
+      </div>
 
+      {/* Pagination */}
+      <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Filas por página:</span>
+          <Select
+            value={String(rowsPerPage)}
+            onValueChange={(v) => {
+              setRowsPerPage(Number(v));
+              setPage(0);
+            }}
+          >
+            <SelectTrigger className="h-8 w-[70px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 20, 50, 100].map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  {n}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {page * rowsPerPage + 1}-
+            {Math.min((page + 1) * rowsPerPage, data.length)} de {data.length}
+          </span>
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

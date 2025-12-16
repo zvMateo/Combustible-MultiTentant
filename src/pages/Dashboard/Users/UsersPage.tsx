@@ -89,8 +89,8 @@ export default function UsersPage() {
     unidadIdsFilter,
     isSupervisor,
     isAuditor,
-    showExportButtons, 
-    showCreateButtons, 
+    showExportButtons,
+    showCreateButtons,
   } = useRoleLogic();
 
   // Estados
@@ -169,7 +169,9 @@ export default function UsersPage() {
   const visibleUsers = useMemo(() => {
     return filteredUsers.filter((u) => {
       const roleName = roleNameByUserId.get(u.id)?.toLowerCase() ?? "";
-      return !roleName.includes("superadmin") && !roleName.includes("super admin");
+      return (
+        !roleName.includes("superadmin") && !roleName.includes("super admin")
+      );
     });
   }, [filteredUsers, roleNameByUserId]);
 
@@ -485,7 +487,7 @@ export default function UsersPage() {
         }}
       >
         <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden rounded-3xl border-none shadow-2xl bg-white">
-          <div className="bg-[#1E2C56] px-8 py-10 text-white relative overflow-hidden">
+          <div className="bg-primary px-8 py-10 text-primary-foreground relative overflow-hidden">
             <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/5" />
             <DialogTitle className="text-2xl font-bold text-white relative z-10">
               {editingUser ? "Actualizar Usuario" : "Registro de Usuario"}
@@ -674,7 +676,7 @@ export default function UsersPage() {
             </Button>
             <Button
               onClick={handleSave}
-              className="rounded-xl bg-[#1E2C56] text-white font-bold px-10 shadow-xl shadow-blue-900/20 hover:bg-[#2a3c74] transition-all"
+              className="rounded-xl bg-primary text-primary-foreground font-bold px-10 shadow-xl hover:bg-primary/90 transition-all"
             >
               {editingUser ? "Guardar Cambios" : "Crear Usuario"}
             </Button>

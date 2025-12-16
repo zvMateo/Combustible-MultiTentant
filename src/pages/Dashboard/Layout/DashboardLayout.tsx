@@ -18,8 +18,11 @@ export default function DashboardLayout() {
   const effectiveCompanyId = useIdCompany();
   const { tenantTheme } = useTheme();
 
-  const { data: businessUnits = [] } = useBusinessUnitsByCompany(effectiveCompanyId || 0);
-  const { unidades, unidadActiva, setUnidades, setUnidadActiva } = useUnidadStore();
+  const { data: businessUnits = [] } = useBusinessUnitsByCompany(
+    effectiveCompanyId || 0
+  );
+  const { unidades, unidadActiva, setUnidades, setUnidadActiva } =
+    useUnidadStore();
 
   useEffect(() => {
     if (!user?.id) return;
@@ -69,22 +72,25 @@ export default function DashboardLayout() {
     const isSuperAdmin = user.role === "superadmin";
     const isAdmin = user.role === "admin";
     const isCompanyAdmin = isAdmin || isSuperAdmin;
-    const assignedForAdmin =
-      isAdmin ? user.idBusinessUnit ?? user.unidadesAsignadas?.[0] ?? null : null;
+    const assignedForAdmin = isAdmin
+      ? user.idBusinessUnit ?? user.unidadesAsignadas?.[0] ?? null
+      : null;
 
     const scopedBusinessUnits = assignedForAdmin
       ? businessUnits.filter((bu) => bu.id === assignedForAdmin)
       : businessUnits;
 
-    const unidadesResumen: UnidadNegocioResumen[] = scopedBusinessUnits.map((bu) => ({
-      id: bu.id,
-      nombre: bu.name,
-      codigo: String(bu.id),
-      tipo: "otro",
-      status: (
-        (bu.active ?? bu.isActive) === false ? "inactiva" : "activa"
-      ) as UnidadNegocioStatus,
-    }));
+    const unidadesResumen: UnidadNegocioResumen[] = scopedBusinessUnits.map(
+      (bu) => ({
+        id: bu.id,
+        nombre: bu.name,
+        codigo: String(bu.id),
+        tipo: "otro",
+        status: ((bu.active ?? bu.isActive) === false
+          ? "inactiva"
+          : "activa") as UnidadNegocioStatus,
+      })
+    );
 
     const sameUnidades =
       unidades.length === unidadesResumen.length &&
@@ -107,7 +113,8 @@ export default function DashboardLayout() {
     if (isCompanyAdmin) {
       // Admin asignado a una unidad: unidad fija (no existe "Todas")
       if (assignedForAdmin) {
-        const match = unidadesResumen.find((u) => u.id === assignedForAdmin) || null;
+        const match =
+          unidadesResumen.find((u) => u.id === assignedForAdmin) || null;
         const desired = match || unidadesResumen[0] || null;
         if ((desired?.id ?? null) !== (unidadActiva?.id ?? null)) {
           setUnidadActiva(desired);
@@ -117,7 +124,8 @@ export default function DashboardLayout() {
 
       // Admin full: puede quedar en "Todas" (unidadActiva=null) o una unidad específica
       if (unidadActiva) {
-        const match = unidadesResumen.find((u) => u.id === unidadActiva.id) || null;
+        const match =
+          unidadesResumen.find((u) => u.id === unidadActiva.id) || null;
         if ((match?.id ?? null) !== (unidadActiva?.id ?? null)) {
           setUnidadActiva(match);
         }
@@ -140,17 +148,30 @@ export default function DashboardLayout() {
         setUnidadActiva(unidadesResumen[0]);
       }
     }
-  }, [businessUnits, setUnidades, setUnidadActiva, unidades, unidadActiva, user?.idBusinessUnit, user?.unidadesAsignadas, user?.idCompany, user?.role]);
+  }, [
+    businessUnits,
+    setUnidades,
+    setUnidadActiva,
+    unidades,
+    unidadActiva,
+    user?.idBusinessUnit,
+    user?.unidadesAsignadas,
+    user?.idCompany,
+    user?.role,
+  ]);
 
-  const themeVariables = useMemo(() => ({
-    "--primary-color": tenantTheme?.primaryColor || "#1E2C56",
-    "--secondary-color": tenantTheme?.secondaryColor || "#3b82f6",
-    "--accent-color": tenantTheme?.accentColor || "#10b981",
-    "--sidebar-bg": tenantTheme?.sidebarBg || "#1E2C56",
-    "--sidebar-text": tenantTheme?.sidebarText || "#FFFFFF",
-    "--header-bg": "#FFFFFF",
-    "--content-bg": "#F8FAFC", // Un gris más limpio que el anterior
-  }), [tenantTheme]);
+  const themeVariables = useMemo(
+    () => ({
+      "--primary-color": tenantTheme?.primaryColor || "#1E2C56",
+      "--secondary-color": tenantTheme?.secondaryColor || "#3b82f6",
+      "--accent-color": tenantTheme?.accentColor || "#10b981",
+      "--sidebar-bg": tenantTheme?.sidebarBg || "#1E2C56",
+      "--sidebar-text": tenantTheme?.sidebarText || "#FFFFFF",
+      "--header-bg": "#FFFFFF",
+      "--content-bg": "#F8FAFC", // Un gris más limpio que el anterior
+    }),
+    [tenantTheme]
+  );
 
   useEffect(() => {
     const root = document.documentElement;
@@ -160,7 +181,7 @@ export default function DashboardLayout() {
   }, [themeVariables]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F8FAFC]">
+    <div className="flex h-screen overflow-hidden bg-background">
       {isLoading && <ProgressBar visible={isLoading} />}
 
       <Sidebar />

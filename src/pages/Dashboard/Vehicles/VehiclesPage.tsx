@@ -435,7 +435,7 @@ export default function VehiclesPage() {
         }}
       >
         <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
-          <div className="bg-[#1E2C56] px-6 py-8 text-white">
+          <div className="bg-primary px-6 py-8 text-primary-foreground">
             <DialogTitle className="text-xl font-semibold">
               Configuración de Vehículo
             </DialogTitle>
@@ -575,7 +575,7 @@ export default function VehiclesPage() {
             </Button>
             <Button
               onClick={handleSave}
-              className="rounded-xl bg-[#1E2C56] text-white font-semibold px-8 shadow-lg shadow-blue-900/20"
+              className="rounded-xl bg-primary text-primary-foreground font-semibold px-8 shadow-lg hover:bg-primary/90"
             >
               {editingVehicle ? "Guardar Cambios" : "Registrar Vehículo"}
             </Button>
