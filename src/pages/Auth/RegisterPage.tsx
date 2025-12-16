@@ -327,7 +327,7 @@ export default function RegisterPage() {
                   type="button"
                   onClick={handleNext}
                   disabled={isLoading}
-                  className="h-11 flex-[2] rounded-xl bg-primary font-bold text-primary-foreground shadow-lg hover:bg-primary/90"
+                  className="h-11 flex-2 rounded-xl bg-primary font-bold text-primary-foreground shadow-lg hover:bg-primary/90"
                 >
                   {isLoading ? (
                     <span className="flex items-center gap-2">

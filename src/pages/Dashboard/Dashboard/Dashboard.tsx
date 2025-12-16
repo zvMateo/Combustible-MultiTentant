@@ -23,15 +23,7 @@ import {
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
 } from "recharts";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  DollarSign,
-  Fuel,
-  Minus,
-  RefreshCw,
-  User,
-} from "lucide-react";
+import { DollarSign, Fuel, Minus, RefreshCw, User } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {

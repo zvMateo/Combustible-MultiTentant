@@ -16,7 +16,7 @@ function PageLoader() {
 }
 
 // Pages públicas (carga inmediata para mejor UX inicial)
-import LandingPage from "@/pages/Landing/LandingPage";
+// import LandingPage from "@/pages/Landing/LandingPage";
 import LoginPage from "@/pages/Auth/LoginPage";
 import RegisterPage from "@/pages/Auth/RegisterPage";
 
@@ -102,8 +102,7 @@ function RbacGuard({
 export function AppRoutes() {
   const routes = useRoutes([
     // Public routes
-    { path: "/", element: <LandingPage /> },
-    { path: "/login", element: <LoginPage /> },
+    { path: "/", element: <LoginPage /> },
     { path: "/registro", element: <RegisterPage /> },
 
     // Protected dashboard routes

@@ -1,5 +1,5 @@
 // src/pages/Dashboard/Fuel/tabs/LoadLitersTab.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ import {
   useCreateLoadLiters,
   useUpdateLoadLiters,
   useResources,
+  useResource,
   useFuelTypes,
   useBusinessUnits,
   useCompany,
@@ -68,6 +69,7 @@ export default function LoadLitersTab() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingLoad, setEditingLoad] = useState<LoadLiters | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedResourceId, setSelectedResourceId] = useState<number>(0);
   const [formData, setFormData] = useState<CreateLoadLitersRequest>({
     idResource: 0,
     loadDate: new Date().toISOString().split("T")[0],
@@ -82,16 +84,29 @@ export default function LoadLitersTab() {
   // React Query hooks
   const { data: loads = [], isLoading, error } = useLoadLitersScoped();
   const { data: resources = [] } = useResources();
+  const { data: selectedResource } = useResource(selectedResourceId);
   const { data: fuelTypes = [] } = useFuelTypes();
   const { data: businessUnits = [] } = useBusinessUnits();
   const { data: company } = useCompany(user?.idCompany ?? 0);
   const createMutation = useCreateLoadLiters();
 
+  // Cuando se obtiene el recurso seleccionado, actualizar initialLiters automáticamente
+  useEffect(() => {
+    if (selectedResource && !editingLoad) {
+      const resourceInitialLiters = selectedResource.initialLiters ?? 0;
+      setFormData((prev) => ({
+        ...prev,
+        initialLiters: resourceInitialLiters,
+      }));
+    }
+  }, [selectedResource, editingLoad]);
+
   // Helper para obtener nombre de ubicación (BU o Company)
   const getLocationName = (load: LoadLiters): string => {
     // Buscar el recurso en la lista de resources para obtener su idBusinessUnit
     const resourceFromList = resources.find((r) => r.id === load.idResource);
-    const resourceIdBU = load.resource?.idBusinessUnit ?? resourceFromList?.idBusinessUnit;
+    const resourceIdBU =
+      load.resource?.idBusinessUnit ?? resourceFromList?.idBusinessUnit;
 
     // Si tiene unidad de negocio, buscar el nombre
     if (resourceIdBU) {
@@ -131,8 +146,10 @@ export default function LoadLitersTab() {
 
   const handleNew = () => {
     setEditingLoad(null);
+    const firstResourceId = resources[0]?.id || 0;
+    setSelectedResourceId(firstResourceId);
     setFormData({
-      idResource: resources[0]?.id || 0,
+      idResource: firstResourceId,
       loadDate: new Date().toISOString().split("T")[0],
       initialLiters: 0,
       finalLiters: 0,
@@ -146,6 +163,7 @@ export default function LoadLitersTab() {
 
   const handleEdit = (load: LoadLiters) => {
     setEditingLoad(load);
+    setSelectedResourceId(load.idResource);
     setFormData({
       idResource: load.idResource,
       loadDate: load.loadDate.split("T")[0],
@@ -168,26 +186,11 @@ export default function LoadLitersTab() {
     if (!formData.loadDate) {
       newErrors.loadDate = "La fecha es obligatoria";
     }
-    if (formData.initialLiters < 0) {
-      newErrors.initialLiters = "Los litros iniciales no pueden ser negativos";
-    }
-    if (formData.finalLiters < 0) {
-      newErrors.finalLiters = "Los litros finales no pueden ser negativos";
-    }
-    if (formData.finalLiters < formData.initialLiters) {
-      newErrors.finalLiters =
-        "Los litros finales deben ser mayores a los iniciales";
+    if (!formData.totalLiters || formData.totalLiters <= 0) {
+      newErrors.totalLiters = "Debe ingresar los litros cargados";
     }
     if (!formData.idFuelType || formData.idFuelType === 0) {
       newErrors.idFuelType = "Debe seleccionar un tipo de combustible";
-    }
-
-    // Calcular total automáticamente
-    if (formData.initialLiters >= 0 && formData.finalLiters >= 0) {
-      setFormData((prev) => ({
-        ...prev,
-        totalLiters: formData.finalLiters - formData.initialLiters,
-      }));
     }
 
     setErrors(newErrors);
@@ -401,9 +404,11 @@ export default function LoadLitersTab() {
               <label className="text-sm font-medium">Recurso *</label>
               <Select
                 value={String(formData.idResource)}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, idResource: Number(value) })
-                }
+                onValueChange={(value) => {
+                  const resourceId = Number(value);
+                  setSelectedResourceId(resourceId);
+                  setFormData({ ...formData, idResource: resourceId });
+                }}
               >
                 <SelectTrigger aria-invalid={!!errors.idResource}>
                   <SelectValue placeholder="Seleccionar" />
@@ -437,27 +442,31 @@ export default function LoadLitersTab() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Litros Iniciales</label>
+              <label className="text-sm font-medium">Litros Cargados *</label>
               <div className="relative">
                 <Input
                   type="number"
-                  value={String(formData.initialLiters)}
-                  onChange={(e) =>
+                  min="0"
+                  placeholder="Ingrese los litros a cargar"
+                  value={
+                    formData.totalLiters > 0 ? String(formData.totalLiters) : ""
+                  }
+                  onChange={(e) => {
+                    const litrosCargados = Number(e.target.value) || 0;
                     setFormData({
                       ...formData,
-                      initialLiters: Number(e.target.value),
-                    })
-                  }
-                  aria-invalid={!!errors.initialLiters}
+                      totalLiters: litrosCargados,
+                      finalLiters: formData.initialLiters + litrosCargados,
+                    });
+                  }}
+                  aria-invalid={!!errors.totalLiters}
                 />
                 <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
                   L
                 </div>
               </div>
-              {errors.initialLiters ? (
-                <p className="text-destructive text-xs">
-                  {errors.initialLiters}
-                </p>
+              {errors.totalLiters ? (
+                <p className="text-destructive text-xs">{errors.totalLiters}</p>
               ) : null}
             </div>
 
@@ -467,35 +476,17 @@ export default function LoadLitersTab() {
                 <Input
                   type="number"
                   value={String(formData.finalLiters)}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      finalLiters: Number(e.target.value),
-                    })
-                  }
-                  aria-invalid={!!errors.finalLiters}
-                />
-                <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
-                  L
-                </div>
-              </div>
-              {errors.finalLiters ? (
-                <p className="text-destructive text-xs">{errors.finalLiters}</p>
-              ) : null}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Total Litros</label>
-              <div className="relative">
-                <Input
-                  type="number"
-                  value={String(formData.totalLiters)}
                   disabled
+                  className="bg-muted"
                 />
                 <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
                   L
                 </div>
               </div>
+              {/* <p className="text-muted-foreground text-xs">
+                Calculado: Litros Iniciales ({formData.initialLiters}) +
+                Cargados
+              </p> */}
             </div>
 
             <div className="space-y-2">

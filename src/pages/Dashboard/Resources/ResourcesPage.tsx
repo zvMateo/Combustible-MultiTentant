@@ -7,6 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -38,6 +44,12 @@ import {
   TriangleAlert,
   CheckCircle2,
   XCircle,
+  Trash2,
+  Edit,
+  MoreVertical,
+  Scale,
+  Droplets,
+  Building2,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import * as XLSX from "xlsx";
@@ -79,9 +91,7 @@ export default function ResourcesPage() {
     isAuditor,
     canManageResources,
     canEdit,
-    canDelete,
     showCreateButtons,
-    showEditButtons,
     showExportButtons,
     isReadOnly,
     unidadIdsFilter,
@@ -102,7 +112,7 @@ export default function ResourcesPage() {
     idCompany: idCompany || 0,
     idBusinessUnit: undefined,
     nativeLiters: undefined,
-    actualLiters: undefined,
+    initialLiters: undefined,
     name: "",
     identifier: "",
   });
@@ -242,7 +252,7 @@ export default function ResourcesPage() {
       idCompany: finalIdCompany,
       idBusinessUnit: undefined,
       nativeLiters: undefined,
-      actualLiters: undefined,
+      initialLiters: undefined,
       name: "",
       identifier: "",
     });
@@ -257,7 +267,7 @@ export default function ResourcesPage() {
       idCompany: resource.idCompany,
       idBusinessUnit: resource.idBusinessUnit,
       nativeLiters: resource.nativeLiters,
-      actualLiters: resource.actualLiters,
+      initialLiters: resource.initialLiters,
       name: resource.name,
       identifier: resource.identifier,
     });
@@ -265,11 +275,11 @@ export default function ResourcesPage() {
     setOpenDialog(true);
   };
 
-  const handleDeleteClick = (_resource: Resource) => {
-    // Ahora usamos Switch para toggle, pero mantenemos para ConfirmDialog
-    setDeleteResource(_resource);
+  const _handleDeleteClick = (resource: Resource) => {
+    setDeleteResource(resource);
     setOpenDeleteDialog(true);
   };
+  void _handleDeleteClick;
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -302,7 +312,7 @@ export default function ResourcesPage() {
           idCompany: formData.idCompany,
           idBusinessUnit: formData.idBusinessUnit,
           nativeLiters: formData.nativeLiters ?? 0,
-          actualLiters: formData.actualLiters ?? 0,
+          initialLiters: formData.initialLiters ?? 0,
           name: formData.name,
           identifier: formData.identifier,
         };
@@ -314,7 +324,7 @@ export default function ResourcesPage() {
           idCompany: finalIdCompany,
           idBusinessUnit: formData.idBusinessUnit ?? 0,
           nativeLiters: formData.nativeLiters ?? 0,
-          actualLiters: formData.actualLiters ?? 0,
+          initialLiters: formData.initialLiters ?? 0,
           name: formData.name.trim(),
           identifier: formData.identifier.trim(),
         };
@@ -400,10 +410,10 @@ export default function ResourcesPage() {
     handleOpenResourceTypeForm(resourceType);
   };
 
-  const handleDeleteResourceTypeClick = (resourceType: ResourceType) => {
-    setDeleteResourceType(resourceType);
-    setOpenDeleteResourceTypeDialog(true);
+  const _handleDeleteResourceTypeClick = (resourceType: ResourceType) => {
+    void resourceType;
   };
+  void _handleDeleteResourceTypeClick;
 
   const validateResourceType = (): boolean => {
     const newErrors: FormErrors = {};
@@ -616,105 +626,140 @@ export default function ResourcesPage() {
 
       {/* Grid de recursos */}
       <SectionCard>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {filteredResources.map((resource) => {
-            const company = companies.find((c) => c.id === resource.idCompany);
-            const businessUnit = businessUnits.find(
-              (bu) => bu.id === resource.idBusinessUnit
-            );
-            const typeName = getResourceTypeName(resource);
-
-            return (
-              <Card
-                key={resource.id}
-                className="border-border transition-shadow hover:shadow-md"
-              >
-                <CardContent className="flex h-full flex-col gap-3 pt-6">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
-                      {getResourceIcon(resource)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-semibold">
-                        {resource.name}
-                      </div>
-                      <Badge variant="outline" className="mt-1">
-                        {resource.identifier}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary">
-                      <Layers className="size-3" />
-                      {typeName}
-                    </Badge>
-                    {resource.nativeLiters ? (
-                      <Badge variant="secondary">
-                        {resource.nativeLiters} L
-                      </Badge>
-                    ) : null}
-                  </div>
-
-                  <div className="text-muted-foreground space-y-1 text-xs">
-                    {company ? (
-                      <div className="truncate">{company.name}</div>
-                    ) : null}
-                    {businessUnit ? (
-                      <div className="truncate">{businessUnit.name}</div>
-                    ) : null}
-                  </div>
-
-                  {/* Estado y acciones */}
-                  <div className="mt-auto flex items-center justify-between gap-2 pt-2 border-t">
-                    <div className={`flex items-center gap-1.5 ${resource.active !== false ? "text-green-600" : "text-red-500"}`}>
-                      {resource.active !== false ? <CheckCircle2 className="size-3.5" /> : <XCircle className="size-3.5" />}
-                      <span className="text-xs font-medium">
-                        {resource.active !== false ? "Activo" : "Inactivo"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {!isReadOnly && showEditButtons && canManageResources ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="size-7"
-                          onClick={() => handleEdit(resource)}
-                          disabled={updateMutation.isPending || !canEdit}
-                          aria-label="Editar"
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
-                      ) : null}
-
-                      {!isReadOnly && canManageResources && canDelete ? (
-                        <Switch
-                          checked={resource.active !== false}
-                          onCheckedChange={() => {
-                            deactivateMutation.mutate(resource.id);
-                          }}
-                          disabled={deactivateMutation.isPending}
-                          aria-label={resource.active !== false ? "Desactivar" : "Activar"}
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* Empty state */}
         {filteredResources.length === 0 ? (
           <EmptyState
             icon={<Package className="size-10" />}
             title="No hay recursos registrados"
             description='Haz clic en "Nuevo Recurso" para agregar uno'
           />
-        ) : null}
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredResources.map((resource) => {
+              const businessUnit = businessUnits.find(
+                (bu) => bu.id === resource.idBusinessUnit
+              );
+              const typeName = getResourceTypeName(resource);
+
+              return (
+                <Card
+                  key={resource.id}
+                  className="group hover:shadow-md transition-all"
+                >
+                  <CardContent className="p-0">
+                    <div className="p-5 flex items-start justify-between bg-muted/50">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
+                          {getResourceIcon(resource)}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-sm uppercase tracking-tight">
+                            {resource.identifier}
+                          </h3>
+                          <p className="text-xs text-muted-foreground truncate max-w-[140px]">
+                            {resource.name}
+                          </p>
+                        </div>
+                      </div>
+                      {!isReadOnly && canEdit && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical size={16} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleEdit(resource)}
+                            >
+                              <Edit size={14} className="mr-2" /> Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setDeleteResource(resource);
+                                setOpenDeleteDialog(true);
+                              }}
+                              className="text-destructive"
+                            >
+                              <Trash2 size={14} className="mr-2" /> Desactivar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+
+                    <div className="p-5 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Capacidad
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <Scale
+                              size={14}
+                              className="text-muted-foreground"
+                            />
+                            <span className="text-sm font-semibold">
+                              {resource.nativeLiters || 0} L
+                            </span>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Litros actuales
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <Droplets
+                              size={14}
+                              className="text-muted-foreground"
+                            />
+                            <span className="text-sm font-semibold">
+                              {typeof resource.initialLiters === "number"
+                                ? `${resource.initialLiters} L`
+                                : "N/D"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <Badge variant="secondary" className="text-xs">
+                          <Layers size={12} className="mr-1" />
+                          {typeName}
+                        </Badge>
+                        <div
+                          className={`flex items-center gap-1.5 ${
+                            resource.active !== false
+                              ? "text-green-600"
+                              : "text-red-500"
+                          }`}
+                        >
+                          {resource.active !== false ? (
+                            <CheckCircle2 size={14} />
+                          ) : (
+                            <XCircle size={14} />
+                          )}
+                          <span className="text-xs font-semibold">
+                            {resource.active !== false ? "Activo" : "Inactivo"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t flex items-center gap-2">
+                        <Building2
+                          size={14}
+                          className="text-muted-foreground"
+                        />
+                        <span className="text-xs text-muted-foreground truncate">
+                          {businessUnit?.name || "Sin unidad asignada"}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </SectionCard>
 
       {/* Diálogo de crear/editar */}
@@ -959,8 +1004,16 @@ export default function ResourcesPage() {
                         <span className="truncate font-medium">
                           {resourceType.name}
                         </span>
-                        <span className={`text-xs font-medium ${resourceType.active !== false ? "text-green-600" : "text-red-500"}`}>
-                          {resourceType.active !== false ? "Activo" : "Inactivo"}
+                        <span
+                          className={`text-xs font-medium ${
+                            resourceType.active !== false
+                              ? "text-green-600"
+                              : "text-red-500"
+                          }`}
+                        >
+                          {resourceType.active !== false
+                            ? "Activo"
+                            : "Inactivo"}
                         </span>
                       </div>
                       <div className="text-muted-foreground text-xs">
@@ -982,10 +1035,16 @@ export default function ResourcesPage() {
                       <Switch
                         checked={resourceType.active !== false}
                         onCheckedChange={() => {
-                          deactivateResourceTypeMutation.mutate(resourceType.id);
+                          deactivateResourceTypeMutation.mutate(
+                            resourceType.id
+                          );
                         }}
                         disabled={deactivateResourceTypeMutation.isPending}
-                        aria-label={resourceType.active !== false ? "Desactivar" : "Activar"}
+                        aria-label={
+                          resourceType.active !== false
+                            ? "Desactivar"
+                            : "Activar"
+                        }
                       />
                     </div>
                   </CardContent>

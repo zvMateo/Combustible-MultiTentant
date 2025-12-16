@@ -32,7 +32,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#0f172a]/70 backdrop-blur-xl">
         <div className="container mx-auto max-w-7xl h-16 flex items-center justify-between px-4 sm:px-8">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20">
               <Fuel className="text-white w-6 h-6" />
             </div>
             <div className="hidden sm:block">
@@ -63,7 +63,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <main className="flex-grow flex items-center py-12 md:py-24 px-4 sm:px-8 relative z-10">
+      <main className="grow flex items-center py-12 md:py-24 px-4 sm:px-8 relative z-10">
         <div className="container mx-auto max-w-7xl grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
           <div className="md:col-span-7 text-center md:text-left space-y-8">
             <Badge
@@ -75,7 +75,7 @@ export default function LandingPage() {
 
             <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-white leading-[1.1] tracking-tight">
               Control total del <br />
-              <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                 combustible
               </span>{" "}
               de tu flota
@@ -110,7 +110,7 @@ export default function LandingPage() {
           {/* Imagen / Dashboard Preview */}
           <div className="md:col-span-5 hidden md:block">
             <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[30px] blur opacity-25 group-hover:opacity-50 transition duration-1000" />
+              <div className="absolute -inset-1 bg-linear-to-r from-blue-600 to-indigo-600 rounded-[30px] blur opacity-25 group-hover:opacity-50 transition duration-1000" />
               <div className="relative bg-slate-900 border border-white/10 rounded-[24px] overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
                 <img
                   src="https://images.unsplash.com/photo-1551288049-bbb653283b78?q=80&w=1000&auto=format&fit=crop"
@@ -124,7 +124,7 @@ export default function LandingPage() {
       </main>
 
       {/* Features Grid */}
-      <section className="py-20 bg-white/[0.02] border-y border-white/5">
+      <section className="py-20 bg-white/2 border-y border-white/5">
         <div className="container mx-auto max-w-7xl px-4 sm:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[

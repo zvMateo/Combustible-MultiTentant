@@ -285,7 +285,7 @@ export default function TripsTab() {
                 <SelectContent>
                   <SelectItem value="0">Seleccionar conductor</SelectItem>
                   {drivers
-                    .filter((driver) => driver.isActive !== false)
+                    .filter((driver) => driver.active !== false)
                     .map((driver) => (
                       <SelectItem key={driver.id} value={String(driver.id)}>
                         {driver.name} {driver.dni ? `(${driver.dni})` : ""}

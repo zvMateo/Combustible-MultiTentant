@@ -88,9 +88,10 @@ export default function VehiclesPage() {
 
   // Buscar el idType de "Vehiculo" dinámicamente
   const vehicleTypeId = useMemo(() => {
-    const vehicleType = resourceTypes.find((rt) =>
-      rt.name.toLowerCase().includes("vehiculo") ||
-      rt.name.toLowerCase().includes("vehicle")
+    const vehicleType = resourceTypes.find(
+      (rt) =>
+        rt.name.toLowerCase().includes("vehiculo") ||
+        rt.name.toLowerCase().includes("vehicle")
     );
     return vehicleType?.id ?? 0;
   }, [resourceTypes]);
@@ -192,7 +193,9 @@ export default function VehiclesPage() {
 
     const finalIdType = formData.idType || vehicleTypeId;
     if (!finalIdType || finalIdType === 0) {
-      toast.error("No existe el tipo 'Vehículo' en tu empresa. Crealo primero en Recursos.");
+      toast.error(
+        "No existe el tipo 'Vehículo' en tu empresa. Crealo primero en Recursos."
+      );
       return;
     }
 
@@ -273,7 +276,9 @@ export default function VehiclesPage() {
                   disabled={createResourceTypeMutation.isPending}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  {createResourceTypeMutation.isPending ? "Creando..." : "Crear tipo Vehículo"}
+                  {createResourceTypeMutation.isPending
+                    ? "Creando..."
+                    : "Crear tipo Vehículo"}
                 </Button>
               )}
               {showCreateButtons && canManageVehicles && vehicleTypeId > 0 && (
@@ -356,7 +361,7 @@ export default function VehiclesPage() {
                               }}
                               className="text-destructive"
                             >
-                              <Trash2 size={14} className="mr-2" /> Eliminar
+                              <Trash2 size={14} className="mr-2" /> Desactivar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

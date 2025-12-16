@@ -303,7 +303,7 @@ export default function BusinessUnitsPage() {
 
         <SectionCard>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div className="flex items-center gap-4 p-5 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-100">
+            <div className="flex items-center gap-4 p-5 rounded-xl bg-linear-to-br from-blue-50 to-blue-100/50 border border-blue-100">
               <div className="h-14 w-14 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 shadow-sm">
                 <Building size={26} />
               </div>
@@ -316,7 +316,7 @@ export default function BusinessUnitsPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-4 p-5 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-100">
+            <div className="flex items-center gap-4 p-5 rounded-xl bg-linear-to-br from-emerald-50 to-emerald-100/50 border border-emerald-100">
               <div className="h-14 w-14 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shadow-sm">
                 <CheckCircle2 size={26} />
               </div>
