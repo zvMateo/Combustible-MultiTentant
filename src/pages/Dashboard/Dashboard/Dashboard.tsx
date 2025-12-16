@@ -175,7 +175,7 @@ export default function Dashboard() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6 animate-fade-in p-6">
+      <div className="space-y-6 animate-fade-in px-6 pt-4 pb-6">
         {/* Header Dashboard */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

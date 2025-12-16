@@ -5,7 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fuelTypesApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
-import { useIdCompany } from "@/stores/auth.store";
+import { useIdBusinessUnit, useIdCompany } from "@/stores/auth.store";
+import { useUnidadActivaId } from "@/stores/unidad.store";
 import type {
   CreateFuelTypeRequest,
   UpdateFuelTypeRequest,
@@ -27,9 +28,24 @@ export function useFuelTypes(idCompany?: number) {
   const storeCompanyId = useIdCompany();
   const companyId = idCompany ?? storeCompanyId ?? 0;
 
+  const activeBusinessUnitId = useUnidadActivaId();
+  const userBusinessUnitId = useIdBusinessUnit();
+  const businessUnitId = activeBusinessUnitId ?? userBusinessUnitId ?? null;
+  const useBusinessUnitScope = !!businessUnitId && businessUnitId > 0;
+
   return useQuery({
-    queryKey: fuelTypesKeys.byCompany(companyId),
-    queryFn: () => fuelTypesApi.getByCompany(companyId),
+    queryKey: [...fuelTypesKeys.byCompany(companyId), { businessUnitId }] as const,
+    queryFn: async () => {
+      const data = await fuelTypesApi.getByCompany(companyId);
+      const list = Array.isArray(data) ? data : [];
+
+      if (!useBusinessUnitScope) return list;
+
+      return list.filter((t) => {
+        const bu = t.idBusinessUnit ?? null;
+        return bu === null || bu === 0 || bu === businessUnitId;
+      });
+    },
     enabled: !!companyId,
     staleTime: 1000 * 60 * 10, // 10 minutos
   });

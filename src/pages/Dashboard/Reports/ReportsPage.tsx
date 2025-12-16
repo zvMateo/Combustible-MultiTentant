@@ -503,7 +503,7 @@ export default function ReportsPage() {
   );
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 px-6 pt-4 pb-6">
       <PageHeader
         title="Sistema de Reportes"
         description="Análisis completo de consumo, costos, eficiencia y desvíos"

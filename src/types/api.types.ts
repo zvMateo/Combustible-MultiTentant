@@ -219,7 +219,7 @@ export interface CreateResourceRequest {
   idCompany: number;
   idBusinessUnit?: number;
   nativeLiters?: number;
-  actualLiters?: number;
+  initialLiters?: number;
   name: string;
   identifier: string;
 }
@@ -241,6 +241,8 @@ export interface FuelType {
 
 export interface CreateFuelTypeRequest {
   name: string;
+  idCompany: number;
+  idBusinessUnit?: number | null;
 }
 
 export interface UpdateFuelTypeRequest extends CreateFuelTypeRequest {
@@ -260,6 +262,8 @@ export interface MovementType {
 
 export interface CreateMovementTypeRequest {
   name: string;
+  idCompany: number;
+  idBusinessUnit?: number | null;
 }
 
 export interface UpdateMovementTypeRequest extends CreateMovementTypeRequest {
@@ -412,9 +416,9 @@ export interface PaginatedResponse<T> {
 // RESOURCE TYPE CONSTANTS
 // ============================================
 export const RESOURCE_TYPES = {
-  VEHICLE: 1, // Vehículo
-  TANK: 2, // Tanque
-  DISPENSER: 3, // Surtidor
+  TANK: 1, // Tanque
+  DISPENSER: 2, // Surtidor
+  VEHICLE: 5, // Vehículo
 } as const;
 
 export type ResourceTypeId =

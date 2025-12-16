@@ -206,8 +206,8 @@ export default function DriversPage() {
 
   if (isLoading)
     return (
-      <div className="space-y-6">
-        <div className="border-b bg-background px-6 py-6">
+      <div className="space-y-4">
+        <div className="bg-background px-6 pt-4 pb-2">
           <PageHeader
             title="Choferes"
             description="Administración del personal de conducción"
@@ -224,8 +224,8 @@ export default function DriversPage() {
     );
 
   return (
-    <div className="space-y-6">
-      <div className="bg-background px-6 py-6">
+    <div className="space-y-4">
+      <div className="bg-background px-6 pt-4 pb-2">
         <PageHeader
           title="Choferes"
           description="Administración del personal de conducción"
@@ -257,7 +257,7 @@ export default function DriversPage() {
         />
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="px-6 pb-6 space-y-4">
         <SectionCard>
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

@@ -31,18 +31,25 @@ import {
   useUpdateFuelType,
   useDeactivateFuelType,
 } from "@/hooks/queries";
+import { useIdBusinessUnit, useIdCompany } from "@/stores/auth.store";
+import { useUnidadActivaId } from "@/stores/unidad.store";
 import type {
   FuelType,
-  CreateFuelTypeRequest,
   UpdateFuelTypeRequest,
+  CreateFuelTypeRequest,
 } from "@/types/api.types";
 
 export default function FuelTypesTab() {
+  const companyId = useIdCompany() ?? 0;
+  const activeBusinessUnitId = useUnidadActivaId();
+  const userBusinessUnitId = useIdBusinessUnit();
+  const businessUnitId = activeBusinessUnitId ?? userBusinessUnitId ?? null;
+
   const [openDialog, setOpenDialog] = useState(false);
   const [openToggleDialog, setOpenToggleDialog] = useState(false);
   const [editingType, setEditingType] = useState<FuelType | null>(null);
   const [toggleType, setToggleType] = useState<FuelType | null>(null);
-  const [formData, setFormData] = useState<CreateFuelTypeRequest>({
+  const [formData, setFormData] = useState<{ name: string }>({
     name: "",
   });
   const [errors, setErrors] = useState({ name: "" });
@@ -81,15 +88,24 @@ export default function FuelTypesTab() {
   const handleSave = async () => {
     if (!validate()) return;
 
+    if (!companyId) return;
+
     try {
       if (editingType) {
         const updateData: UpdateFuelTypeRequest = {
           id: editingType.id,
           name: formData.name,
+          idCompany: companyId,
+          idBusinessUnit: editingType.idBusinessUnit ?? businessUnitId ?? null,
         };
         await updateMutation.mutateAsync(updateData);
       } else {
-        await createMutation.mutateAsync(formData);
+        const createData: CreateFuelTypeRequest = {
+          name: formData.name,
+          idCompany: companyId,
+          idBusinessUnit: businessUnitId,
+        };
+        await createMutation.mutateAsync(createData);
       }
       setOpenDialog(false);
     } catch {

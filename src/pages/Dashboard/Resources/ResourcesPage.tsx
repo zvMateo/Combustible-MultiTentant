@@ -476,7 +476,7 @@ export default function ResourcesPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="space-y-6 p-6">
+      <div className="space-y-4 px-6 pt-4 pb-6">
         <PageHeader title="Recursos" description="Cargando recursos..." />
 
         <div className="space-y-4">
@@ -502,7 +502,7 @@ export default function ResourcesPage() {
   // Error state
   if (error) {
     return (
-      <div className="space-y-6 p-6">
+      <div className="space-y-4 px-6 pt-4 pb-6">
         <PageHeader title="Recursos" description="No se pudieron cargar" />
 
         <div className="space-y-4">
@@ -522,7 +522,7 @@ export default function ResourcesPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 px-6 pt-4 pb-6">
       <PageHeader
         title="Recursos"
         description={`${filteredResources.length} ${

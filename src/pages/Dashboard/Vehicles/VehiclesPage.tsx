@@ -24,8 +24,9 @@ import {
   useUpdateResource,
   useDeactivateResource,
   useBusinessUnits,
+  useResourceTypes,
+  useCreateResourceType,
 } from "@/hooks/queries";
-import { RESOURCE_TYPES } from "@/types/api.types";
 import type {
   Resource,
   CreateResourceRequest,
@@ -83,22 +84,33 @@ export default function VehiclesPage() {
   const [editingVehicle, setEditingVehicle] = useState<Resource | null>(null);
   const [deleteVehicle, setDeleteVehicle] = useState<Resource | null>(null);
 
+  const { data: resourceTypes = [] } = useResourceTypes();
+
+  // Buscar el idType de "Vehiculo" dinámicamente
+  const vehicleTypeId = useMemo(() => {
+    const vehicleType = resourceTypes.find((rt) =>
+      rt.name.toLowerCase().includes("vehiculo") ||
+      rt.name.toLowerCase().includes("vehicle")
+    );
+    return vehicleType?.id ?? 0;
+  }, [resourceTypes]);
+
   const getInitialFormData = (): CreateResourceRequest => ({
-    idType: RESOURCE_TYPES.VEHICLE,
+    idType: vehicleTypeId,
     idCompany: user?.idCompany || 0,
     idBusinessUnit: undefined,
     nativeLiters: undefined,
-    actualLiters: undefined,
+    initialLiters: undefined,
     name: "",
     identifier: "",
   });
 
   const [formData, setFormData] = useState<CreateResourceRequest>({
-    idType: RESOURCE_TYPES.VEHICLE,
+    idType: 0,
     idCompany: user?.idCompany || 0,
     idBusinessUnit: undefined,
     nativeLiters: undefined,
-    actualLiters: undefined,
+    initialLiters: undefined,
     name: "",
     identifier: "",
   });
@@ -109,6 +121,24 @@ export default function VehiclesPage() {
   const createMutation = useCreateResource();
   const updateMutation = useUpdateResource();
   const deactivateMutation = useDeactivateResource();
+  const createResourceTypeMutation = useCreateResourceType();
+
+  const handleCreateVehicleType = async () => {
+    const companyId = user?.idCompany || 0;
+    if (!companyId) {
+      toast.error("No se pudo determinar la empresa");
+      return;
+    }
+    try {
+      await createResourceTypeMutation.mutateAsync({
+        name: "Vehiculo",
+        idCompany: companyId,
+      });
+      toast.success("Tipo 'Vehículo' creado. Ya podés agregar vehículos.");
+    } catch {
+      toast.error("Error al crear el tipo de recurso");
+    }
+  };
 
   const filteredVehicles = useMemo(() => {
     let filtered = Array.isArray(vehicles) ? vehicles : [];
@@ -147,7 +177,7 @@ export default function VehiclesPage() {
       idCompany: v.idCompany,
       idBusinessUnit: v.idBusinessUnit,
       nativeLiters: v.nativeLiters,
-      actualLiters: v.actualLiters,
+      initialLiters: v.initialLiters,
       name: v.name,
       identifier: v.identifier,
     });
@@ -160,10 +190,18 @@ export default function VehiclesPage() {
       return;
     }
 
+    const finalIdType = formData.idType || vehicleTypeId;
+    if (!finalIdType || finalIdType === 0) {
+      toast.error("No existe el tipo 'Vehículo' en tu empresa. Crealo primero en Recursos.");
+      return;
+    }
+
     const payload: CreateResourceRequest = {
       ...formData,
+      idType: finalIdType,
+      idCompany: formData.idCompany || user?.idCompany || 0,
       nativeLiters: formData.nativeLiters ?? 0,
-      actualLiters: formData.actualLiters ?? 0,
+      initialLiters: formData.initialLiters ?? 0,
     };
 
     try {
@@ -196,8 +234,8 @@ export default function VehiclesPage() {
 
   if (isLoading)
     return (
-      <div className="space-y-6">
-        <div className="border-b bg-background px-6 py-6">
+      <div className="space-y-4">
+        <div className="bg-background px-6 pt-4 pb-2">
           <PageHeader
             title="Flota de Vehículos"
             description="Administración de activos y unidades de transporte"
@@ -216,8 +254,8 @@ export default function VehiclesPage() {
     );
 
   return (
-    <div className="space-y-6">
-      <div className="bg-background px-6 py-6">
+    <div className="space-y-4">
+      <div className="bg-background px-6 pt-4 pb-2">
         <PageHeader
           title="Flota de Vehículos"
           description="Administración de activos y unidades de transporte"
@@ -228,7 +266,17 @@ export default function VehiclesPage() {
                   <Download className="mr-2 h-4 w-4" /> Exportar
                 </Button>
               )}
-              {showCreateButtons && canManageVehicles && (
+              {showCreateButtons && canManageVehicles && !vehicleTypeId && (
+                <Button
+                  variant="outline"
+                  onClick={handleCreateVehicleType}
+                  disabled={createResourceTypeMutation.isPending}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  {createResourceTypeMutation.isPending ? "Creando..." : "Crear tipo Vehículo"}
+                </Button>
+              )}
+              {showCreateButtons && canManageVehicles && vehicleTypeId > 0 && (
                 <Button
                   onClick={() => {
                     setEditingVehicle(null);
@@ -244,7 +292,7 @@ export default function VehiclesPage() {
         />
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="px-6 pb-6 space-y-4">
         <SectionCard>
           <div className="relative max-w-xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -469,11 +517,11 @@ export default function VehiclesPage() {
                   />
                   <Input
                     type="number"
-                    value={formData.actualLiters ?? ""}
+                    value={formData.initialLiters ?? ""}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        actualLiters: e.target.value
+                        initialLiters: e.target.value
                           ? Number(e.target.value)
                           : undefined,
                       })

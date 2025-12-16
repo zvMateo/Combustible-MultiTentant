@@ -169,7 +169,7 @@ export default function DashboardLayout() {
         <Header />
 
         <main className="flex-1 overflow-y-auto outline-none">
-          <div className="p-4 md:p-8 max-w-[1600px] mx-auto w-full">
+          <div className="max-w-[1600px] mx-auto w-full">
             <Outlet />
           </div>
         </main>

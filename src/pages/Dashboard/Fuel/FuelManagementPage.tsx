@@ -15,7 +15,7 @@ export default function FuelManagementPage() {
   const [tab, setTab] = useState("stock");
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 px-6 pt-4 pb-6">
       <PageHeader
         title="Gestión de Combustible"
         description="Administración completa de stock, cargas, tipos de combustible, movimientos y viajes"

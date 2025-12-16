@@ -307,8 +307,8 @@ export default function UsersPage() {
 
   if (isLoading)
     return (
-      <div className="space-y-6">
-        <div className="border-b bg-background px-6 py-6">
+      <div className="space-y-4">
+        <div className="bg-background px-6 pt-4 pb-2">
           <PageHeader
             title="Usuarios"
             description="Gestioná los accesos y perfiles de tu organización"
@@ -327,8 +327,8 @@ export default function UsersPage() {
     );
 
   return (
-    <div className="space-y-6">
-      <div className=" bg-background px-6 py-6">
+    <div className="space-y-4">
+      <div className="bg-background px-6 pt-4 pb-2">
         <PageHeader
           title="Usuarios"
           description="Gestioná los accesos y perfiles de tu organización"
@@ -357,7 +357,7 @@ export default function UsersPage() {
         />
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="px-6 pb-6 space-y-4">
         <SectionCard>
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

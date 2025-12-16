@@ -220,8 +220,8 @@ export default function TanksPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="border-b bg-background px-6 py-6">
+      <div className="space-y-4">
+        <div className="bg-background px-6 pt-4 pb-2">
           <PageHeader title="Tanques" description="Cargando tanques..." />
         </div>
 
@@ -248,8 +248,8 @@ export default function TanksPage() {
   // Error state
   if (error) {
     return (
-      <div className="space-y-6">
-        <div className="border-b bg-background px-6 py-6">
+      <div className="space-y-4">
+        <div className="bg-background px-6 pt-4 pb-2">
           <PageHeader title="Tanques" description="No se pudieron cargar" />
         </div>
 
@@ -270,8 +270,8 @@ export default function TanksPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="border-b bg-background px-6 py-6">
+    <div className="space-y-4">
+      <div className="bg-background px-6 pt-4 pb-2">
         <PageHeader
           title="Tanques"
           description={`${filteredTanks.length} ${

@@ -245,34 +245,17 @@ export function useVehicles() {
         : await resourcesApi.getByCompany(companyId);
 
       const all = Array.isArray(raw) ? raw.map(normalizeResource) : [];
-      // Filtrar vehículos: idType 1 (legacy), idType 5 (nuevo tipo "Vehiculo"), o que tenga "vehiculo" en el type array
-      // También filtrar recursos inactivos (active: false)
+      // Filtrar vehículos: buscar "vehiculo" o "vehicle" en el type array
+      // También filtrar recursos inactivos
       return all.filter((r) => {
-        // Excluir recursos inactivos
-        if (r.active === false || r.isActive === false) {
-          return false;
-        }
+        if (r.active === false || r.isActive === false) return false;
 
         const typeArray = (r as { type?: unknown[] }).type ?? [];
-        if (typeArray.length > 0) {
-          // Si tiene type array, verificar si es vehículo o no es tanque/surtidor
-          const isVehicle = typeArray.some((t: unknown) =>
-            typeof t === "string"
-              ? t.toLowerCase().includes("vehiculo") ||
-                t.toLowerCase().includes("vehicle")
-              : false
-          );
-          const isNotTankOrDispenser = !typeArray.some((t: unknown) =>
-            typeof t === "string"
-              ? t.toLowerCase().includes("tanque") ||
-                t.toLowerCase().includes("surtidor") ||
-                t.toLowerCase().includes("dispenser")
-              : false
-          );
-          return isVehicle || isNotTankOrDispenser;
-        }
-        // Si no tiene type array, usar idType: 1 (legacy) o 5 (nuevo tipo "Vehiculo")
-        return r.idType === 1 || r.idType === 5;
+        return typeArray.some((t: unknown) =>
+          typeof t === "string"
+            ? t.toLowerCase().includes("vehiculo") || t.toLowerCase().includes("vehicle")
+            : false
+        );
       });
     },
     enabled,
@@ -297,23 +280,17 @@ export function useTanks() {
   const isSuperAdmin = user?.role === "superadmin";
   const isAdmin = user?.role === "admin";
   const isCompanyAdmin = isAdmin || isSuperAdmin;
-  const isAdminAssigned =
-    isAdmin && (!!userBusinessUnitId || !!fallbackAssignedId);
 
-  const businessUnitId =
-    activeBusinessUnitId ??
-    (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
+  // Determinar si usar scope por BU o por Company
+  const businessUnitId = activeBusinessUnitId ?? 
     (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
 
-  const useBusinessUnitScope = !!businessUnitId;
-  const shouldHaveBusinessUnit = !isCompanyAdmin || isAdminAssigned;
-  const enabled =
-    hasUser &&
-    (useBusinessUnitScope ? true : shouldHaveBusinessUnit ? false : !!companyId);
+  const useBusinessUnitScope = !!businessUnitId && businessUnitId > 0;
+  const enabled = hasUser && (useBusinessUnitScope || (isCompanyAdmin && !!companyId));
 
   return useQuery({
     queryKey: useBusinessUnitScope
-      ? resourcesKeys.list({ idType: 2, idBusinessUnit: businessUnitId as number })
+      ? resourcesKeys.list({ idType: 1, idBusinessUnit: businessUnitId as number })
       : resourcesKeys.tanks(companyId),
     queryFn: async () => {
       const raw = useBusinessUnitScope
@@ -321,21 +298,15 @@ export function useTanks() {
         : await resourcesApi.getByCompany(companyId);
 
       const all = Array.isArray(raw) ? raw.map(normalizeResource) : [];
-      // Filtrar tanques: buscar por type array o idType 2
-      // También filtrar recursos inactivos (active: false)
+      // Filtrar tanques: buscar "tanque" en el type array
+      // También filtrar recursos inactivos
       return all.filter((r) => {
-        // Excluir recursos inactivos
-        if (r.active === false || r.isActive === false) {
-          return false;
-        }
+        if (r.active === false || r.isActive === false) return false;
 
         const typeArray = (r as { type?: unknown[] }).type ?? [];
-        if (typeArray.length > 0) {
-          return typeArray.some((t: unknown) =>
-            typeof t === "string" ? t.toLowerCase().includes("tanque") : false
-          );
-        }
-        return r.idType === 2;
+        return typeArray.some((t: unknown) =>
+          typeof t === "string" ? t.toLowerCase().includes("tanque") : false
+        );
       });
     },
     enabled,
@@ -360,23 +331,17 @@ export function useDispensers() {
   const isSuperAdmin = user?.role === "superadmin";
   const isAdmin = user?.role === "admin";
   const isCompanyAdmin = isAdmin || isSuperAdmin;
-  const isAdminAssigned =
-    isAdmin && (!!userBusinessUnitId || !!fallbackAssignedId);
 
-  const businessUnitId =
-    activeBusinessUnitId ??
-    (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
+  // Determinar si usar scope por BU o por Company
+  const businessUnitId = activeBusinessUnitId ?? 
     (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
 
-  const useBusinessUnitScope = !!businessUnitId;
-  const shouldHaveBusinessUnit = !isCompanyAdmin || isAdminAssigned;
-  const enabled =
-    hasUser &&
-    (useBusinessUnitScope ? true : shouldHaveBusinessUnit ? false : !!companyId);
+  const useBusinessUnitScope = !!businessUnitId && businessUnitId > 0;
+  const enabled = hasUser && (useBusinessUnitScope || (isCompanyAdmin && !!companyId));
 
   return useQuery({
     queryKey: useBusinessUnitScope
-      ? resourcesKeys.list({ idType: 3, idBusinessUnit: businessUnitId as number })
+      ? resourcesKeys.list({ idType: 2, idBusinessUnit: businessUnitId as number })
       : resourcesKeys.dispensers(companyId),
     queryFn: async () => {
       const raw = useBusinessUnitScope
@@ -384,24 +349,17 @@ export function useDispensers() {
         : await resourcesApi.getByCompany(companyId);
 
       const all = Array.isArray(raw) ? raw.map(normalizeResource) : [];
-      // Filtrar surtidores: buscar por type array o idType 3
-      // También filtrar recursos inactivos (active: false)
+      // Filtrar surtidores: buscar "surtidor" o "dispenser" en el type array
+      // También filtrar recursos inactivos
       return all.filter((r) => {
-        // Excluir recursos inactivos
-        if (r.active === false || r.isActive === false) {
-          return false;
-        }
+        if (r.active === false || r.isActive === false) return false;
 
         const typeArray = (r as { type?: unknown[] }).type ?? [];
-        if (typeArray.length > 0) {
-          return typeArray.some((t: unknown) =>
-            typeof t === "string"
-              ? t.toLowerCase().includes("surtidor") ||
-                t.toLowerCase().includes("dispenser")
-              : false
-          );
-        }
-        return r.idType === 3;
+        return typeArray.some((t: unknown) =>
+          typeof t === "string"
+            ? t.toLowerCase().includes("surtidor") || t.toLowerCase().includes("dispenser")
+            : false
+        );
       });
     },
     enabled,
@@ -471,7 +429,7 @@ export function useDeactivateResource() {
 // ============================================
 
 /**
- * Obtener todos los tipos de recursos (scoped por Company o BusinessUnit)
+ * Obtener todos los tipos de recursos (siempre por Company, ya que los tipos son a nivel empresa)
  */
 export function useResourceTypes() {
   const storeCompanyId = useIdCompany();
@@ -479,29 +437,13 @@ export function useResourceTypes() {
 
   const user = useAuthStore((s) => s.user);
   const hasUser = !!user;
-  const activeBusinessUnitId = useUnidadActivaId();
-  const userBusinessUnitId = useIdBusinessUnit();
-  const fallbackAssignedId = user?.unidadesAsignadas?.[0] ?? null;
 
-  const isSuperAdmin = user?.role === "superadmin";
-  const isAdmin = user?.role === "admin";
-  const isCompanyAdmin = isAdmin || isSuperAdmin;
-
-  // Determinar si usar scope por BU o por Company
-  const businessUnitId = activeBusinessUnitId ?? 
-    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
-
-  const useBusinessUnitScope = !!businessUnitId && businessUnitId > 0;
-  const enabled = hasUser && (useBusinessUnitScope || (isCompanyAdmin && !!companyId));
+  const enabled = hasUser && !!companyId;
 
   return useQuery({
-    queryKey: useBusinessUnitScope
-      ? [...resourceTypesKeys.all, "byBusinessUnit", businessUnitId]
-      : resourceTypesKeys.byCompany(companyId),
+    queryKey: resourceTypesKeys.byCompany(companyId),
     queryFn: async () => {
-      const data = useBusinessUnitScope
-        ? await resourceTypesApi.getByBusinessUnit(businessUnitId as number)
-        : await resourceTypesApi.getByCompany(companyId);
+      const data = await resourceTypesApi.getByCompany(companyId);
       return Array.isArray(data) ? data : [];
     },
     enabled,

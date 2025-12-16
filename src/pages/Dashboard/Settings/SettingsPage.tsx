@@ -1473,7 +1473,7 @@ export default function SettingsPage() {
   const canEdit = hasPermission("configuracion:editar") && canManageSettings;
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 px-6 pt-4 pb-6">
       <PageHeader
         title="Configuración"
         description="Gestión de políticas, precios, umbrales, alertas y personalización"
