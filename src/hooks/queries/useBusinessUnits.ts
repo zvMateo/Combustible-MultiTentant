@@ -1,12 +1,21 @@
 /**
  * Hooks de TanStack Query para Business Units
+ * Con Optimistic Updates para mejor UX
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { businessUnitsApi } from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/axios";
 import { useIdCompany } from "@/stores/auth.store";
+import {
+  optimisticCreate,
+  optimisticUpdate,
+  optimisticDelete,
+  rollbackOptimistic,
+  type OptimisticContext,
+} from "@/lib/query-helpers";
 import type {
+  BusinessUnit,
   CreateBusinessUnitRequest,
   UpdateBusinessUnitRequest,
 } from "@/types/api.types";
@@ -62,7 +71,7 @@ export function useBusinessUnitsByCompany(idCompany: number) {
 }
 
 /**
- * Crear nueva unidad de negocio
+ * Crear nueva unidad de negocio (con Optimistic Update)
  */
 export function useCreateBusinessUnit() {
   const queryClient = useQueryClient();
@@ -70,25 +79,33 @@ export function useCreateBusinessUnit() {
   return useMutation({
     mutationFn: (data: CreateBusinessUnitRequest) =>
       businessUnitsApi.create(data),
+    onMutate: async (newUnit) => {
+      const queryKey = businessUnitsKeys.byCompany(newUnit.idCompany);
+      return optimisticCreate<BusinessUnit>(queryClient, queryKey, newUnit);
+    },
+    onError: (error, _, context) => {
+      if (context) {
+        rollbackOptimistic(
+          queryClient,
+          context as OptimisticContext<BusinessUnit>
+        );
+      }
+      toast.error(getErrorMessage(error));
+    },
     onSuccess: (_, variables) => {
       toast.success("Unidad de negocio creada correctamente");
-      // Invalidar todas las queries relacionadas
       queryClient.invalidateQueries({ queryKey: businessUnitsKeys.all });
-      // Invalidar también la query por empresa si existe
       if (variables.idCompany) {
         queryClient.invalidateQueries({
           queryKey: businessUnitsKeys.byCompany(variables.idCompany),
         });
       }
     },
-    onError: (error) => {
-      toast.error(getErrorMessage(error));
-    },
   });
 }
 
 /**
- * Actualizar unidad de negocio
+ * Actualizar unidad de negocio (con Optimistic Update)
  */
 export function useUpdateBusinessUnit() {
   const queryClient = useQueryClient();
@@ -96,41 +113,64 @@ export function useUpdateBusinessUnit() {
   return useMutation({
     mutationFn: (data: UpdateBusinessUnitRequest) =>
       businessUnitsApi.update(data),
+    onMutate: async (updatedUnit) => {
+      const queryKey = businessUnitsKeys.byCompany(updatedUnit.idCompany);
+      return optimisticUpdate<BusinessUnit>(
+        queryClient,
+        queryKey,
+        updatedUnit as BusinessUnit
+      );
+    },
+    onError: (error, _, context) => {
+      if (context) {
+        rollbackOptimistic(
+          queryClient,
+          context as OptimisticContext<BusinessUnit>
+        );
+      }
+      toast.error(getErrorMessage(error));
+    },
     onSuccess: (_, variables) => {
       toast.success("Unidad de negocio actualizada correctamente");
-      // Invalidar todas las queries relacionadas
       queryClient.invalidateQueries({ queryKey: businessUnitsKeys.all });
       queryClient.invalidateQueries({
         queryKey: businessUnitsKeys.detail(variables.id),
       });
-      // Invalidar también la query por empresa si existe
       if (variables.idCompany) {
         queryClient.invalidateQueries({
           queryKey: businessUnitsKeys.byCompany(variables.idCompany),
         });
       }
     },
-    onError: (error) => {
-      toast.error(getErrorMessage(error));
-    },
   });
 }
 
 /**
- * Desactivar unidad de negocio
+ * Desactivar unidad de negocio (con Optimistic Update)
  */
 export function useDeactivateBusinessUnit() {
   const queryClient = useQueryClient();
+  const companyId = useIdCompany();
 
   return useMutation({
     mutationFn: (id: number) => businessUnitsApi.deactivate(id),
+    onMutate: async (id) => {
+      if (!companyId) return;
+      const queryKey = businessUnitsKeys.byCompany(companyId);
+      return optimisticDelete<BusinessUnit>(queryClient, queryKey, id);
+    },
+    onError: (error, _, context) => {
+      if (context) {
+        rollbackOptimistic(
+          queryClient,
+          context as OptimisticContext<BusinessUnit>
+        );
+      }
+      toast.error(getErrorMessage(error));
+    },
     onSuccess: () => {
       toast.success("Unidad de negocio desactivada");
-      // Invalidar todas las queries relacionadas
       queryClient.invalidateQueries({ queryKey: businessUnitsKeys.all });
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error));
     },
   });
 }
