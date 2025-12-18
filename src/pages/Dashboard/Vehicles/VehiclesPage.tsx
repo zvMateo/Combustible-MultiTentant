@@ -72,7 +72,7 @@ import { SearchInput } from "@/components/common/DataTable";
 const DEFAULT_FORM_VALUES: CreateResourceFormData = {
   idType: 0,
   idCompany: 0,
-  idBusinessUnit: undefined,
+  idBusinessUnit: null,
   nativeLiters: undefined,
   initialLiters: undefined,
   name: "",
@@ -113,8 +113,6 @@ const prepareUpdateData = (
 export default function VehiclesPage() {
   const { user } = useAuthStore();
   const {
-    isSupervisor,
-    isAuditor,
     canManageVehicles,
     canEdit,
     showCreateButtons,
@@ -178,17 +176,15 @@ export default function VehiclesPage() {
     if (companyIdFilter && companyIdFilter > 0) {
       filtered = filtered.filter((v) => v.idCompany === companyIdFilter);
     }
-    if ((isSupervisor || isAuditor) && unidadIdsFilter?.length) {
+    if (unidadIdsFilter?.length) {
       filtered = filtered.filter(
-        (v) => v.idBusinessUnit && unidadIdsFilter.includes(v.idBusinessUnit)
+        (v) => v.idBusinessUnit == null || unidadIdsFilter.includes(v.idBusinessUnit)
       );
     }
     return filtered;
   }, [
     crud.filteredItems,
     companyIdFilter,
-    isSupervisor,
-    isAuditor,
     unidadIdsFilter,
   ]);
 
@@ -502,11 +498,15 @@ export default function VehiclesPage() {
                 Unidad de Negocio
               </Label>
               <Select
-                value={String(form.watch("idBusinessUnit") || "none")}
+                value={
+                  form.watch("idBusinessUnit") == null
+                    ? "none"
+                    : String(form.watch("idBusinessUnit"))
+                }
                 onValueChange={(v) =>
                   form.setValue(
                     "idBusinessUnit",
-                    v === "none" ? undefined : Number(v)
+                    v === "none" ? null : Number(v)
                   )
                 }
               >

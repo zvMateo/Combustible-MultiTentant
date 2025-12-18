@@ -43,6 +43,8 @@ const requiredId = z.number().int(msg.integer).positive(msg.positive);
 
 const optionalId = z.number().int().positive().optional();
 
+const optionalNullableId = optionalId.nullable();
+
 const dni = z
   .string()
   .min(1, msg.required)
@@ -93,7 +95,7 @@ export const createUserSchema = z
     password: password,
     confirmPassword: requiredString,
     idCompany: requiredId,
-    idBusinessUnit: optionalId,
+    idBusinessUnit: optionalNullableId,
     phoneNumber: phone,
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -141,10 +143,11 @@ export const updateBusinessUnitSchema = createBusinessUnitSchema.extend({
 // DRIVER SCHEMAS
 // ============================================
 export const createDriverSchema = z.object({
-  idBusinessUnit: optionalId,
+  idCompany: requiredId,
+  idBusinessUnit: optionalNullableId,
   name: requiredString.max(100, msg.maxLength(100)),
   dni: dni,
-  phoneNumber: phone.transform((v) => v || undefined),
+  phoneNumber: phone,
 });
 
 export const updateDriverSchema = createDriverSchema.extend({
@@ -157,7 +160,7 @@ export const updateDriverSchema = createDriverSchema.extend({
 export const createResourceSchema = z.object({
   idType: requiredId,
   idCompany: requiredId,
-  idBusinessUnit: optionalId,
+  idBusinessUnit: optionalNullableId,
   name: requiredString.max(100, msg.maxLength(100)),
   identifier: requiredString.max(50, msg.maxLength(50)),
   nativeLiters: optionalPositiveNumber,
@@ -174,7 +177,7 @@ export const updateResourceSchema = createResourceSchema.extend({
 export const createFuelTypeSchema = z.object({
   name: requiredString.max(50, msg.maxLength(50)),
   idCompany: requiredId,
-  idBusinessUnit: optionalId,
+  idBusinessUnit: optionalNullableId,
 });
 
 export const updateFuelTypeSchema = createFuelTypeSchema.extend({
@@ -187,7 +190,7 @@ export const updateFuelTypeSchema = createFuelTypeSchema.extend({
 export const createMovementTypeSchema = z.object({
   name: requiredString.max(50, msg.maxLength(50)),
   idCompany: requiredId,
-  idBusinessUnit: optionalId,
+  idBusinessUnit: optionalNullableId,
 });
 
 export const updateMovementTypeSchema = createMovementTypeSchema.extend({
@@ -203,7 +206,7 @@ export const createFuelStockMovementSchema = z.object({
   date: requiredString,
   idMovementType: requiredId,
   idCompany: requiredId,
-  idBusinessUnit: optionalId,
+  idBusinessUnit: optionalNullableId,
   liters: requiredPositiveNumber,
 });
 
@@ -217,6 +220,7 @@ export const updateFuelStockMovementSchema =
 // ============================================
 const loadLitersBaseSchema = z.object({
   idResource: requiredId,
+  idBusinessUnit: optionalNullableId,
   loadDate: requiredString,
   initialLiters: z.number().min(0),
   finalLiters: z.number().min(0),

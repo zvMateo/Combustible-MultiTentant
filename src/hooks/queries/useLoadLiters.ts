@@ -72,9 +72,11 @@ export function useLoadLitersScoped() {
   // - Si NO es admin/superadmin => usar su unidad asignada
   // - Si es admin/superadmin y está en "Todas" => NO filtrar por unidad
   const businessUnitId =
-    activeBusinessUnitId ??
-    (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
-    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
+    activeBusinessUnitId === null
+      ? null
+      : activeBusinessUnitId ??
+        (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
+        (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
 
   const useBusinessUnitScope = !!businessUnitId;
   const shouldHaveBusinessUnit = !isCompanyAdmin || isAdminAssigned;

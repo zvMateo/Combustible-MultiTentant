@@ -63,7 +63,7 @@ import { RESOURCE_TYPES } from "@/types/api.types";
 const DEFAULT_FORM_VALUES: CreateResourceFormData = {
   idType: RESOURCE_TYPES.TANK,
   idCompany: 0,
-  idBusinessUnit: undefined,
+  idBusinessUnit: null,
   nativeLiters: undefined,
   name: "",
   identifier: "",
@@ -329,11 +329,15 @@ export default function TanksPage() {
                   Unidad de Negocio (opcional)
                 </label>
                 <Select
-                  value={String(form.watch("idBusinessUnit") || "none")}
+                  value={
+                    form.watch("idBusinessUnit") == null
+                      ? "none"
+                      : String(form.watch("idBusinessUnit"))
+                  }
                   onValueChange={(value) =>
                     form.setValue(
                       "idBusinessUnit",
-                      value === "none" ? undefined : Number(value)
+                      value === "none" ? null : Number(value)
                     )
                   }
                 >

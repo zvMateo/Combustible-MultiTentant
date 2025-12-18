@@ -85,8 +85,6 @@ export default function UsersPage() {
     canEdit,
     isReadOnly,
     unidadIdsFilter,
-    isSupervisor,
-    isAuditor,
     showExportButtons,
     showCreateButtons,
   } = useRoleLogic();
@@ -107,7 +105,7 @@ export default function UsersPage() {
       password: "",
       confirmPassword: "",
       idCompany: user?.idCompany || 0,
-      idBusinessUnit: undefined,
+      idBusinessUnit: null,
       phoneNumber: "",
     },
   });
@@ -125,9 +123,9 @@ export default function UsersPage() {
   const filteredUsers = useMemo(() => {
     let filtered = Array.isArray(users) ? users : [];
 
-    if ((isSupervisor || isAuditor) && unidadIdsFilter?.length) {
+    if (unidadIdsFilter?.length) {
       filtered = filtered.filter(
-        (u) => u.idBusinessUnit && unidadIdsFilter.includes(u.idBusinessUnit)
+        (u) => u.idBusinessUnit == null || unidadIdsFilter.includes(u.idBusinessUnit)
       );
     }
 
@@ -140,7 +138,7 @@ export default function UsersPage() {
       );
     }
     return filtered;
-  }, [users, searchTerm, isSupervisor, isAuditor, unidadIdsFilter]);
+  }, [users, searchTerm, unidadIdsFilter]);
 
   const userRoleQueries = useQueries({
     queries: (Array.isArray(users) ? users : []).map((u) => ({
@@ -236,7 +234,7 @@ export default function UsersPage() {
       password: "",
       confirmPassword: "",
       idCompany: user?.idCompany || 0,
-      idBusinessUnit: undefined,
+      idBusinessUnit: null,
       phoneNumber: "",
     });
     setOpenDialog(true);
@@ -631,11 +629,15 @@ export default function UsersPage() {
                 Unidad Asignada
               </Label>
               <Select
-                value={String(form.watch("idBusinessUnit") || "none")}
+                value={
+                  form.watch("idBusinessUnit") == null
+                    ? "none"
+                    : String(form.watch("idBusinessUnit"))
+                }
                 onValueChange={(v) =>
                   form.setValue(
                     "idBusinessUnit",
-                    v === "none" ? undefined : Number(v)
+                    v === "none" ? null : Number(v)
                   )
                 }
               >

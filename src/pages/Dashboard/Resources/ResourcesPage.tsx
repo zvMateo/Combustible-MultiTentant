@@ -56,6 +56,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
+import { useUnidadActivaId } from "@/stores/unidad.store";
 import {
   useResources,
   useCreateResource,
@@ -85,8 +86,6 @@ type ResourceFilter = "all" | string; // string es el idType serializado
 export default function ResourcesPage() {
   const { user } = useAuthStore();
   const {
-    isSupervisor,
-    isAuditor,
     canManageResources,
     canEdit,
     showCreateButtons,
@@ -97,6 +96,12 @@ export default function ResourcesPage() {
   } = useRoleLogic();
 
   const idCompany = user?.empresaId ?? companyIdFilter ?? 0;
+  const activeBusinessUnitId = useUnidadActivaId();
+  const userBusinessUnitId = user?.idBusinessUnit ?? null;
+  const defaultBusinessUnitId =
+    activeBusinessUnitId === null
+      ? null
+      : activeBusinessUnitId ?? userBusinessUnitId ?? null;
 
   // Estados locales
   const [searchTerm, setSearchTerm] = useState("");
@@ -108,7 +113,7 @@ export default function ResourcesPage() {
   const [formData, setFormData] = useState<CreateResourceRequest>({
     idType: 0,
     idCompany: idCompany || 0,
-    idBusinessUnit: undefined,
+    idBusinessUnit: defaultBusinessUnitId,
     nativeLiters: undefined,
     initialLiters: undefined,
     name: "",
@@ -131,7 +136,7 @@ export default function ResourcesPage() {
     useState<CreateResourceTypeRequest>({
       name: "",
       idCompany: idCompany,
-      idBusinessUnit: 0,
+      idBusinessUnit: defaultBusinessUnitId,
     });
   const [resourceTypeErrors, setResourceTypeErrors] = useState<FormErrors>({});
 
@@ -154,18 +159,11 @@ export default function ResourcesPage() {
     // NO filtrar recursos inactivos - mostrar todos y usar Switch para activar/desactivar
 
     // 2. Filtrar por unidad de negocio (Supervisor y Auditor solo ven recursos de su(s) unidad(es))
-    if (
-      (isSupervisor || isAuditor) &&
-      unidadIdsFilter &&
-      unidadIdsFilter.length > 0
-    ) {
+    if (unidadIdsFilter && unidadIdsFilter.length > 0) {
       filtered = filtered.filter((r) => {
-        // Si el recurso tiene unidad asignada, verificar que esté en las unidades del usuario
-        if (r.idBusinessUnit) {
-          return unidadIdsFilter.includes(r.idBusinessUnit);
-        }
-        // Si no tiene unidad asignada, no mostrarlo para supervisor/auditor
-        return false;
+        // Registros globales (sin unidad) deben verse también al filtrar por unidad
+        if (r.idBusinessUnit == null) return true;
+        return unidadIdsFilter.includes(r.idBusinessUnit);
       });
     }
 
@@ -206,8 +204,6 @@ export default function ResourcesPage() {
   }, [
     allResources,
     searchTerm,
-    isSupervisor,
-    isAuditor,
     unidadIdsFilter,
     filterType,
   ]);
@@ -248,7 +244,7 @@ export default function ResourcesPage() {
     setFormData({
       idType: defaultType,
       idCompany: finalIdCompany,
-      idBusinessUnit: undefined,
+      idBusinessUnit: defaultBusinessUnitId,
       nativeLiters: undefined,
       initialLiters: undefined,
       name: "",
@@ -320,7 +316,9 @@ export default function ResourcesPage() {
         const createPayload: CreateResourceRequest = {
           idType: formData.idType,
           idCompany: finalIdCompany,
-          idBusinessUnit: formData.idBusinessUnit ?? 0,
+          idBusinessUnit:
+            formData.idBusinessUnit ??
+            (activeBusinessUnitId === null ? null : undefined),
           nativeLiters: formData.nativeLiters ?? 0,
           initialLiters: formData.initialLiters ?? 0,
           name: formData.name.trim(),
@@ -386,14 +384,14 @@ export default function ResourcesPage() {
       setResourceTypeFormData({
         name: resourceType.name,
         idCompany: resourceType.idCompany ?? idCompany,
-        idBusinessUnit: resourceType.idBusinessUnit ?? 0,
+        idBusinessUnit: resourceType.idBusinessUnit ?? defaultBusinessUnitId,
       });
     } else {
       setEditingResourceType(null);
       setResourceTypeFormData({
         name: "",
         idCompany: idCompany,
-        idBusinessUnit: 0,
+        idBusinessUnit: defaultBusinessUnitId,
       });
     }
     setResourceTypeErrors({});
@@ -435,6 +433,7 @@ export default function ResourcesPage() {
         await createResourceTypeMutation.mutateAsync({
           ...resourceTypeFormData,
           idCompany: idCompany,
+          idBusinessUnit: resourceTypeFormData.idBusinessUnit ?? defaultBusinessUnitId,
         });
       }
       setOpenResourceTypeFormDialog(false);
@@ -818,7 +817,7 @@ export default function ResourcesPage() {
                   setFormData({
                     ...formData,
                     idBusinessUnit:
-                      value === "none" ? undefined : Number(value),
+                      value === "none" ? null : Number(value),
                   })
                 }
               >
@@ -1080,6 +1079,39 @@ export default function ResourcesPage() {
                 {resourceTypeErrors.name}
               </p>
             ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Unidad de Negocio (opcional)
+            </label>
+            <Select
+              value={
+                resourceTypeFormData.idBusinessUnit
+                  ? String(resourceTypeFormData.idBusinessUnit)
+                  : "none"
+              }
+              onValueChange={(value) =>
+                setResourceTypeFormData({
+                  ...resourceTypeFormData,
+                  idBusinessUnit: value === "none" ? null : Number(value),
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sin asignar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin asignar</SelectItem>
+                {businessUnits
+                  .filter((bu) => bu.idCompany === idCompany)
+                  .map((bu) => (
+                    <SelectItem key={bu.id} value={String(bu.id)}>
+                      {bu.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <DialogFooter>

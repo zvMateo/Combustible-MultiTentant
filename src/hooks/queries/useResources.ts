@@ -67,10 +67,17 @@ function normalizeResource(raw: unknown): Resource {
     (r.idcompany as number | undefined) ??
     0;
 
+  const rawIdBusinessUnit =
+    (r.idBusinessUnit as unknown) ??
+    (r.IdBusinessUnit as unknown) ??
+    (r.idbusinessunit as unknown);
+
   const idBusinessUnit =
-    (r.idBusinessUnit as number | undefined) ??
-    (r.IdBusinessUnit as number | undefined) ??
-    (r.idbusinessunit as number | undefined);
+    rawIdBusinessUnit === null
+      ? null
+      : typeof rawIdBusinessUnit === "number"
+      ? rawIdBusinessUnit
+      : undefined;
 
   const name =
     (r.name as string | undefined) ??
@@ -105,7 +112,7 @@ function normalizeResource(raw: unknown): Resource {
     id,
     idType,
     idCompany,
-    ...(typeof idBusinessUnit === "number" ? { idBusinessUnit } : null),
+    ...(idBusinessUnit !== undefined ? { idBusinessUnit } : null),
     name,
     identifier,
     ...(typeof nativeLiters === "number" ? { nativeLiters } : null),
@@ -136,8 +143,11 @@ export function useResources(idCompany?: number) {
   // - Si hay activeBusinessUnitId seleccionado (desde el selector) → usar BU
   // - Si no hay BU seleccionada y es admin/superadmin → usar Company
   // - Si no es admin/superadmin → usar la BU asignada del usuario
-  const businessUnitId = activeBusinessUnitId ?? 
-    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
+  const businessUnitId =
+    activeBusinessUnitId === null
+      ? null
+      : activeBusinessUnitId ??
+        (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
 
   const useBusinessUnitScope = !!businessUnitId && businessUnitId > 0;
   
@@ -151,10 +161,30 @@ export function useResources(idCompany?: number) {
       ? resourcesKeys.byBusinessUnit(businessUnitId as number)
       : resourcesKeys.byCompany(companyId),
     queryFn: async () => {
-      const data = useBusinessUnitScope
-        ? await resourcesApi.getByBusinessUnit(businessUnitId as number)
-        : await resourcesApi.getByCompany(companyId);
-      return Array.isArray(data) ? data.map(normalizeResource) : [];
+      if (!useBusinessUnitScope) {
+        const data = await resourcesApi.getByCompany(companyId);
+        return Array.isArray(data) ? data.map(normalizeResource) : [];
+      }
+
+      const [byBusinessUnitRaw, byCompanyRaw] = await Promise.all([
+        resourcesApi.getByBusinessUnit(businessUnitId as number),
+        resourcesApi.getByCompany(companyId),
+      ]);
+
+      const byBusinessUnit = Array.isArray(byBusinessUnitRaw)
+        ? byBusinessUnitRaw.map(normalizeResource)
+        : [];
+
+      const byCompanyGlobals = Array.isArray(byCompanyRaw)
+        ? byCompanyRaw
+            .map(normalizeResource)
+            .filter((r) => r.idBusinessUnit == null)
+        : [];
+
+      const merged = [...byBusinessUnit, ...byCompanyGlobals];
+      const dedup = new Map<number, Resource>();
+      for (const r of merged) dedup.set(r.id, r);
+      return Array.from(dedup.values());
     },
     enabled,
     staleTime: 1000 * 60 * 5,
@@ -229,8 +259,11 @@ export function useVehicles() {
   const isCompanyAdmin = isAdmin || isSuperAdmin;
 
   // Determinar si usar scope por BU o por Company
-  const businessUnitId = activeBusinessUnitId ?? 
-    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
+  const businessUnitId =
+    activeBusinessUnitId === null
+      ? null
+      : activeBusinessUnitId ??
+        (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
 
   const useBusinessUnitScope = !!businessUnitId && businessUnitId > 0;
   const enabled = hasUser && (useBusinessUnitScope || (isCompanyAdmin && !!companyId));
@@ -240,11 +273,33 @@ export function useVehicles() {
       ? resourcesKeys.list({ idType: 1, idBusinessUnit: businessUnitId as number })
       : resourcesKeys.vehicles(companyId),
     queryFn: async () => {
-      const raw = useBusinessUnitScope
-        ? await resourcesApi.getByBusinessUnit(businessUnitId as number)
-        : await resourcesApi.getByCompany(companyId);
+      let all: Resource[] = [];
 
-      const all = Array.isArray(raw) ? raw.map(normalizeResource) : [];
+      if (!useBusinessUnitScope) {
+        const raw = await resourcesApi.getByCompany(companyId);
+        all = Array.isArray(raw) ? raw.map(normalizeResource) : [];
+      } else {
+        const [byBusinessUnitRaw, byCompanyRaw] = await Promise.all([
+          resourcesApi.getByBusinessUnit(businessUnitId as number),
+          resourcesApi.getByCompany(companyId),
+        ]);
+
+        const byBusinessUnit = Array.isArray(byBusinessUnitRaw)
+          ? byBusinessUnitRaw.map(normalizeResource)
+          : [];
+
+        const byCompanyGlobals = Array.isArray(byCompanyRaw)
+          ? byCompanyRaw
+              .map(normalizeResource)
+              .filter((r) => r.idBusinessUnit == null)
+          : [];
+
+        const merged = [...byBusinessUnit, ...byCompanyGlobals];
+        const dedup = new Map<number, Resource>();
+        for (const r of merged) dedup.set(r.id, r);
+        all = Array.from(dedup.values());
+      }
+
       // Filtrar vehículos: buscar "vehiculo" o "vehicle" en el type array
       // También filtrar recursos inactivos
       return all.filter((r) => {
@@ -282,8 +337,11 @@ export function useTanks() {
   const isCompanyAdmin = isAdmin || isSuperAdmin;
 
   // Determinar si usar scope por BU o por Company
-  const businessUnitId = activeBusinessUnitId ?? 
-    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
+  const businessUnitId =
+    activeBusinessUnitId === null
+      ? null
+      : activeBusinessUnitId ??
+        (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
 
   const useBusinessUnitScope = !!businessUnitId && businessUnitId > 0;
   const enabled = hasUser && (useBusinessUnitScope || (isCompanyAdmin && !!companyId));
@@ -293,11 +351,33 @@ export function useTanks() {
       ? resourcesKeys.list({ idType: 1, idBusinessUnit: businessUnitId as number })
       : resourcesKeys.tanks(companyId),
     queryFn: async () => {
-      const raw = useBusinessUnitScope
-        ? await resourcesApi.getByBusinessUnit(businessUnitId as number)
-        : await resourcesApi.getByCompany(companyId);
+      let all: Resource[] = [];
 
-      const all = Array.isArray(raw) ? raw.map(normalizeResource) : [];
+      if (!useBusinessUnitScope) {
+        const raw = await resourcesApi.getByCompany(companyId);
+        all = Array.isArray(raw) ? raw.map(normalizeResource) : [];
+      } else {
+        const [byBusinessUnitRaw, byCompanyRaw] = await Promise.all([
+          resourcesApi.getByBusinessUnit(businessUnitId as number),
+          resourcesApi.getByCompany(companyId),
+        ]);
+
+        const byBusinessUnit = Array.isArray(byBusinessUnitRaw)
+          ? byBusinessUnitRaw.map(normalizeResource)
+          : [];
+
+        const byCompanyGlobals = Array.isArray(byCompanyRaw)
+          ? byCompanyRaw
+              .map(normalizeResource)
+              .filter((r) => r.idBusinessUnit == null)
+          : [];
+
+        const merged = [...byBusinessUnit, ...byCompanyGlobals];
+        const dedup = new Map<number, Resource>();
+        for (const r of merged) dedup.set(r.id, r);
+        all = Array.from(dedup.values());
+      }
+
       // Filtrar tanques: buscar "tanque" en el type array
       // También filtrar recursos inactivos
       return all.filter((r) => {
@@ -333,8 +413,11 @@ export function useDispensers() {
   const isCompanyAdmin = isAdmin || isSuperAdmin;
 
   // Determinar si usar scope por BU o por Company
-  const businessUnitId = activeBusinessUnitId ?? 
-    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
+  const businessUnitId =
+    activeBusinessUnitId === null
+      ? null
+      : activeBusinessUnitId ??
+        (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
 
   const useBusinessUnitScope = !!businessUnitId && businessUnitId > 0;
   const enabled = hasUser && (useBusinessUnitScope || (isCompanyAdmin && !!companyId));
@@ -344,11 +427,33 @@ export function useDispensers() {
       ? resourcesKeys.list({ idType: 2, idBusinessUnit: businessUnitId as number })
       : resourcesKeys.dispensers(companyId),
     queryFn: async () => {
-      const raw = useBusinessUnitScope
-        ? await resourcesApi.getByBusinessUnit(businessUnitId as number)
-        : await resourcesApi.getByCompany(companyId);
+      let all: Resource[] = [];
 
-      const all = Array.isArray(raw) ? raw.map(normalizeResource) : [];
+      if (!useBusinessUnitScope) {
+        const raw = await resourcesApi.getByCompany(companyId);
+        all = Array.isArray(raw) ? raw.map(normalizeResource) : [];
+      } else {
+        const [byBusinessUnitRaw, byCompanyRaw] = await Promise.all([
+          resourcesApi.getByBusinessUnit(businessUnitId as number),
+          resourcesApi.getByCompany(companyId),
+        ]);
+
+        const byBusinessUnit = Array.isArray(byBusinessUnitRaw)
+          ? byBusinessUnitRaw.map(normalizeResource)
+          : [];
+
+        const byCompanyGlobals = Array.isArray(byCompanyRaw)
+          ? byCompanyRaw
+              .map(normalizeResource)
+              .filter((r) => r.idBusinessUnit == null)
+          : [];
+
+        const merged = [...byBusinessUnit, ...byCompanyGlobals];
+        const dedup = new Map<number, Resource>();
+        for (const r of merged) dedup.set(r.id, r);
+        all = Array.from(dedup.values());
+      }
+
       // Filtrar surtidores: buscar "surtidor" o "dispenser" en el type array
       // También filtrar recursos inactivos
       return all.filter((r) => {

@@ -86,7 +86,8 @@ const getInitials = (name: string): string => {
 };
 
 const DEFAULT_FORM_VALUES: CreateDriverFormData = {
-  idBusinessUnit: undefined,
+  idCompany: 0,
+  idBusinessUnit: null,
   name: "",
   dni: "",
   phoneNumber: "",
@@ -98,6 +99,7 @@ const filterDriver = (driver: Driver, searchTerm: string): boolean => {
 };
 
 const driverToFormData = (driver: Driver): CreateDriverFormData => ({
+  idCompany: driver.idCompany,
   idBusinessUnit: driver.idBusinessUnit,
   name: driver.name,
   dni: driver.dni,
@@ -137,7 +139,7 @@ export default function DriversPage() {
     updateMutation: useUpdateDriver(),
     deleteMutation: deactivateMutation,
     schema: createDriverSchema,
-    defaultValues: DEFAULT_FORM_VALUES,
+    defaultValues: { ...DEFAULT_FORM_VALUES, idCompany },
     filterFn: filterDriver,
     entityToFormData: driverToFormData,
     prepareCreateData: (data) => ({
@@ -165,7 +167,8 @@ export default function DriversPage() {
     (d) =>
       !unidadIdsFilter ||
       unidadIdsFilter.length === 0 ||
-      (d.idBusinessUnit && unidadIdsFilter.includes(d.idBusinessUnit))
+      d.idBusinessUnit == null ||
+      unidadIdsFilter.includes(d.idBusinessUnit)
   );
 
   const { form } = crud;
@@ -433,11 +436,15 @@ export default function DriversPage() {
                 Unidad de Negocio (opcional)
               </Label>
               <Select
-                value={String(form.watch("idBusinessUnit") || "none")}
+                value={
+                  form.watch("idBusinessUnit") == null
+                    ? "none"
+                    : String(form.watch("idBusinessUnit"))
+                }
                 onValueChange={(v) =>
                   form.setValue(
                     "idBusinessUnit",
-                    v === "none" ? undefined : Number(v)
+                    v === "none" ? null : Number(v)
                   )
                 }
               >

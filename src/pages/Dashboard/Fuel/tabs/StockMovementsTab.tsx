@@ -49,6 +49,7 @@ import {
   useCompany,
 } from "@/hooks/queries";
 import { useAuthStore } from "@/stores/auth.store";
+import { useUnidadActivaId } from "@/stores/unidad.store";
 import { useZodForm } from "@/hooks/useZodForm";
 import {
   createFuelStockMovementSchema,
@@ -62,7 +63,13 @@ import type {
 export default function StockMovementsTab() {
   const { user } = useAuthStore();
   const idCompany = user?.idCompany ?? 0;
-  const idBusinessUnit = user?.idBusinessUnit ?? 0;
+  const companyIdForRequests = idCompany || user?.idCompany || user?.empresaId || 0;
+  const activeBusinessUnitId = useUnidadActivaId();
+  const userBusinessUnitId = user?.idBusinessUnit ?? null;
+  const businessUnitId =
+    activeBusinessUnitId === null
+      ? null
+      : activeBusinessUnitId ?? userBusinessUnitId ?? null;
 
   const [openDialog, setOpenDialog] = useState(false);
   const [editingMovement, setEditingMovement] =
@@ -78,7 +85,7 @@ export default function StockMovementsTab() {
         date: new Date().toISOString().split("T")[0],
         idMovementType: 0,
         idCompany: idCompany,
-        idBusinessUnit: idBusinessUnit || undefined,
+        idBusinessUnit: businessUnitId,
         liters: 0,
       },
     }
@@ -168,7 +175,7 @@ export default function StockMovementsTab() {
       date: new Date().toISOString().split("T")[0],
       idMovementType: movementTypes[0]?.id || 0,
       idCompany: idCompany,
-      idBusinessUnit: idBusinessUnit || undefined,
+      idBusinessUnit: businessUnitId,
       liters: 0,
     });
     setOpenDialog(true);
@@ -190,6 +197,8 @@ export default function StockMovementsTab() {
 
   const onSubmit = async (data: CreateFuelStockMovementFormData) => {
     const finalIdCompany = idCompany || user?.idCompany || user?.empresaId || 0;
+    const finalIdBusinessUnit =
+      data.idBusinessUnit ?? businessUnitId;
 
     try {
       if (editingMovement) {
@@ -198,6 +207,7 @@ export default function StockMovementsTab() {
           ...data,
           date: new Date(data.date).toISOString(),
           idCompany: finalIdCompany,
+          idBusinessUnit: finalIdBusinessUnit,
         };
         await updateMutation.mutateAsync(updateData);
       } else {
@@ -205,6 +215,7 @@ export default function StockMovementsTab() {
           ...data,
           date: new Date(data.date).toISOString(),
           idCompany: finalIdCompany,
+          idBusinessUnit: finalIdBusinessUnit,
         });
       }
       setOpenDialog(false);
@@ -429,6 +440,39 @@ export default function StockMovementsTab() {
                   {form.formState.errors.idFuelType.message}
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Unidad de Negocio (opcional)
+              </label>
+              <Select
+                value={
+                  form.watch("idBusinessUnit") != null
+                    ? String(form.watch("idBusinessUnit"))
+                    : "none"
+                }
+                onValueChange={(value) =>
+                  form.setValue(
+                    "idBusinessUnit",
+                    value === "none" ? null : Number(value)
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin asignar</SelectItem>
+                  {businessUnits
+                    .filter((bu) => bu.idCompany === companyIdForRequests)
+                    .map((bu) => (
+                      <SelectItem key={bu.id} value={String(bu.id)}>
+                        {bu.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

@@ -2,7 +2,7 @@
  * MovementTypesTab - Gestión de Tipos de Movimiento
  * Implementa patrón CRUD con useCrudPage
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
@@ -33,6 +40,7 @@ import {
   useCreateMovementType,
   useUpdateMovementType,
   useDeactivateMovementType,
+  useBusinessUnits,
 } from "@/hooks/queries";
 import { useIdBusinessUnit, useIdCompany } from "@/stores/auth.store";
 import { useUnidadActivaId } from "@/stores/unidad.store";
@@ -65,7 +73,12 @@ export default function MovementTypesTab() {
   const companyId = useIdCompany() ?? 0;
   const activeBusinessUnitId = useUnidadActivaId();
   const userBusinessUnitId = useIdBusinessUnit();
-  const businessUnitId = activeBusinessUnitId ?? userBusinessUnitId ?? null;
+  const businessUnitId =
+    activeBusinessUnitId === null
+      ? null
+      : activeBusinessUnitId ?? userBusinessUnitId ?? null;
+
+  const { data: businessUnits = [] } = useBusinessUnits(companyId);
 
   // Estado para toggle (activar/desactivar)
   const [openToggleDialog, setOpenToggleDialog] = useState(false);
@@ -88,24 +101,28 @@ export default function MovementTypesTab() {
     defaultValues: {
       name: "",
       idCompany: companyId,
-      idBusinessUnit: businessUnitId ?? undefined,
+      idBusinessUnit: businessUnitId,
     },
     entityToFormData: movementTypeToFormData,
     prepareCreateData: (data) => ({
       name: data.name,
       idCompany: companyId,
-      idBusinessUnit: data.idBusinessUnit ?? businessUnitId ?? undefined,
+      idBusinessUnit: data.idBusinessUnit ?? businessUnitId,
     }),
     prepareUpdateData: (data, type) => ({
       id: type.id,
       name: data.name,
       idCompany: companyId,
-      idBusinessUnit: data.idBusinessUnit ?? businessUnitId ?? null,
+      idBusinessUnit: data.idBusinessUnit ?? businessUnitId,
     }),
   });
 
   const { form } = crud;
   const movementTypes = crud.items;
+
+  useEffect(() => {
+    form.register("idBusinessUnit");
+  }, [form]);
 
   const handleToggleActive = async (id: number) => {
     try {
@@ -262,6 +279,37 @@ export default function MovementTypesTab() {
                   {form.formState.errors.name.message}
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Unidad de Negocio (opcional)
+              </label>
+              <Select
+                value={
+                  form.watch("idBusinessUnit") != null
+                    ? String(form.watch("idBusinessUnit"))
+                    : "none"
+                }
+                onValueChange={(value) =>
+                  form.setValue(
+                    "idBusinessUnit",
+                    value === "none" ? null : Number(value)
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin asignar</SelectItem>
+                  {businessUnits.map((bu) => (
+                    <SelectItem key={bu.id} value={String(bu.id)}>
+                      {bu.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </form>
 

@@ -41,9 +41,11 @@ export function useFuelStockMovements() {
     isAdmin && (!!userBusinessUnitId || !!fallbackAssignedId);
 
   const businessUnitId =
-    activeBusinessUnitId ??
-    (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
-    (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
+    activeBusinessUnitId === null
+      ? null
+      : activeBusinessUnitId ??
+        (isAdminAssigned ? (userBusinessUnitId ?? fallbackAssignedId) : null) ??
+        (!isCompanyAdmin ? (userBusinessUnitId ?? fallbackAssignedId) : null);
 
   const useBusinessUnitScope = !!businessUnitId;
   const shouldHaveBusinessUnit = !isCompanyAdmin || isAdminAssigned;

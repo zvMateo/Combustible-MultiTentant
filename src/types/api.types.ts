@@ -51,7 +51,7 @@ export interface CreateUserRequest {
   password: string;
   confirmPassword: string;
   idCompany: number;
-  idBusinessUnit?: number;
+  idBusinessUnit?: number | null;
   phoneNumber?: string;
 }
 
@@ -150,7 +150,7 @@ export interface UpdateBusinessUnitRequest extends CreateBusinessUnitRequest {
 export interface Driver {
   id: number;
   idCompany: number;
-  idBusinessUnit?: number;
+  idBusinessUnit?: number | null;
   name: string;
   dni: string;
   phoneNumber?: string;
@@ -161,7 +161,7 @@ export interface Driver {
 
 export interface CreateDriverRequest {
   idCompany: number;
-  idBusinessUnit?: number;
+  idBusinessUnit?: number | null;
   name: string;
   dni: string;
   phoneNumber?: string;
@@ -185,7 +185,7 @@ export interface ResourceType {
 export interface CreateResourceTypeRequest {
   name: string;
   idCompany: number;
-  idBusinessUnit?: number;
+  idBusinessUnit?: number | null;
 }
 
 export interface UpdateResourceTypeRequest extends CreateResourceTypeRequest {
@@ -201,7 +201,7 @@ export interface Resource {
   type?: string[]; // Array de tipos desde la API (ej: ["Tanque"])
   idCompany: number;
   company?: string[]; // Array de nombres de empresa desde la API
-  idBusinessUnit?: number;
+  idBusinessUnit?: number | null;
   businessUnit?: string[]; // Array de nombres de unidad desde la API
   nativeLiters?: number;
   initialLiters?: number; // Litros iniciales desde la API
@@ -218,7 +218,7 @@ export interface Resource {
 export interface CreateResourceRequest {
   idType: number;
   idCompany: number;
-  idBusinessUnit?: number;
+  idBusinessUnit?: number | null;
   nativeLiters?: number;
   initialLiters?: number;
   name: string;
@@ -294,7 +294,7 @@ export interface CreateFuelStockMovementRequest {
   date: string;
   idMovementType: number;
   idCompany: number;
-  idBusinessUnit?: number;
+  idBusinessUnit?: number | null;
   liters: number;
 }
 
@@ -323,6 +323,7 @@ export interface LoadLiters {
 
 export interface CreateLoadLitersRequest {
   idResource: number;
+  idBusinessUnit?: number | null;
   loadDate: string;
   initialLiters: number;
   finalLiters: number;

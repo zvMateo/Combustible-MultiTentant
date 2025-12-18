@@ -50,6 +50,7 @@ import {
   useCompany,
 } from "@/hooks/queries";
 import { useAuthStore } from "@/stores/auth.store";
+import { useUnidadActivaId } from "@/stores/unidad.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
 import { useZodForm } from "@/hooks/useZodForm";
 import {
@@ -62,6 +63,13 @@ export default function LoadLitersTab() {
   const { user } = useAuthStore();
   const { showCreateButtons, showExportButtons, isReadOnly } = useRoleLogic();
 
+  const activeBusinessUnitId = useUnidadActivaId();
+  const userBusinessUnitId = user?.idBusinessUnit ?? null;
+  const businessUnitId =
+    activeBusinessUnitId === null
+      ? null
+      : activeBusinessUnitId ?? userBusinessUnitId ?? null;
+
   const [openDialog, setOpenDialog] = useState(false);
   const [editingLoad, setEditingLoad] = useState<LoadLiters | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,6 +78,7 @@ export default function LoadLitersTab() {
   const form = useZodForm<CreateLoadLitersFormData>(createLoadLitersSchema, {
     defaultValues: {
       idResource: 0,
+      idBusinessUnit: businessUnitId,
       loadDate: new Date().toISOString().split("T")[0],
       initialLiters: 0,
       finalLiters: 0,
@@ -145,6 +154,7 @@ export default function LoadLitersTab() {
     setSelectedResourceId(firstResourceId);
     form.reset({
       idResource: firstResourceId,
+      idBusinessUnit: businessUnitId,
       loadDate: new Date().toISOString().split("T")[0],
       initialLiters: 0,
       finalLiters: 0,
@@ -158,8 +168,13 @@ export default function LoadLitersTab() {
   const handleEdit = (load: LoadLiters) => {
     setEditingLoad(load);
     setSelectedResourceId(load.idResource);
+    const inferredBusinessUnitId =
+      load.resource?.idBusinessUnit ??
+      resources.find((r) => r.id === load.idResource)?.idBusinessUnit ??
+      businessUnitId;
     form.reset({
       idResource: load.idResource,
+      idBusinessUnit: inferredBusinessUnitId ?? businessUnitId,
       loadDate: load.loadDate.split("T")[0],
       initialLiters: load.initialLiters,
       finalLiters: load.finalLiters,
@@ -176,6 +191,7 @@ export default function LoadLitersTab() {
         const updateData: UpdateLoadLitersRequest = {
           id: editingLoad.id,
           idResource: data.idResource,
+          idBusinessUnit: data.idBusinessUnit,
           loadDate: new Date(data.loadDate).toISOString(),
           initialLiters: data.initialLiters,
           finalLiters: data.finalLiters,
@@ -190,6 +206,7 @@ export default function LoadLitersTab() {
       } else {
         await createMutation.mutateAsync({
           ...data,
+          idBusinessUnit: data.idBusinessUnit ?? businessUnitId,
           loadDate: new Date(data.loadDate).toISOString(),
         });
       }
@@ -407,6 +424,39 @@ export default function LoadLitersTab() {
                   {form.formState.errors.idResource.message}
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Unidad de Negocio (opcional)
+              </label>
+              <Select
+                value={
+                  form.watch("idBusinessUnit") != null
+                    ? String(form.watch("idBusinessUnit"))
+                    : "none"
+                }
+                onValueChange={(value) =>
+                  form.setValue(
+                    "idBusinessUnit",
+                    value === "none" ? null : Number(value)
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin asignar</SelectItem>
+                  {businessUnits
+                    .filter((bu) => bu.idCompany === (user?.idCompany ?? 0))
+                    .map((bu) => (
+                      <SelectItem key={bu.id} value={String(bu.id)}>
+                        {bu.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
