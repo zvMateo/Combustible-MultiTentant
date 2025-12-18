@@ -41,12 +41,10 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import * as XLSX from "xlsx";
-import { toast } from "sonner";
 
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
-import { useCrudPage } from "@/hooks/useCrudPage";
+import { useCrudPage, useExcelExport } from "@/hooks";
 import { createResourceSchema, type CreateResourceFormData } from "@/schemas";
 import {
   useTanks,
@@ -137,25 +135,22 @@ export default function TanksPage() {
   );
 
   // Export handler
-  const handleExport = () => {
-    const dataToExport = filteredByCompany.map((t) => ({
-      Nombre: t.name,
-      Identificador: t.identifier,
-      "Capacidad (L)": t.nativeLiters || 0,
-      Empresa: companies.find((c) => c.id === t.idCompany)?.name || "",
-      "Unidad de Negocio":
-        businessUnits.find((bu) => bu.id === t.idBusinessUnit)?.name || "",
-      Estado: t.isActive !== false ? "Activo" : "Inactivo",
-    }));
+  const { exportToExcel } = useExcelExport<Resource>();
 
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Tanques");
-    XLSX.writeFile(
-      wb,
-      `tanques_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
-    toast.success("Archivo exportado correctamente");
+  const handleExport = () => {
+    exportToExcel(filteredByCompany, {
+      fileName: "tanques",
+      sheetName: "Tanques",
+      transform: (t) => ({
+        Nombre: t.name,
+        Identificador: t.identifier,
+        "Capacidad (L)": t.nativeLiters || 0,
+        Empresa: companies.find((c) => c.id === t.idCompany)?.name || "",
+        "Unidad de Negocio":
+          businessUnits.find((bu) => bu.id === t.idBusinessUnit)?.name || "",
+        Estado: t.isActive !== false ? "Activo" : "Inactivo",
+      }),
+    });
   };
 
   // Loading state

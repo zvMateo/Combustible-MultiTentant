@@ -1,4 +1,7 @@
-// src/pages/Dashboard/Fuel/tabs/FuelTypesTab.tsx
+/**
+ * FuelTypesTab - Gestión de Tipos de Combustible
+ * Implementa patrón CRUD con useCrudPage
+ */
 import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -33,75 +36,71 @@ import {
 } from "@/hooks/queries";
 import { useIdBusinessUnit, useIdCompany } from "@/stores/auth.store";
 import { useUnidadActivaId } from "@/stores/unidad.store";
-import { useZodForm } from "@/hooks/useZodForm";
+import { useCrudPage } from "@/hooks/useCrudPage";
 import { createFuelTypeSchema, type CreateFuelTypeFormData } from "@/schemas";
-import type { FuelType, UpdateFuelTypeRequest } from "@/types/api.types";
+import type {
+  FuelType,
+  CreateFuelTypeRequest,
+  UpdateFuelTypeRequest,
+} from "@/types/api.types";
 
+// ============================================
+// HELPERS
+// ============================================
+const fuelTypeToFormData = (type: FuelType): CreateFuelTypeFormData => ({
+  name: type.name,
+  idCompany: type.idCompany ?? 0,
+  idBusinessUnit: type.idBusinessUnit ?? undefined,
+});
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 export default function FuelTypesTab() {
   const companyId = useIdCompany() ?? 0;
   const activeBusinessUnitId = useUnidadActivaId();
   const userBusinessUnitId = useIdBusinessUnit();
   const businessUnitId = activeBusinessUnitId ?? userBusinessUnitId ?? null;
 
-  const [openDialog, setOpenDialog] = useState(false);
+  // Estado para toggle (activar/desactivar)
   const [openToggleDialog, setOpenToggleDialog] = useState(false);
-  const [editingType, setEditingType] = useState<FuelType | null>(null);
   const [toggleType, setToggleType] = useState<FuelType | null>(null);
 
-  const form = useZodForm<CreateFuelTypeFormData>(createFuelTypeSchema, {
+  const deactivateMutation = useDeactivateFuelType();
+
+  // Hook CRUD genérico
+  const crud = useCrudPage<
+    FuelType,
+    CreateFuelTypeFormData,
+    CreateFuelTypeRequest,
+    UpdateFuelTypeRequest
+  >({
+    useListQuery: useFuelTypes,
+    createMutation: useCreateFuelType(),
+    updateMutation: useUpdateFuelType(),
+    deleteMutation: deactivateMutation,
+    schema: createFuelTypeSchema,
     defaultValues: {
       name: "",
       idCompany: companyId,
       idBusinessUnit: businessUnitId ?? undefined,
     },
+    entityToFormData: fuelTypeToFormData,
+    prepareCreateData: (data) => ({
+      name: data.name,
+      idCompany: companyId,
+      idBusinessUnit: data.idBusinessUnit ?? businessUnitId ?? undefined,
+    }),
+    prepareUpdateData: (data, type) => ({
+      id: type.id,
+      name: data.name,
+      idCompany: companyId,
+      idBusinessUnit: data.idBusinessUnit ?? businessUnitId ?? null,
+    }),
   });
 
-  // React Query hooks
-  const { data: fuelTypes = [], isLoading, error } = useFuelTypes();
-  const createMutation = useCreateFuelType();
-  const updateMutation = useUpdateFuelType();
-  const deactivateMutation = useDeactivateFuelType();
-
-  const handleNew = () => {
-    setEditingType(null);
-    form.reset({
-      name: "",
-      idCompany: companyId,
-      idBusinessUnit: businessUnitId ?? undefined,
-    });
-    setOpenDialog(true);
-  };
-
-  const handleEdit = (type: FuelType) => {
-    setEditingType(type);
-    form.reset({
-      name: type.name,
-      idCompany: companyId,
-      idBusinessUnit: type.idBusinessUnit ?? businessUnitId ?? undefined,
-    });
-    setOpenDialog(true);
-  };
-
-  const onSubmit = async (data: CreateFuelTypeFormData) => {
-    if (!companyId) return;
-
-    try {
-      if (editingType) {
-        const updateData: UpdateFuelTypeRequest = {
-          id: editingType.id,
-          name: data.name,
-          idCompany: companyId,
-          idBusinessUnit: data.idBusinessUnit ?? businessUnitId ?? null,
-        };
-        await updateMutation.mutateAsync(updateData);
-      } else {
-        await createMutation.mutateAsync(data);
-      }
-      setOpenDialog(false);
-    } catch {
-      // Error manejado por el mutation
-    }
-  };
+  const { form } = crud;
+  const fuelTypes = crud.items;
 
   const handleToggleActive = async (id: number) => {
     try {
@@ -116,7 +115,7 @@ export default function FuelTypesTab() {
     setOpenToggleDialog(true);
   };
 
-  if (isLoading) {
+  if (crud.isLoading) {
     return (
       <SectionCard>
         <div className="flex items-center gap-2">
@@ -129,7 +128,7 @@ export default function FuelTypesTab() {
     );
   }
 
-  if (error) {
+  if (crud.error) {
     return (
       <SectionCard>
         <Alert variant="destructive">
@@ -137,7 +136,9 @@ export default function FuelTypesTab() {
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
             Error al cargar tipos de combustible:{" "}
-            {error instanceof Error ? error.message : "Error desconocido"}
+            {crud.error instanceof Error
+              ? crud.error.message
+              : "Error desconocido"}
           </AlertDescription>
         </Alert>
       </SectionCard>
@@ -150,11 +151,7 @@ export default function FuelTypesTab() {
         title="Tipos de Combustible"
         description="Maestro de tipos de combustible disponibles"
         actions={
-          <Button
-            onClick={handleNew}
-            disabled={createMutation.isPending}
-            size="sm"
-          >
+          <Button onClick={crud.handleNew} disabled={crud.isSaving} size="sm">
             <Plus className="size-4" />
             Nuevo Tipo
           </Button>
@@ -206,8 +203,8 @@ export default function FuelTypesTab() {
                           type="button"
                           variant="outline"
                           size="icon"
-                          onClick={() => handleEdit(type)}
-                          disabled={updateMutation.isPending}
+                          onClick={() => crud.handleEdit(type)}
+                          disabled={crud.isSaving}
                           aria-label="Editar"
                         >
                           <Pencil className="size-4" />
@@ -231,25 +228,22 @@ export default function FuelTypesTab() {
       </SectionCard>
 
       <Dialog
-        open={openDialog}
-        onOpenChange={(open) => {
-          setOpenDialog(open);
-          if (!open) {
-            setEditingType(null);
-            form.reset();
-          }
-        }}
+        open={crud.isDialogOpen}
+        onOpenChange={(open) => !open && crud.closeDialog()}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingType
+              {crud.isEditing
                 ? "Editar Tipo de Combustible"
                 : "Nuevo Tipo de Combustible"}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-2">
+          <form
+            onSubmit={form.handleSubmit(crud.onSubmit)}
+            className="grid gap-2"
+          >
             <div className="space-y-2">
               <label className="text-sm font-medium">Nombre *</label>
               <Input
@@ -267,21 +261,17 @@ export default function FuelTypesTab() {
           </form>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpenDialog(false)}
-            >
+            <Button type="button" variant="outline" onClick={crud.closeDialog}>
               Cancelar
             </Button>
             <Button
               type="submit"
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={createMutation.isPending || updateMutation.isPending}
+              onClick={form.handleSubmit(crud.onSubmit)}
+              disabled={crud.isSaving}
             >
-              {createMutation.isPending || updateMutation.isPending
+              {crud.isSaving
                 ? "Guardando..."
-                : editingType
+                : crud.isEditing
                 ? "Guardar Cambios"
                 : "Crear"}
             </Button>

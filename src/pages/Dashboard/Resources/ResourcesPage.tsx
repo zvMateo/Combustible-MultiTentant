@@ -42,8 +42,6 @@ import {
   Search,
   Shapes,
   TriangleAlert,
-  CheckCircle2,
-  XCircle,
   Trash2,
   Edit,
   MoreVertical,
@@ -52,8 +50,8 @@ import {
   Building2,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import * as XLSX from "xlsx";
-import { toast } from "sonner";
+import { useExcelExport } from "@/hooks";
+import { StatusBadge } from "@/components/common/StatusBadge";
 
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
@@ -348,36 +346,33 @@ export default function ResourcesPage() {
     }
   };
 
-  const handleExport = () => {
-    const dataToExport = filteredResources.map((r) => {
-      const company = companies.find((c) => c.id === r.idCompany);
-      const businessUnit = businessUnits.find(
-        (bu) => bu.id === r.idBusinessUnit
-      );
-      const typeArray = r.type ?? [];
-      const typeName =
-        typeArray.join(", ") ||
-        resourceTypes.find((rt) => rt.id === r.idType)?.name ||
-        "N/A";
-      return {
-        Nombre: r.name,
-        Identificador: r.identifier,
-        Tipo: typeName,
-        "Capacidad (L)": r.nativeLiters || 0,
-        Empresa: company?.name || "",
-        "Unidad de Negocio": businessUnit?.name || "",
-        Estado: r.isActive !== false ? "Activo" : "Inactivo",
-      };
-    });
+  const { exportToExcel } = useExcelExport<Resource>();
 
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Resources");
-    XLSX.writeFile(
-      wb,
-      `resources_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
-    toast.success("Archivo exportado correctamente");
+  const handleExport = () => {
+    exportToExcel(filteredResources, {
+      fileName: "resources",
+      sheetName: "Resources",
+      transform: (r) => {
+        const company = companies.find((c) => c.id === r.idCompany);
+        const businessUnit = businessUnits.find(
+          (bu) => bu.id === r.idBusinessUnit
+        );
+        const typeArray = r.type ?? [];
+        const typeName =
+          typeArray.join(", ") ||
+          resourceTypes.find((rt) => rt.id === r.idType)?.name ||
+          "N/A";
+        return {
+          Nombre: r.name,
+          Identificador: r.identifier,
+          Tipo: typeName,
+          "Capacidad (L)": r.nativeLiters || 0,
+          Empresa: company?.name || "",
+          "Unidad de Negocio": businessUnit?.name || "",
+          Estado: r.isActive !== false ? "Activo" : "Inactivo",
+        };
+      },
+    });
   };
 
   // Handlers para gestión de tipos de recursos
@@ -726,22 +721,7 @@ export default function ResourcesPage() {
                           <Layers size={12} className="mr-1" />
                           {typeName}
                         </Badge>
-                        <div
-                          className={`flex items-center gap-1.5 ${
-                            resource.active !== false
-                              ? "text-green-600"
-                              : "text-red-500"
-                          }`}
-                        >
-                          {resource.active !== false ? (
-                            <CheckCircle2 size={14} />
-                          ) : (
-                            <XCircle size={14} />
-                          )}
-                          <span className="text-xs font-semibold">
-                            {resource.active !== false ? "Activo" : "Inactivo"}
-                          </span>
-                        </div>
+                        <StatusBadge active={resource.active !== false} />
                       </div>
 
                       <div className="pt-3 border-t flex items-center gap-2">

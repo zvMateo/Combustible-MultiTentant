@@ -1,4 +1,8 @@
-import { useState, useMemo } from "react";
+/**
+ * BusinessUnitsPage - Gestión de Unidades de Negocio
+ * Implementa patrón CRUD con useCrudPage
+ */
+import { useMemo } from "react";
 import {
   useBusinessUnits,
   useCreateBusinessUnit,
@@ -8,19 +12,21 @@ import {
 } from "@/hooks/queries";
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
-import { useZodForm } from "@/hooks/useZodForm";
+import { useCrudPage, useExcelExport } from "@/hooks";
 import {
   createBusinessUnitSchema,
   type CreateBusinessUnitFormData,
 } from "@/schemas";
-import type { BusinessUnit } from "@/types/api.types";
+import type {
+  BusinessUnit,
+  CreateBusinessUnitRequest,
+  UpdateBusinessUnitRequest,
+} from "@/types/api.types";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
 import {
   Plus,
   Edit,
   Trash2,
-  Search,
   Store,
   Download,
   Building,
@@ -57,7 +63,37 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { SearchInput } from "@/components/common/DataTable";
 
+// ============================================
+// HELPERS
+// ============================================
+const DEFAULT_FORM_VALUES: CreateBusinessUnitFormData = {
+  idCompany: 0,
+  name: "",
+  detail: "",
+};
+
+const filterBusinessUnit = (
+  unit: BusinessUnit,
+  searchTerm: string
+): boolean => {
+  const term = searchTerm.toLowerCase();
+  return (
+    unit.name.toLowerCase().includes(term) ||
+    Boolean(unit.detail && unit.detail.toLowerCase().includes(term))
+  );
+};
+
+const unitToFormData = (unit: BusinessUnit): CreateBusinessUnitFormData => ({
+  idCompany: unit.idCompany,
+  name: unit.name,
+  detail: unit.detail || "",
+});
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 export default function BusinessUnitsPage() {
   const { user } = useAuthStore();
   const {
@@ -71,128 +107,76 @@ export default function BusinessUnitsPage() {
   } = useRoleLogic();
 
   const idCompany = user?.empresaId ?? companyIdFilter ?? 0;
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [openDialog, setOpenDialog] = useState(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [editingUnit, setEditingUnit] = useState<BusinessUnit | null>(null);
-  const [deleteUnit, setDeleteUnit] = useState<BusinessUnit | null>(null);
-
-  const form = useZodForm<CreateBusinessUnitFormData>(
-    createBusinessUnitSchema,
-    {
-      defaultValues: {
-        idCompany: idCompany || 0,
-        name: "",
-        detail: "",
-      },
-    }
-  );
-
   const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
   const effectiveCompanyId = idCompany || companies[0]?.id || 0;
-  const {
-    data: businessUnitsAll = [],
-    isLoading: loadingUnits,
-    error: unitsError,
-  } = useBusinessUnits(effectiveCompanyId);
 
-  const createMutation = useCreateBusinessUnit();
-  const updateMutation = useUpdateBusinessUnit();
-  const deactivateMutation = useDeactivateBusinessUnit();
+  // Hook CRUD genérico
+  const crud = useCrudPage<
+    BusinessUnit,
+    CreateBusinessUnitFormData,
+    CreateBusinessUnitRequest,
+    UpdateBusinessUnitRequest
+  >({
+    useListQuery: () => useBusinessUnits(effectiveCompanyId),
+    createMutation: useCreateBusinessUnit(),
+    updateMutation: useUpdateBusinessUnit(),
+    deleteMutation: useDeactivateBusinessUnit(),
+    schema: createBusinessUnitSchema,
+    defaultValues: { ...DEFAULT_FORM_VALUES, idCompany: effectiveCompanyId },
+    filterFn: filterBusinessUnit,
+    entityToFormData: unitToFormData,
+    prepareCreateData: (data) => ({
+      idCompany: data.idCompany || effectiveCompanyId,
+      name: data.name,
+      detail: data.detail || undefined,
+    }),
+    prepareUpdateData: (data, unit) => ({
+      id: unit.id,
+      idCompany: data.idCompany,
+      name: data.name,
+      detail: data.detail || undefined,
+    }),
+    onCreateSuccess: () => toast.success("Unidad creada correctamente"),
+    onUpdateSuccess: () => toast.success("Unidad actualizada correctamente"),
+    onDeleteSuccess: () => toast.success("Unidad desactivada"),
+  });
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-
-  const businessUnits = useMemo(
-    () => (Array.isArray(businessUnitsAll) ? businessUnitsAll : []),
-    [businessUnitsAll]
-  );
-
+  // Filtrar por empresa
   const filteredUnits = useMemo(() => {
-    let filtered = businessUnits;
-    if (idCompany > 0)
+    let filtered = crud.filteredItems;
+    if (idCompany > 0) {
       filtered = filtered.filter((u) => u.idCompany === idCompany);
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (u) =>
-          u.name.toLowerCase().includes(term) ||
-          (u.detail && u.detail.toLowerCase().includes(term))
-      );
     }
     return filtered;
-  }, [businessUnits, searchTerm, idCompany]);
+  }, [crud.filteredItems, idCompany]);
 
+  const { form } = crud;
+
+  // Validar empresa antes de crear
   const handleNew = () => {
     if (!effectiveCompanyId) {
       toast.error("No hay una empresa activa para crear unidades de negocio");
       return;
     }
-    setEditingUnit(null);
-    form.reset({ idCompany: effectiveCompanyId, name: "", detail: "" });
-    setOpenDialog(true);
+    crud.handleNew();
   };
 
-  const handleEdit = (unit: BusinessUnit) => {
-    setEditingUnit(unit);
-    form.reset({
-      idCompany: unit.idCompany,
-      name: unit.name,
-      detail: unit.detail || "",
-    });
-    setOpenDialog(true);
-  };
-
-  const handleDelete = (unit: BusinessUnit) => {
-    setDeleteUnit(unit);
-    setOpenDeleteDialog(true);
-  };
-
-  const onSubmit = async (data: CreateBusinessUnitFormData) => {
-    const finalCompanyId = data.idCompany || effectiveCompanyId;
-    if (!finalCompanyId) {
-      toast.error("Debe existir una empresa para guardar la unidad");
-      return;
-    }
-
-    try {
-      if (editingUnit) {
-        await updateMutation.mutateAsync({
-          id: editingUnit.id,
-          ...data,
-          idCompany: finalCompanyId,
-        });
-      } else {
-        await createMutation.mutateAsync({
-          ...data,
-          idCompany: finalCompanyId,
-        });
-      }
-      setOpenDialog(false);
-    } catch {
-      toast.error("Error al procesar la solicitud");
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deleteUnit) return;
-    try {
-      await deactivateMutation.mutateAsync(deleteUnit.id);
-      setOpenDeleteDialog(false);
-      setDeleteUnit(null);
-    } catch {
-      toast.error("Error al desactivar");
-    }
-  };
+  const { exportToExcel } = useExcelExport<BusinessUnit>();
 
   const handleExport = () => {
-    const ws = XLSX.utils.json_to_sheet(filteredUnits);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Unidades");
-    XLSX.writeFile(wb, "unidades_negocio.xlsx");
+    exportToExcel(filteredUnits, {
+      fileName: "unidades_negocio",
+      sheetName: "Unidades",
+      transform: (u) => ({
+        ID: u.id,
+        Nombre: u.name,
+        Detalle: u.detail || "",
+        Estado: u.isActive !== false ? "Activo" : "Inactivo",
+      }),
+    });
   };
 
-  if (loadingUnits) {
+  if (crud.isLoading) {
     return (
       <div className="space-y-4">
         <div className="px-6 pt-4 pb-2">
@@ -221,7 +205,7 @@ export default function BusinessUnitsPage() {
     );
   }
 
-  if (unitsError) {
+  if (crud.error) {
     return (
       <div className="space-y-4">
         <div className="px-6 pt-4 pb-2">
@@ -268,7 +252,7 @@ export default function BusinessUnitsPage() {
                   onClick={handleNew}
                   disabled={
                     isReadOnly ||
-                    isSaving ||
+                    crud.isSaving ||
                     loadingCompanies ||
                     !effectiveCompanyId
                   }
@@ -284,15 +268,12 @@ export default function BusinessUnitsPage() {
 
       <div className="px-6 pb-6 space-y-4">
         <SectionCard>
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar unidad por nombre..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+          <SearchInput
+            value={crud.searchTerm}
+            onChange={crud.setSearchTerm}
+            placeholder="Buscar unidad por nombre..."
+            className="max-w-md"
+          />
         </SectionCard>
 
         <SectionCard>
@@ -386,16 +367,14 @@ export default function BusinessUnitsPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => handleEdit(unit)}
-                                disabled={!canEdit || isSaving}
+                                onClick={() => crud.handleEdit(unit)}
+                                disabled={!canEdit || crud.isSaving}
                               >
                                 <Edit size={14} className="mr-2" /> Editar
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => handleDelete(unit)}
-                                disabled={
-                                  !canDelete || deactivateMutation.isPending
-                                }
+                                onClick={() => crud.handleDelete(unit)}
+                                disabled={!canDelete || crud.isDeleting}
                                 className="text-destructive"
                               >
                                 <Trash2 size={14} className="mr-2" /> Desactivar
@@ -438,11 +417,14 @@ export default function BusinessUnitsPage() {
       </div>
 
       {/* Dialogo Guardar/Editar - Refactorizado */}
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+      <Dialog
+        open={crud.isDialogOpen}
+        onOpenChange={(open) => !open && crud.closeDialog()}
+      >
         <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
           <div className="bg-primary px-6 py-8 text-primary-foreground">
             <DialogTitle className="text-xl font-bold">
-              {editingUnit ? "Editar Unidad" : "Nueva Unidad de Negocio"}
+              {crud.isEditing ? "Editar Unidad" : "Nueva Unidad de Negocio"}
             </DialogTitle>
             <DialogDescription className="text-white/60 text-xs mt-1 font-medium">
               Configurá los detalles básicos del punto operativo.
@@ -450,7 +432,7 @@ export default function BusinessUnitsPage() {
           </div>
 
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={form.handleSubmit(crud.onSubmit)}
             className="p-6 space-y-5 bg-white"
           >
             <div className="space-y-2">
@@ -505,19 +487,25 @@ export default function BusinessUnitsPage() {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => setOpenDialog(false)}
-              disabled={isSaving}
+              onClick={crud.closeDialog}
+              disabled={crud.isSaving}
               className="rounded-xl font-bold text-slate-500 hover:bg-slate-100"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={isSaving || loadingCompanies || !effectiveCompanyId}
+              onClick={form.handleSubmit(crud.onSubmit)}
+              disabled={
+                crud.isSaving || loadingCompanies || !effectiveCompanyId
+              }
               className="rounded-xl bg-primary font-bold px-6 shadow-lg hover:bg-primary/90"
             >
-              {editingUnit ? "Guardar Cambios" : "Crear Unidad"}
+              {crud.isSaving
+                ? "Guardando..."
+                : crud.isEditing
+                ? "Guardar Cambios"
+                : "Crear Unidad"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -525,18 +513,19 @@ export default function BusinessUnitsPage() {
 
       {/* DELETE CONFIRMATION */}
       <ConfirmDialog
-        open={openDeleteDialog}
-        onOpenChange={setOpenDeleteDialog}
+        open={crud.isDeleteDialogOpen}
+        onOpenChange={(open) => !open && crud.closeDeleteDialog()}
         title="¿Desactivar unidad?"
         description={
           <>
-            La unidad <strong>"{deleteUnit?.name}"</strong> dejará de estar
-            disponible para nuevas cargas, pero mantendrá su historial.
+            La unidad <strong>"{crud.deletingItem?.name}"</strong> dejará de
+            estar disponible para nuevas cargas, pero mantendrá su historial.
           </>
         }
-        confirmLabel="Sí, desactivar"
+        confirmLabel={crud.isDeleting ? "Desactivando..." : "Sí, desactivar"}
         cancelLabel="No, cancelar"
-        onConfirm={handleConfirmDelete}
+        onConfirm={crud.confirmDelete}
+        confirmDisabled={crud.isDeleting}
       />
     </div>
   );

@@ -12,7 +12,7 @@ import {
   User,
   MoreVertical,
 } from "lucide-react";
-import * as XLSX from "xlsx";
+import { useExcelExport } from "@/hooks";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -284,11 +284,20 @@ export default function UsersPage() {
     }
   };
 
+  const { exportToExcel } = useExcelExport<ApiUser>();
+
   const handleExport = () => {
-    const ws = XLSX.utils.json_to_sheet(filteredUsers);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Usuarios");
-    XLSX.writeFile(wb, "listado_usuarios.xlsx");
+    exportToExcel(filteredUsers, {
+      fileName: "listado_usuarios",
+      sheetName: "Usuarios",
+      transform: (u) => ({
+        Usuario: u.userName,
+        Email: u.email,
+        Nombre: u.firstName || "",
+        Apellido: u.lastName || "",
+        Telefono: u.phoneNumber || "",
+      }),
+    });
   };
 
   if (isLoading)

@@ -70,16 +70,9 @@ export function useCreateDriver() {
 
   return useMutation({
     mutationFn: (data: CreateDriverRequest) => driversApi.create(data),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       toast.success("Chofer creado correctamente");
-      // Invalidar todas las queries relacionadas
       queryClient.invalidateQueries({ queryKey: driversKeys.all });
-      // Invalidar también la query por empresa si existe
-      if (variables.idCompany) {
-        queryClient.invalidateQueries({
-          queryKey: driversKeys.byCompany(variables.idCompany),
-        });
-      }
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -102,12 +95,6 @@ export function useUpdateDriver() {
       queryClient.invalidateQueries({
         queryKey: driversKeys.detail(variables.id),
       });
-      // Invalidar también la query por empresa si existe
-      if (variables.idCompany) {
-        queryClient.invalidateQueries({
-          queryKey: driversKeys.byCompany(variables.idCompany),
-        });
-      }
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));

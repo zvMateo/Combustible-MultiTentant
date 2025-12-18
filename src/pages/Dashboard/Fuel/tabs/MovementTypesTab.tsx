@@ -1,4 +1,7 @@
-// src/pages/Dashboard/Fuel/tabs/MovementTypesTab.tsx
+/**
+ * MovementTypesTab - Gestión de Tipos de Movimiento
+ * Implementa patrón CRUD con useCrudPage
+ */
 import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -33,84 +36,76 @@ import {
 } from "@/hooks/queries";
 import { useIdBusinessUnit, useIdCompany } from "@/stores/auth.store";
 import { useUnidadActivaId } from "@/stores/unidad.store";
-import { useZodForm } from "@/hooks/useZodForm";
+import { useCrudPage } from "@/hooks/useCrudPage";
 import {
   createMovementTypeSchema,
   type CreateMovementTypeFormData,
 } from "@/schemas";
 import type {
   MovementType,
+  CreateMovementTypeRequest,
   UpdateMovementTypeRequest,
 } from "@/types/api.types";
 
+// ============================================
+// HELPERS
+// ============================================
+const movementTypeToFormData = (
+  type: MovementType
+): CreateMovementTypeFormData => ({
+  name: type.name,
+  idCompany: type.idCompany ?? 0,
+  idBusinessUnit: type.idBusinessUnit ?? undefined,
+});
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 export default function MovementTypesTab() {
   const companyId = useIdCompany() ?? 0;
   const activeBusinessUnitId = useUnidadActivaId();
   const userBusinessUnitId = useIdBusinessUnit();
   const businessUnitId = activeBusinessUnitId ?? userBusinessUnitId ?? null;
 
-  const [openDialog, setOpenDialog] = useState(false);
+  // Estado para toggle (activar/desactivar)
   const [openToggleDialog, setOpenToggleDialog] = useState(false);
-  const [editingType, setEditingType] = useState<MovementType | null>(null);
   const [toggleType, setToggleType] = useState<MovementType | null>(null);
 
-  const form = useZodForm<CreateMovementTypeFormData>(
-    createMovementTypeSchema,
-    {
-      defaultValues: {
-        name: "",
-        idCompany: companyId,
-        idBusinessUnit: businessUnitId ?? undefined,
-      },
-    }
-  );
-
-  // React Query hooks
-  const { data: movementTypes = [], isLoading, error } = useMovementTypes();
-  const createMutation = useCreateMovementType();
-  const updateMutation = useUpdateMovementType();
   const deactivateMutation = useDeactivateMovementType();
 
-  const handleNew = () => {
-    setEditingType(null);
-    form.reset({
+  // Hook CRUD genérico
+  const crud = useCrudPage<
+    MovementType,
+    CreateMovementTypeFormData,
+    CreateMovementTypeRequest,
+    UpdateMovementTypeRequest
+  >({
+    useListQuery: useMovementTypes,
+    createMutation: useCreateMovementType(),
+    updateMutation: useUpdateMovementType(),
+    deleteMutation: deactivateMutation,
+    schema: createMovementTypeSchema,
+    defaultValues: {
       name: "",
       idCompany: companyId,
       idBusinessUnit: businessUnitId ?? undefined,
-    });
-    setOpenDialog(true);
-  };
-
-  const handleEdit = (type: MovementType) => {
-    setEditingType(type);
-    form.reset({
-      name: type.name,
+    },
+    entityToFormData: movementTypeToFormData,
+    prepareCreateData: (data) => ({
+      name: data.name,
       idCompany: companyId,
-      idBusinessUnit: type.idBusinessUnit ?? businessUnitId ?? undefined,
-    });
-    setOpenDialog(true);
-  };
+      idBusinessUnit: data.idBusinessUnit ?? businessUnitId ?? undefined,
+    }),
+    prepareUpdateData: (data, type) => ({
+      id: type.id,
+      name: data.name,
+      idCompany: companyId,
+      idBusinessUnit: data.idBusinessUnit ?? businessUnitId ?? null,
+    }),
+  });
 
-  const onSubmit = async (data: CreateMovementTypeFormData) => {
-    if (!companyId) return;
-
-    try {
-      if (editingType) {
-        const updateData: UpdateMovementTypeRequest = {
-          id: editingType.id,
-          name: data.name,
-          idCompany: companyId,
-          idBusinessUnit: data.idBusinessUnit ?? businessUnitId ?? null,
-        };
-        await updateMutation.mutateAsync(updateData);
-      } else {
-        await createMutation.mutateAsync(data);
-      }
-      setOpenDialog(false);
-    } catch {
-      // Error manejado por el mutation
-    }
-  };
+  const { form } = crud;
+  const movementTypes = crud.items;
 
   const handleToggleActive = async (id: number) => {
     try {
@@ -125,7 +120,7 @@ export default function MovementTypesTab() {
     setOpenToggleDialog(true);
   };
 
-  if (isLoading) {
+  if (crud.isLoading) {
     return (
       <SectionCard>
         <div className="flex items-center gap-2">
@@ -138,7 +133,7 @@ export default function MovementTypesTab() {
     );
   }
 
-  if (error) {
+  if (crud.error) {
     return (
       <SectionCard>
         <Alert variant="destructive">
@@ -146,7 +141,9 @@ export default function MovementTypesTab() {
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
             Error al cargar tipos de movimiento:{" "}
-            {error instanceof Error ? error.message : "Error desconocido"}
+            {crud.error instanceof Error
+              ? crud.error.message
+              : "Error desconocido"}
           </AlertDescription>
         </Alert>
       </SectionCard>
@@ -159,11 +156,7 @@ export default function MovementTypesTab() {
         title="Tipos de Movimiento"
         description="Maestro de tipos de movimiento de stock"
         actions={
-          <Button
-            onClick={handleNew}
-            disabled={createMutation.isPending}
-            size="sm"
-          >
+          <Button onClick={crud.handleNew} disabled={crud.isSaving} size="sm">
             <Plus className="size-4" />
             Nuevo Tipo
           </Button>
@@ -215,8 +208,8 @@ export default function MovementTypesTab() {
                           type="button"
                           variant="outline"
                           size="icon"
-                          onClick={() => handleEdit(type)}
-                          disabled={updateMutation.isPending}
+                          onClick={() => crud.handleEdit(type)}
+                          disabled={crud.isSaving}
                           aria-label="Editar"
                         >
                           <Pencil className="size-4" />
@@ -240,25 +233,22 @@ export default function MovementTypesTab() {
       </SectionCard>
 
       <Dialog
-        open={openDialog}
-        onOpenChange={(open) => {
-          setOpenDialog(open);
-          if (!open) {
-            setEditingType(null);
-            form.reset();
-          }
-        }}
+        open={crud.isDialogOpen}
+        onOpenChange={(open) => !open && crud.closeDialog()}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingType
+              {crud.isEditing
                 ? "Editar Tipo de Movimiento"
                 : "Nuevo Tipo de Movimiento"}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-2">
+          <form
+            onSubmit={form.handleSubmit(crud.onSubmit)}
+            className="grid gap-2"
+          >
             <div className="space-y-2">
               <label className="text-sm font-medium">Nombre *</label>
               <Input
@@ -276,21 +266,17 @@ export default function MovementTypesTab() {
           </form>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpenDialog(false)}
-            >
+            <Button type="button" variant="outline" onClick={crud.closeDialog}>
               Cancelar
             </Button>
             <Button
               type="submit"
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={createMutation.isPending || updateMutation.isPending}
+              onClick={form.handleSubmit(crud.onSubmit)}
+              disabled={crud.isSaving}
             >
-              {createMutation.isPending || updateMutation.isPending
+              {crud.isSaving
                 ? "Guardando..."
-                : editingType
+                : crud.isEditing
                 ? "Guardar Cambios"
                 : "Crear"}
             </Button>

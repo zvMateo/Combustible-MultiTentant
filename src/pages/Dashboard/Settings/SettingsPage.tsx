@@ -702,9 +702,9 @@ function PreciosTab() {
 
   const [precioLoading, setPrecioLoading] = useState(false);
   const [precioError, setPrecioError] = useState<string | null>(null);
-  const [precioData, setPrecioData] = useState<PrecioBaseResponse[string] | null>(
-    null
-  );
+  const [precioData, setPrecioData] = useState<
+    PrecioBaseResponse[string] | null
+  >(null);
   const precioRequestSeq = useRef(0);
 
   useEffect(() => {
@@ -746,7 +746,9 @@ function PreciosTab() {
       } catch (e) {
         if (controller.signal.aborted) return;
         setSearchError(
-          e instanceof Error ? e.message : "Error desconocido al buscar ciudades"
+          e instanceof Error
+            ? e.message
+            : "Error desconocido al buscar ciudades"
         );
         setSearchResults([]);
       } finally {
@@ -789,7 +791,9 @@ function PreciosTab() {
       } catch (e) {
         if (seq !== precioRequestSeq.current) return;
         const message =
-          e instanceof Error ? e.message : "Error desconocido al cargar precios";
+          e instanceof Error
+            ? e.message
+            : "Error desconocido al cargar precios";
         setPrecioError(message);
         setPrecioData(null);
         toast.error(message);
@@ -815,7 +819,8 @@ function PreciosTab() {
     const plural = (n: number, s: string) => (n === 1 ? s : `${s}s`);
 
     if (minutes < 1) return "Actualizado recién";
-    if (minutes < 60) return `Actualizado hace ${minutes} ${plural(minutes, "minuto")}`;
+    if (minutes < 60)
+      return `Actualizado hace ${minutes} ${plural(minutes, "minuto")}`;
     if (hours < 24) return `Actualizado hace ${hours} ${plural(hours, "hora")}`;
     if (days < 30) return `Actualizado hace ${days} ${plural(days, "día")}`;
     if (days < 365)
@@ -823,11 +828,18 @@ function PreciosTab() {
     return `Actualizado hace ${years} ${plural(years, "año")}`;
   };
 
-  const brandStyles: Record<string, { bg: string; text: string; label: string }> = {
+  const brandStyles: Record<
+    string,
+    { bg: string; text: string; label: string }
+  > = {
     YPF: { bg: "bg-blue-600", text: "text-white", label: "YPF" },
     PUMA: { bg: "bg-red-600", text: "text-white", label: "PUMA" },
     AXION: { bg: "bg-purple-600", text: "text-white", label: "AXION" },
-    "SHELL C.A.P.S.A.": { bg: "bg-red-600", text: "text-white", label: "SHELL" },
+    "SHELL C.A.P.S.A.": {
+      bg: "bg-red-600",
+      text: "text-white",
+      label: "SHELL",
+    },
   };
 
   const empresas = useMemo(() => {
@@ -840,8 +852,10 @@ function PreciosTab() {
       }));
       const avg =
         fuels.length > 0
-          ? fuels.reduce((acc, f) => acc + (typeof f.precio === "number" ? f.precio : 0), 0) /
-            fuels.length
+          ? fuels.reduce(
+              (acc, f) => acc + (typeof f.precio === "number" ? f.precio : 0),
+              0
+            ) / fuels.length
           : 0;
       return { empresa, fuels, avgPrice: avg };
     });
@@ -897,7 +911,10 @@ function PreciosTab() {
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-3">
-          <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
+          <Dialog
+            open={locationDialogOpen}
+            onOpenChange={setLocationDialogOpen}
+          >
             <Button
               type="button"
               variant="outline"
@@ -932,13 +949,14 @@ function PreciosTab() {
                 </div>
 
                 <div className="mt-3">
-                  <Command>
+                  <Command className="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <CommandInput
                       value={searchQuery}
                       onValueChange={setSearchQuery}
                       placeholder="Buscar ciudad..."
+                      className="border-b border-slate-100"
                     />
-                    <CommandList>
+                    <CommandList className="max-h-[280px]">
                       {searchLoading ? (
                         <div className="flex items-center justify-center py-6">
                           <Spinner />
@@ -949,12 +967,12 @@ function PreciosTab() {
                           {searchError}
                         </div>
                       ) : null}
-                      <CommandEmpty>
+                      <CommandEmpty className="py-6 text-center text-sm text-slate-500">
                         {searchQuery.trim().length < 2
                           ? "Escribí al menos 2 letras"
                           : "Sin resultados"}
                       </CommandEmpty>
-                      <CommandGroup>
+                      <CommandGroup className="p-2">
                         {searchResults.map((c) => (
                           <CommandItem
                             key={c.nombre}
@@ -963,11 +981,11 @@ function PreciosTab() {
                               setSelectedCity(c.nombre);
                               setLocationDialogOpen(false);
                             }}
-                            className="rounded-md border"
+                            className="rounded-lg px-3 py-2.5 cursor-pointer hover:bg-slate-50 data-[selected=true]:bg-slate-100"
                           >
-                            <MapPin className="size-4" />
+                            <MapPin className="size-4 text-slate-400" />
                             <span className="font-medium">{c.nombre}</span>
-                            <ChevronRight className="ml-auto size-4 opacity-60" />
+                            <ChevronRight className="ml-auto size-4 text-slate-300" />
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -982,8 +1000,8 @@ function PreciosTab() {
         <Alert className="mt-4 border-gray-200">
           <AlertTitle>Info</AlertTitle>
           <AlertDescription>
-            Los valores son referenciales (promedios por empresa/ciudad) y pueden
-            variar por estación.
+            Los valores son referenciales (promedios por empresa/ciudad) y
+            pueden variar por estación.
           </AlertDescription>
         </Alert>
 
@@ -1048,7 +1066,9 @@ function PreciosTab() {
                           </div>
                           <div>
                             <div className="font-semibold">
-                              {brand.label === e.empresa ? e.empresa : brand.label}
+                              {brand.label === e.empresa
+                                ? e.empresa
+                                : brand.label}
                             </div>
                             <div className="text-muted-foreground text-xs">
                               {selectedCity}
@@ -1082,9 +1102,9 @@ function PreciosTab() {
 
                             <div className="flex items-center gap-2">
                               <div className="text-sm font-semibold whitespace-nowrap">
-                                ${f.precio.toLocaleString("es-AR")} / {getUnit(f.nombre)}
+                                ${f.precio.toLocaleString("es-AR")} /{" "}
+                                {getUnit(f.nombre)}
                               </div>
-                              <ChevronRight className="text-muted-foreground size-4" />
                             </div>
                           </button>
                         ))}
@@ -1096,7 +1116,6 @@ function PreciosTab() {
             </div>
           )}
         </div>
-
       </CardContent>
     </Card>
   );

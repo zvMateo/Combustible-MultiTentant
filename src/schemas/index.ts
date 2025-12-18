@@ -141,7 +141,7 @@ export const updateBusinessUnitSchema = createBusinessUnitSchema.extend({
 // DRIVER SCHEMAS
 // ============================================
 export const createDriverSchema = z.object({
-  idCompany: requiredId,
+  idBusinessUnit: optionalId,
   name: requiredString.max(100, msg.maxLength(100)),
   dni: dni,
   phoneNumber: phone.transform((v) => v || undefined),

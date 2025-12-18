@@ -161,6 +161,7 @@ export interface Driver {
 
 export interface CreateDriverRequest {
   idCompany: number;
+  idBusinessUnit?: number;
   name: string;
   dni: string;
   phoneNumber?: string;

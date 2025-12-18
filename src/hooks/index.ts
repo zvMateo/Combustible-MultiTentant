@@ -17,6 +17,7 @@ export type { UseCrudPageConfig, UseCrudPageReturn } from "./useCrudPage";
 // Utility hooks
 export { useDebouncedValue, useDebouncedState } from "./useDebouncedValue";
 export { useIsMobile } from "./use-mobile";
+export { useExcelExport, exportToExcel } from "./useExcelExport";
 
 // Permission & Role hooks
 export { usePermissions } from "./usePermissions";

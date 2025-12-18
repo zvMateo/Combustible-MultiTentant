@@ -2,7 +2,6 @@
  * DriversPage - Gestión de Choferes
  * Implementa patrón CRUD con useCrudPage
  */
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import {
   Plus,
@@ -13,23 +12,20 @@ import {
   Download,
   IdCard,
   Building2,
-  CheckCircle2,
   MoreVertical,
-  XCircle,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
-import { useCrudPage } from "@/hooks/useCrudPage";
+import { useCrudPage, useExcelExport } from "@/hooks";
 import { createDriverSchema, type CreateDriverFormData } from "@/schemas";
 import {
   useDrivers,
   useCreateDriver,
   useUpdateDriver,
   useDeactivateDriver,
-  useCompanies,
+  useBusinessUnits,
 } from "@/hooks/queries";
 import type {
   Driver,
@@ -70,6 +66,7 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SearchInput } from "@/components/common/DataTable";
+import { EntityCardFooter } from "@/components/common/EntityCardFooter";
 
 // ============================================
 // HELPERS
@@ -89,7 +86,7 @@ const getInitials = (name: string): string => {
 };
 
 const DEFAULT_FORM_VALUES: CreateDriverFormData = {
-  idCompany: 0,
+  idBusinessUnit: undefined,
   name: "",
   dni: "",
   phoneNumber: "",
@@ -101,18 +98,10 @@ const filterDriver = (driver: Driver, searchTerm: string): boolean => {
 };
 
 const driverToFormData = (driver: Driver): CreateDriverFormData => ({
-  idCompany: driver.idCompany,
+  idBusinessUnit: driver.idBusinessUnit,
   name: driver.name,
   dni: driver.dni,
   phoneNumber: driver.phoneNumber || "",
-});
-
-const prepareUpdateData = (
-  data: CreateDriverFormData,
-  driver: Driver
-): UpdateDriverRequest => ({
-  id: driver.id,
-  ...data,
 });
 
 // ============================================
@@ -126,11 +115,13 @@ export default function DriversPage() {
     showCreateButtons,
     showExportButtons,
     isReadOnly,
-    companyIdFilter,
+    unidadIdsFilter,
   } = useRoleLogic();
 
-  const idCompany = user?.idCompany || user?.empresaId || companyIdFilter || 0;
-  const { data: companies = [] } = useCompanies();
+  // idCompany del usuario autenticado (se envía automáticamente)
+  const idCompany = user?.idCompany || user?.empresaId || 0;
+
+  const { data: businessUnits = [] } = useBusinessUnits();
 
   const deactivateMutation = useDeactivateDriver();
 
@@ -146,44 +137,54 @@ export default function DriversPage() {
     updateMutation: useUpdateDriver(),
     deleteMutation: deactivateMutation,
     schema: createDriverSchema,
-    defaultValues: { ...DEFAULT_FORM_VALUES, idCompany },
+    defaultValues: DEFAULT_FORM_VALUES,
     filterFn: filterDriver,
     entityToFormData: driverToFormData,
     prepareCreateData: (data) => ({
-      idCompany: data.idCompany,
+      idCompany,
+      idBusinessUnit: data.idBusinessUnit,
       name: data.name,
       dni: data.dni,
       phoneNumber: data.phoneNumber || undefined,
     }),
-    prepareUpdateData,
+    prepareUpdateData: (data, driver) => ({
+      id: driver.id,
+      idCompany: driver.idCompany,
+      idBusinessUnit: data.idBusinessUnit,
+      name: data.name,
+      dni: data.dni,
+      phoneNumber: data.phoneNumber || undefined,
+    }),
     onCreateSuccess: () => toast.success("Chofer registrado"),
     onUpdateSuccess: () => toast.success("Chofer actualizado"),
     onDeleteSuccess: () => toast.success("Chofer desactivado"),
   });
 
-  // Filtrar por empresa
+  // Filtrar por unidad de negocio
   const filteredDrivers = crud.filteredItems.filter(
     (d) =>
-      !companyIdFilter ||
-      companyIdFilter <= 0 ||
-      d.idCompany === companyIdFilter
+      !unidadIdsFilter ||
+      unidadIdsFilter.length === 0 ||
+      (d.idBusinessUnit && unidadIdsFilter.includes(d.idBusinessUnit))
   );
 
   const { form } = crud;
 
-  const handleExport = () => {
-    const dataToExport = filteredDrivers.map((d) => ({
-      Nombre: d.name,
-      DNI: d.dni,
-      Telefono: d.phoneNumber || "",
-      Empresa: companies.find((c) => c.id === d.idCompany)?.name || "",
-      Estado: d.active !== false ? "Activo" : "Inactivo",
-    }));
+  const { exportToExcel } = useExcelExport<Driver>();
 
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Choferes");
-    XLSX.writeFile(wb, "choferes.xlsx");
+  const handleExport = () => {
+    exportToExcel(filteredDrivers, {
+      fileName: "choferes",
+      sheetName: "Choferes",
+      transform: (d) => ({
+        Nombre: d.name,
+        DNI: d.dni,
+        Telefono: d.phoneNumber || "",
+        "Unidad de Negocio":
+          businessUnits.find((bu) => bu.id === d.idBusinessUnit)?.name || "",
+        Estado: d.active !== false ? "Activo" : "Inactivo",
+      }),
+    });
   };
 
   if (crud.isLoading)
@@ -320,41 +321,22 @@ export default function DriversPage() {
                       <div className="flex items-center gap-3 text-muted-foreground">
                         <Building2 size={15} className="shrink-0" />
                         <span className="text-xs truncate uppercase">
-                          {companies.find((c) => c.id === d.idCompany)?.name ||
-                            "Empresa Logística"}
+                          {businessUnits.find(
+                            (bu) => bu.id === d.idBusinessUnit
+                          )?.name || "Todas las unidades"}
                         </span>
                       </div>
                     </div>
                   </CardContent>
 
-                  <div className="px-5 py-3 bg-muted/30 border-t flex items-center justify-between">
-                    <div
-                      className={`flex items-center gap-1.5 ${
-                        d.active !== false ? "text-green-600" : "text-red-500"
-                      }`}
-                    >
-                      {d.active !== false ? (
-                        <CheckCircle2 size={14} />
-                      ) : (
-                        <XCircle size={14} />
-                      )}
-                      <span className="text-xs font-bold uppercase">
-                        {d.active !== false ? "Habilitado" : "Deshabilitado"}
-                      </span>
-                    </div>
-                    {!isReadOnly && canEdit && (
-                      <Switch
-                        checked={d.active !== false}
-                        onCheckedChange={() => {
-                          deactivateMutation.mutate(d.id);
-                        }}
-                        disabled={deactivateMutation.isPending}
-                        aria-label={
-                          d.active !== false ? "Desactivar" : "Activar"
-                        }
-                      />
-                    )}
-                  </div>
+                  <EntityCardFooter
+                    active={d.active !== false}
+                    activeLabel="Habilitado"
+                    inactiveLabel="Deshabilitado"
+                    showSwitch={!isReadOnly && canEdit}
+                    onToggle={() => deactivateMutation.mutate(d.id)}
+                    isToggling={deactivateMutation.isPending}
+                  />
                 </Card>
               ))}
             </div>
@@ -446,28 +428,32 @@ export default function DriversPage() {
               </div>
             </div>
 
-            {companies.length > 1 && (
-              <div className="space-y-2">
-                <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
-                  Empresa
-                </Label>
-                <Select
-                  value={String(form.watch("idCompany") || "")}
-                  onValueChange={(v) => form.setValue("idCompany", Number(v))}
-                >
-                  <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white">
-                    <SelectValue placeholder="Elegir empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map((c) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                Unidad de Negocio (opcional)
+              </Label>
+              <Select
+                value={String(form.watch("idBusinessUnit") || "none")}
+                onValueChange={(v) =>
+                  form.setValue(
+                    "idBusinessUnit",
+                    v === "none" ? undefined : Number(v)
+                  )
+                }
+              >
+                <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white">
+                  <SelectValue placeholder="Todas las unidades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Todas las unidades</SelectItem>
+                  {businessUnits.map((bu) => (
+                    <SelectItem key={bu.id} value={String(bu.id)}>
+                      {bu.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </form>
 
           <DialogFooter className="p-8 bg-slate-50/80 border-t border-slate-100 gap-3">

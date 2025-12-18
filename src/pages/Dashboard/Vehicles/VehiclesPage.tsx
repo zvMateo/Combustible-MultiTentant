@@ -13,10 +13,10 @@ import {
   Droplets,
   Building2,
   MoreVertical,
-  CheckCircle2,
   Hash,
   Scale,
 } from "lucide-react";
+import { StatusBadge } from "@/components/common/StatusBadge";
 
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
@@ -381,10 +381,7 @@ export default function VehiclesPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 text-green-600">
-                        <CheckCircle2 size={14} />
-                        <span className="text-xs font-semibold">Activo</span>
-                      </div>
+                      <StatusBadge active={true} />
 
                       <div className="pt-3 border-t flex items-center gap-2">
                         <Building2

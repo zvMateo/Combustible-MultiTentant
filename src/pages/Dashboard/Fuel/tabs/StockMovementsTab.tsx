@@ -37,8 +37,7 @@ import {
   Search,
   TriangleAlert,
 } from "lucide-react";
-import * as XLSX from "xlsx";
-import { toast } from "sonner";
+import { useExcelExport } from "@/hooks";
 import {
   useFuelStockMovements,
   useCreateFuelStockMovement,
@@ -214,33 +213,30 @@ export default function StockMovementsTab() {
     }
   };
 
-  const handleExport = () => {
-    const dataToExport = filteredMovements.map((m) => ({
-      Fecha: new Date(m.date).toLocaleDateString(),
-      "Tipo Combustible":
-        m.fuelType?.name ||
-        fuelTypes.find((ft) => ft.id === m.idFuelType)?.name ||
-        "-",
-      Recurso:
-        m.resource?.name ||
-        resources.find((r) => r.id === m.idResource)?.name ||
-        "-",
-      Movimiento:
-        m.movementType?.name ||
-        movementTypes.find((mt) => mt.id === m.idMovementType)?.name ||
-        "-",
-      Empresa: getLocationName(m),
-      Litros: m.liters,
-    }));
+  const { exportToExcel } = useExcelExport<FuelStockMovement>();
 
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
-    XLSX.writeFile(
-      wb,
-      `movimientos_stock_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
-    toast.success("Archivo exportado correctamente");
+  const handleExport = () => {
+    exportToExcel(filteredMovements, {
+      fileName: "movimientos_stock",
+      sheetName: "Movimientos",
+      transform: (m) => ({
+        Fecha: new Date(m.date).toLocaleDateString(),
+        "Tipo Combustible":
+          m.fuelType?.name ||
+          fuelTypes.find((ft) => ft.id === m.idFuelType)?.name ||
+          "-",
+        Recurso:
+          m.resource?.name ||
+          resources.find((r) => r.id === m.idResource)?.name ||
+          "-",
+        Movimiento:
+          m.movementType?.name ||
+          movementTypes.find((mt) => mt.id === m.idMovementType)?.name ||
+          "-",
+        Empresa: getLocationName(m),
+        Litros: m.liters,
+      }),
+    });
   };
 
   if (isLoading) {

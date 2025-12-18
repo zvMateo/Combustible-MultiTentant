@@ -38,8 +38,7 @@ import {
   Search,
   TriangleAlert,
 } from "lucide-react";
-import * as XLSX from "xlsx";
-import { toast } from "sonner";
+import { useExcelExport } from "@/hooks";
 import {
   useLoadLitersScoped,
   useCreateLoadLiters,
@@ -200,27 +199,24 @@ export default function LoadLitersTab() {
     }
   };
 
-  const handleExport = () => {
-    const dataToExport = filteredLoads.map((l) => ({
-      Fecha: l.loadDate.split("T")[0],
-      Recurso: l.nameResource || l.resource?.name || "",
-      Identificador: l.resource?.identifier || "",
-      "Litros Iniciales": l.initialLiters,
-      "Litros Finales": l.finalLiters,
-      "Total Litros": l.totalLiters,
-      "Tipo Combustible": l.nameFuelType || l.fuelType?.name || "",
-      "Unidad/Empresa": getLocationName(l),
-      Detalle: l.detail || "",
-    }));
+  const { exportToExcel } = useExcelExport<LoadLiters>();
 
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Cargas");
-    XLSX.writeFile(
-      wb,
-      `cargas_litros_${new Date().toISOString().split("T")[0]}.xlsx`
-    );
-    toast.success("Archivo exportado correctamente");
+  const handleExport = () => {
+    exportToExcel(filteredLoads, {
+      fileName: "cargas_litros",
+      sheetName: "Cargas",
+      transform: (l) => ({
+        Fecha: l.loadDate.split("T")[0],
+        Recurso: l.nameResource || l.resource?.name || "",
+        Identificador: l.resource?.identifier || "",
+        "Litros Iniciales": l.initialLiters,
+        "Litros Finales": l.finalLiters,
+        "Total Litros": l.totalLiters,
+        "Tipo Combustible": l.nameFuelType || l.fuelType?.name || "",
+        "Unidad/Empresa": getLocationName(l),
+        Detalle: l.detail || "",
+      }),
+    });
   };
 
   if (isLoading) {
