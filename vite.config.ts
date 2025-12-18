@@ -26,6 +26,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/naftas": {
+        target: "https://naftas.com.ar",
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/naftas/, ""),
+      },
     },
   },
   build: {
