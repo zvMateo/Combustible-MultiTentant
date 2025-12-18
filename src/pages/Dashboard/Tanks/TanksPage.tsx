@@ -39,6 +39,8 @@ import { toast } from "sonner";
 
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
+import { useZodForm } from "@/hooks/useZodForm";
+import { createResourceSchema, type CreateResourceFormData } from "@/schemas";
 import {
   useTanks,
   useCreateResource,
@@ -46,16 +48,8 @@ import {
   useDeactivateResource,
 } from "@/hooks/queries";
 import { useCompanies, useBusinessUnits } from "@/hooks/queries";
-import type {
-  Resource,
-  CreateResourceRequest,
-  UpdateResourceRequest,
-} from "@/types/api.types";
+import type { Resource, UpdateResourceRequest } from "@/types/api.types";
 import { RESOURCE_TYPES } from "@/types/api.types";
-
-interface FormErrors {
-  [key: string]: string;
-}
 
 export default function TanksPage() {
   const { user } = useAuthStore();
@@ -67,15 +61,17 @@ export default function TanksPage() {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [editingTank, setEditingTank] = useState<Resource | null>(null);
   const [deleteTank, setDeleteTank] = useState<Resource | null>(null);
-  const [formData, setFormData] = useState<CreateResourceRequest>({
-    idType: RESOURCE_TYPES.TANK,
-    idCompany: idCompany || 0,
-    idBusinessUnit: undefined,
-    nativeLiters: undefined,
-    name: "",
-    identifier: "",
+
+  const form = useZodForm<CreateResourceFormData>(createResourceSchema, {
+    defaultValues: {
+      idType: RESOURCE_TYPES.TANK,
+      idCompany: idCompany || 0,
+      idBusinessUnit: undefined,
+      nativeLiters: undefined,
+      name: "",
+      identifier: "",
+    },
   });
-  const [errors, setErrors] = useState<FormErrors>({});
 
   // React Query hooks
   const { data: tanks = [], isLoading, error } = useTanks();
@@ -110,7 +106,7 @@ export default function TanksPage() {
   // Handlers
   const handleNew = () => {
     setEditingTank(null);
-    setFormData({
+    form.reset({
       idType: RESOURCE_TYPES.TANK,
       idCompany: idCompany || companies[0]?.id || 0,
       idBusinessUnit: undefined,
@@ -118,13 +114,12 @@ export default function TanksPage() {
       name: "",
       identifier: "",
     });
-    setErrors({});
     setOpenDialog(true);
   };
 
   const handleEdit = (tank: Resource) => {
     setEditingTank(tank);
-    setFormData({
+    form.reset({
       idType: tank.idType,
       idCompany: tank.idCompany,
       idBusinessUnit: tank.idBusinessUnit,
@@ -132,7 +127,6 @@ export default function TanksPage() {
       name: tank.name,
       identifier: tank.identifier,
     });
-    setErrors({});
     setOpenDialog(true);
   };
 
@@ -141,40 +135,21 @@ export default function TanksPage() {
     setOpenDeleteDialog(true);
   };
 
-  const validate = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = "El nombre es obligatorio";
-    }
-    if (!formData.identifier.trim()) {
-      newErrors.identifier = "El identificador es obligatorio";
-    }
-    if (!formData.idCompany || formData.idCompany === 0) {
-      newErrors.idCompany = "Debe seleccionar una empresa";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!validate()) return;
-
+  const onSubmit = async (data: CreateResourceFormData) => {
     try {
       if (editingTank) {
         const updateData: UpdateResourceRequest = {
           id: editingTank.id,
-          idType: formData.idType,
-          idCompany: formData.idCompany,
-          idBusinessUnit: formData.idBusinessUnit,
-          nativeLiters: formData.nativeLiters,
-          name: formData.name,
-          identifier: formData.identifier,
+          idType: data.idType,
+          idCompany: data.idCompany,
+          idBusinessUnit: data.idBusinessUnit,
+          nativeLiters: data.nativeLiters,
+          name: data.name,
+          identifier: data.identifier,
         };
         await updateMutation.mutateAsync(updateData);
       } else {
-        await createMutation.mutateAsync(formData);
+        await createMutation.mutateAsync(data);
       }
       setOpenDialog(false);
     } catch {
@@ -411,7 +386,16 @@ export default function TanksPage() {
         </SectionCard>
 
         {/* Diálogo de crear/editar */}
-        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <Dialog
+          open={openDialog}
+          onOpenChange={(open) => {
+            setOpenDialog(open);
+            if (!open) {
+              setEditingTank(null);
+              form.reset();
+            }
+          }}
+        >
           <DialogContent className="sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>
@@ -419,17 +403,22 @@ export default function TanksPage() {
               </DialogTitle>
             </DialogHeader>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="grid gap-4 sm:grid-cols-2"
+            >
               {companies.length > 1 ? (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Empresa *</label>
                   <Select
-                    value={String(formData.idCompany)}
+                    value={String(form.watch("idCompany") || "")}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, idCompany: Number(value) })
+                      form.setValue("idCompany", Number(value))
                     }
                   >
-                    <SelectTrigger aria-invalid={!!errors.idCompany}>
+                    <SelectTrigger
+                      aria-invalid={!!form.formState.errors.idCompany}
+                    >
                       <SelectValue placeholder="Seleccionar" />
                     </SelectTrigger>
                     <SelectContent>
@@ -440,11 +429,11 @@ export default function TanksPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.idCompany ? (
+                  {form.formState.errors.idCompany && (
                     <p className="text-destructive text-xs">
-                      {errors.idCompany}
+                      {form.formState.errors.idCompany.message}
                     </p>
-                  ) : null}
+                  )}
                 </div>
               ) : null}
 
@@ -453,17 +442,12 @@ export default function TanksPage() {
                   Unidad de Negocio (opcional)
                 </label>
                 <Select
-                  value={
-                    formData.idBusinessUnit
-                      ? String(formData.idBusinessUnit)
-                      : "none"
-                  }
+                  value={String(form.watch("idBusinessUnit") || "none")}
                   onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      idBusinessUnit:
-                        value === "none" ? undefined : Number(value),
-                    })
+                    form.setValue(
+                      "idBusinessUnit",
+                      value === "none" ? undefined : Number(value)
+                    )
                   }
                 >
                   <SelectTrigger>
@@ -472,7 +456,7 @@ export default function TanksPage() {
                   <SelectContent>
                     <SelectItem value="none">Sin asignar</SelectItem>
                     {businessUnits
-                      .filter((bu) => bu.idCompany === formData.idCompany)
+                      .filter((bu) => bu.idCompany === form.watch("idCompany"))
                       .map((bu) => (
                         <SelectItem key={bu.id} value={String(bu.id)}>
                           {bu.name}
@@ -487,32 +471,28 @@ export default function TanksPage() {
                   Nombre del Tanque *
                 </label>
                 <Input
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  aria-invalid={!!errors.name}
+                  {...form.register("name")}
+                  aria-invalid={!!form.formState.errors.name}
                   autoFocus
                 />
-                {errors.name ? (
-                  <p className="text-destructive text-xs">{errors.name}</p>
-                ) : null}
+                {form.formState.errors.name && (
+                  <p className="text-destructive text-xs">
+                    {form.formState.errors.name.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Identificador *</label>
                 <Input
-                  value={formData.identifier}
-                  onChange={(e) =>
-                    setFormData({ ...formData, identifier: e.target.value })
-                  }
-                  aria-invalid={!!errors.identifier}
+                  {...form.register("identifier")}
+                  aria-invalid={!!form.formState.errors.identifier}
                 />
-                {errors.identifier ? (
+                {form.formState.errors.identifier && (
                   <p className="text-destructive text-xs">
-                    {errors.identifier}
+                    {form.formState.errors.identifier.message}
                   </p>
-                ) : null}
+                )}
               </div>
 
               <div className="space-y-2">
@@ -522,22 +502,14 @@ export default function TanksPage() {
                 <div className="relative">
                   <Input
                     type="number"
-                    value={formData.nativeLiters ?? ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        nativeLiters: e.target.value
-                          ? Number(e.target.value)
-                          : undefined,
-                      })
-                    }
+                    {...form.register("nativeLiters", { valueAsNumber: true })}
                   />
                   <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
                     L
                   </div>
                 </div>
               </div>
-            </div>
+            </form>
 
             <DialogFooter>
               <Button
@@ -548,8 +520,8 @@ export default function TanksPage() {
                 Cancelar
               </Button>
               <Button
-                type="button"
-                onClick={handleSave}
+                type="submit"
+                onClick={form.handleSubmit(onSubmit)}
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
                 {createMutation.isPending || updateMutation.isPending

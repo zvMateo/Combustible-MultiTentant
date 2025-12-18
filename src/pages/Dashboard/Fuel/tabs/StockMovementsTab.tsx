@@ -50,15 +50,15 @@ import {
   useCompany,
 } from "@/hooks/queries";
 import { useAuthStore } from "@/stores/auth.store";
+import { useZodForm } from "@/hooks/useZodForm";
+import {
+  createFuelStockMovementSchema,
+  type CreateFuelStockMovementFormData,
+} from "@/schemas";
 import type {
   FuelStockMovement,
-  CreateFuelStockMovementRequest,
   UpdateFuelStockMovementRequest,
 } from "@/types/api.types";
-
-interface FormErrors {
-  [key: string]: string;
-}
 
 export default function StockMovementsTab() {
   const { user } = useAuthStore();
@@ -69,16 +69,21 @@ export default function StockMovementsTab() {
   const [editingMovement, setEditingMovement] =
     useState<FuelStockMovement | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [formData, setFormData] = useState<CreateFuelStockMovementRequest>({
-    idFuelType: 0,
-    idResource: 0,
-    date: new Date().toISOString(),
-    idMovementType: 0,
-    idCompany: idCompany,
-    idBusinessUnit: idBusinessUnit,
-    liters: 0,
-  });
-  const [errors, setErrors] = useState<FormErrors>({});
+
+  const form = useZodForm<CreateFuelStockMovementFormData>(
+    createFuelStockMovementSchema,
+    {
+      defaultValues: {
+        idFuelType: 0,
+        idResource: 0,
+        date: new Date().toISOString().split("T")[0],
+        idMovementType: 0,
+        idCompany: idCompany,
+        idBusinessUnit: idBusinessUnit || undefined,
+        liters: 0,
+      },
+    }
+  );
 
   // React Query hooks
   const { data: movements = [], isLoading, error } = useFuelStockMovements();
@@ -91,8 +96,13 @@ export default function StockMovementsTab() {
   // Helper para obtener nombre de ubicación (BU o Company)
   const getLocationName = (movement: FuelStockMovement): string => {
     // Buscar el recurso en la lista para obtener su idBusinessUnit si no viene en movement
-    const resourceFromList = resources.find((r) => r.id === movement.idResource);
-    const buId = movement.idBusinessUnit ?? movement.resource?.idBusinessUnit ?? resourceFromList?.idBusinessUnit;
+    const resourceFromList = resources.find(
+      (r) => r.id === movement.idResource
+    );
+    const buId =
+      movement.idBusinessUnit ??
+      movement.resource?.idBusinessUnit ??
+      resourceFromList?.idBusinessUnit;
 
     // Si tiene unidad de negocio, buscar el nombre
     if (buId) {
@@ -153,75 +163,50 @@ export default function StockMovementsTab() {
 
   const handleNew = () => {
     setEditingMovement(null);
-    setFormData({
+    form.reset({
       idFuelType: fuelTypes[0]?.id || 0,
       idResource: resources[0]?.id || 0,
-      date: new Date().toISOString(),
+      date: new Date().toISOString().split("T")[0],
       idMovementType: movementTypes[0]?.id || 0,
       idCompany: idCompany,
-      idBusinessUnit: idBusinessUnit,
+      idBusinessUnit: idBusinessUnit || undefined,
       liters: 0,
     });
-    setErrors({});
     setOpenDialog(true);
   };
 
   const handleEdit = (movement: FuelStockMovement) => {
     setEditingMovement(movement);
-    setFormData({
+    form.reset({
       idFuelType: movement.idFuelType,
       idResource: movement.idResource,
-      date: movement.date,
+      date: movement.date.split("T")[0],
       idMovementType: movement.idMovementType,
       idCompany: movement.idCompany,
-      idBusinessUnit: movement.idBusinessUnit,
+      idBusinessUnit: movement.idBusinessUnit || undefined,
       liters: movement.liters,
     });
-    setErrors({});
     setOpenDialog(true);
   };
 
-  const validate = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    if (!formData.idFuelType || formData.idFuelType === 0) {
-      newErrors.idFuelType = "Debe seleccionar un tipo de combustible";
-    }
-    if (!formData.idResource || formData.idResource === 0) {
-      newErrors.idResource = "Debe seleccionar un recurso";
-    }
-    if (!formData.idMovementType || formData.idMovementType === 0) {
-      newErrors.idMovementType = "Debe seleccionar un tipo de movimiento";
-    }
-    if (formData.liters <= 0) {
-      newErrors.liters = "Los litros deben ser mayores a 0";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!validate()) return;
-
-    // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado
+  const onSubmit = async (data: CreateFuelStockMovementFormData) => {
     const finalIdCompany = idCompany || user?.idCompany || user?.empresaId || 0;
 
     try {
       if (editingMovement) {
         const updateData: UpdateFuelStockMovementRequest = {
           id: editingMovement.id,
-          ...formData,
-          idCompany: finalIdCompany, // ✅ Usar idCompany del usuario autenticado
+          ...data,
+          date: new Date(data.date).toISOString(),
+          idCompany: finalIdCompany,
         };
         await updateMutation.mutateAsync(updateData);
       } else {
-        // MULTI-TENANT: Usar SIEMPRE el idCompany del usuario autenticado
-        const createData: CreateFuelStockMovementRequest = {
-          ...formData,
-          idCompany: finalIdCompany, // ✅ Usar idCompany del usuario autenticado
-        };
-        await createMutation.mutateAsync(createData);
+        await createMutation.mutateAsync({
+          ...data,
+          date: new Date(data.date).toISOString(),
+          idCompany: finalIdCompany,
+        });
       }
       setOpenDialog(false);
     } catch {
@@ -397,7 +382,16 @@ export default function StockMovementsTab() {
         )}
       </div>
 
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+      <Dialog
+        open={openDialog}
+        onOpenChange={(open) => {
+          setOpenDialog(open);
+          if (!open) {
+            setEditingMovement(null);
+            form.reset();
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -407,18 +401,23 @@ export default function StockMovementsTab() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="grid gap-4 sm:grid-cols-2"
+          >
             <div className="space-y-2">
               <label className="text-sm font-medium">
                 Tipo de Combustible *
               </label>
               <Select
-                value={String(formData.idFuelType)}
+                value={String(form.watch("idFuelType") || "")}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, idFuelType: Number(value) })
+                  form.setValue("idFuelType", Number(value))
                 }
               >
-                <SelectTrigger aria-invalid={!!errors.idFuelType}>
+                <SelectTrigger
+                  aria-invalid={!!form.formState.errors.idFuelType}
+                >
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent>
@@ -429,20 +428,24 @@ export default function StockMovementsTab() {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.idFuelType ? (
-                <p className="text-destructive text-xs">{errors.idFuelType}</p>
-              ) : null}
+              {form.formState.errors.idFuelType && (
+                <p className="text-destructive text-xs">
+                  {form.formState.errors.idFuelType.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Recurso *</label>
               <Select
-                value={String(formData.idResource)}
+                value={String(form.watch("idResource") || "")}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, idResource: Number(value) })
+                  form.setValue("idResource", Number(value))
                 }
               >
-                <SelectTrigger aria-invalid={!!errors.idResource}>
+                <SelectTrigger
+                  aria-invalid={!!form.formState.errors.idResource}
+                >
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent>
@@ -453,23 +456,16 @@ export default function StockMovementsTab() {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.idResource ? (
-                <p className="text-destructive text-xs">{errors.idResource}</p>
-              ) : null}
+              {form.formState.errors.idResource && (
+                <p className="text-destructive text-xs">
+                  {form.formState.errors.idResource.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Fecha</label>
-              <Input
-                type="datetime-local"
-                value={new Date(formData.date).toISOString().slice(0, 16)}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    date: new Date(e.target.value).toISOString(),
-                  })
-                }
-              />
+              <Input type="date" {...form.register("date")} />
             </div>
 
             <div className="space-y-2">
@@ -477,12 +473,14 @@ export default function StockMovementsTab() {
                 Tipo de Movimiento *
               </label>
               <Select
-                value={String(formData.idMovementType)}
+                value={String(form.watch("idMovementType") || "")}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, idMovementType: Number(value) })
+                  form.setValue("idMovementType", Number(value))
                 }
               >
-                <SelectTrigger aria-invalid={!!errors.idMovementType}>
+                <SelectTrigger
+                  aria-invalid={!!form.formState.errors.idMovementType}
+                >
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent>
@@ -493,11 +491,11 @@ export default function StockMovementsTab() {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.idMovementType ? (
+              {form.formState.errors.idMovementType && (
                 <p className="text-destructive text-xs">
-                  {errors.idMovementType}
+                  {form.formState.errors.idMovementType.message}
                 </p>
-              ) : null}
+              )}
             </div>
 
             <div className="space-y-2 sm:col-span-2">
@@ -505,21 +503,20 @@ export default function StockMovementsTab() {
               <div className="relative">
                 <Input
                   type="number"
-                  value={String(formData.liters)}
-                  onChange={(e) =>
-                    setFormData({ ...formData, liters: Number(e.target.value) })
-                  }
-                  aria-invalid={!!errors.liters}
+                  {...form.register("liters", { valueAsNumber: true })}
+                  aria-invalid={!!form.formState.errors.liters}
                 />
                 <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
                   L
                 </div>
               </div>
-              {errors.liters ? (
-                <p className="text-destructive text-xs">{errors.liters}</p>
-              ) : null}
+              {form.formState.errors.liters && (
+                <p className="text-destructive text-xs">
+                  {form.formState.errors.liters.message}
+                </p>
+              )}
             </div>
-          </div>
+          </form>
 
           <DialogFooter>
             <Button
@@ -530,8 +527,8 @@ export default function StockMovementsTab() {
               Cancelar
             </Button>
             <Button
-              type="button"
-              onClick={handleSave}
+              type="submit"
+              onClick={form.handleSubmit(onSubmit)}
               disabled={createMutation.isPending || updateMutation.isPending}
             >
               {createMutation.isPending || updateMutation.isPending

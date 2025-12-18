@@ -33,9 +33,13 @@ import {
 } from "@/hooks/queries";
 import { useIdBusinessUnit, useIdCompany } from "@/stores/auth.store";
 import { useUnidadActivaId } from "@/stores/unidad.store";
+import { useZodForm } from "@/hooks/useZodForm";
+import {
+  createMovementTypeSchema,
+  type CreateMovementTypeFormData,
+} from "@/schemas";
 import type {
   MovementType,
-  CreateMovementTypeRequest,
   UpdateMovementTypeRequest,
 } from "@/types/api.types";
 
@@ -49,10 +53,17 @@ export default function MovementTypesTab() {
   const [openToggleDialog, setOpenToggleDialog] = useState(false);
   const [editingType, setEditingType] = useState<MovementType | null>(null);
   const [toggleType, setToggleType] = useState<MovementType | null>(null);
-  const [formData, setFormData] = useState<{ name: string }>({
-    name: "",
-  });
-  const [errors, setErrors] = useState({ name: "" });
+
+  const form = useZodForm<CreateMovementTypeFormData>(
+    createMovementTypeSchema,
+    {
+      defaultValues: {
+        name: "",
+        idCompany: companyId,
+        idBusinessUnit: businessUnitId ?? undefined,
+      },
+    }
+  );
 
   // React Query hooks
   const { data: movementTypes = [], isLoading, error } = useMovementTypes();
@@ -62,50 +73,38 @@ export default function MovementTypesTab() {
 
   const handleNew = () => {
     setEditingType(null);
-    setFormData({ name: "" });
-    setErrors({ name: "" });
+    form.reset({
+      name: "",
+      idCompany: companyId,
+      idBusinessUnit: businessUnitId ?? undefined,
+    });
     setOpenDialog(true);
   };
 
   const handleEdit = (type: MovementType) => {
     setEditingType(type);
-    setFormData({ name: type.name });
-    setErrors({ name: "" });
+    form.reset({
+      name: type.name,
+      idCompany: companyId,
+      idBusinessUnit: type.idBusinessUnit ?? businessUnitId ?? undefined,
+    });
     setOpenDialog(true);
   };
 
-  const validate = (): boolean => {
-    const newErrors = { name: "" };
-
-    if (!formData.name.trim()) {
-      newErrors.name = "El nombre es obligatorio";
-    }
-
-    setErrors(newErrors);
-    return !newErrors.name;
-  };
-
-  const handleSave = async () => {
-    if (!validate()) return;
-
+  const onSubmit = async (data: CreateMovementTypeFormData) => {
     if (!companyId) return;
 
     try {
       if (editingType) {
         const updateData: UpdateMovementTypeRequest = {
           id: editingType.id,
-          name: formData.name,
+          name: data.name,
           idCompany: companyId,
-          idBusinessUnit: editingType.idBusinessUnit ?? businessUnitId ?? null,
+          idBusinessUnit: data.idBusinessUnit ?? businessUnitId ?? null,
         };
         await updateMutation.mutateAsync(updateData);
       } else {
-        const createData: CreateMovementTypeRequest = {
-          name: formData.name,
-          idCompany: companyId,
-          idBusinessUnit: businessUnitId,
-        };
-        await createMutation.mutateAsync(createData);
+        await createMutation.mutateAsync(data);
       }
       setOpenDialog(false);
     } catch {
@@ -240,7 +239,16 @@ export default function MovementTypesTab() {
         )}
       </SectionCard>
 
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+      <Dialog
+        open={openDialog}
+        onOpenChange={(open) => {
+          setOpenDialog(open);
+          if (!open) {
+            setEditingType(null);
+            form.reset();
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -250,21 +258,22 @@ export default function MovementTypesTab() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-2">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-2">
             <div className="space-y-2">
               <label className="text-sm font-medium">Nombre *</label>
               <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ name: e.target.value })}
+                {...form.register("name")}
                 placeholder="Ej: Carga, Consumo, Transferencia"
                 autoFocus
-                aria-invalid={!!errors.name}
+                aria-invalid={!!form.formState.errors.name}
               />
-              {errors.name ? (
-                <p className="text-destructive text-xs">{errors.name}</p>
-              ) : null}
+              {form.formState.errors.name && (
+                <p className="text-destructive text-xs">
+                  {form.formState.errors.name.message}
+                </p>
+              )}
             </div>
-          </div>
+          </form>
 
           <DialogFooter>
             <Button
@@ -275,8 +284,8 @@ export default function MovementTypesTab() {
               Cancelar
             </Button>
             <Button
-              type="button"
-              onClick={handleSave}
+              type="submit"
+              onClick={form.handleSubmit(onSubmit)}
               disabled={createMutation.isPending || updateMutation.isPending}
             >
               {createMutation.isPending || updateMutation.isPending
@@ -302,8 +311,8 @@ export default function MovementTypesTab() {
         description={
           <>
             ¿Estás seguro de{" "}
-            {toggleType?.active !== false ? "desactivar" : "activar"} el tipo
-            de movimiento <strong>{toggleType?.name}</strong>?
+            {toggleType?.active !== false ? "desactivar" : "activar"} el tipo de
+            movimiento <strong>{toggleType?.name}</strong>?
           </>
         }
         confirmLabel={

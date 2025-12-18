@@ -70,14 +70,9 @@ export function useCreateIaWhiteListContact() {
 
   return useMutation({
     mutationFn: (data: CreateIaWhiteListRequest) => {
-      console.log("🔥 [useCreateIaWhiteListContact] Datos a enviar:", data);
       return iaWhiteListApi.create(data);
     },
     onSuccess: (newContact, variables) => {
-      console.log(
-        "✅ [useCreateIaWhiteListContact] Contacto creado:",
-        newContact
-      );
       toast.success(`Contacto ${newContact.name} agregado a la WhiteList`);
 
       // Invalidar queries relacionadas
@@ -104,14 +99,9 @@ export function useUpdateIaWhiteListContact() {
 
   return useMutation({
     mutationFn: (data: UpdateIaWhiteListRequest) => {
-      console.log("🔥 [useUpdateIaWhiteListContact] Datos a enviar:", data);
       return iaWhiteListApi.update(data);
     },
     onSuccess: (updatedContact, variables) => {
-      console.log(
-        "✅ [useUpdateIaWhiteListContact] Contacto actualizado:",
-        updatedContact
-      );
       toast.success(`Contacto ${updatedContact.name} actualizado`);
 
       // Invalidar queries relacionadas
@@ -141,11 +131,9 @@ export function useActivateIaWhiteListContact() {
 
   return useMutation({
     mutationFn: (id: number) => {
-      console.log("🔥 [useActivateIaWhiteListContact] Activando contacto:", id);
       return iaWhiteListApi.activate(id);
     },
     onSuccess: (_, id) => {
-      console.log("✅ [useActivateIaWhiteListContact] Contacto activado:", id);
       toast.success("Contacto activado correctamente");
 
       queryClient.invalidateQueries({ queryKey: iaWhiteListKeys.lists() });
@@ -167,14 +155,9 @@ export function useToggleIaWhiteListContact() {
 
   return useMutation({
     mutationFn: ({ id, activate }: { id: number; activate: boolean }) => {
-      console.log("🔥 [useToggleIaWhiteListContact]", { id, activate });
       return iaWhiteListApi.toggleActive(id, activate);
     },
     onSuccess: (_, { id, activate }) => {
-      console.log("✅ [useToggleIaWhiteListContact] Estado cambiado:", {
-        id,
-        activate,
-      });
       toast.success(activate ? "Contacto activado" : "Contacto desactivado");
 
       queryClient.invalidateQueries({ queryKey: iaWhiteListKeys.lists() });
@@ -196,17 +179,9 @@ export function useDesactivateIaWhiteListContact() {
 
   return useMutation({
     mutationFn: (id: number) => {
-      console.log(
-        "🔥 [useDesactivateIaWhiteListContact] Desactivando contacto:",
-        id
-      );
       return iaWhiteListApi.desactivate(id);
     },
     onSuccess: (_, id) => {
-      console.log(
-        "✅ [useDesactivateIaWhiteListContact] Contacto desactivado:",
-        id
-      );
       toast.success("Contacto desactivado correctamente");
 
       // Invalidar todas las queries relacionadas

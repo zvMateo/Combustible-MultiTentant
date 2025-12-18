@@ -62,11 +62,9 @@ import {
 import { userRolesApi } from "@/services/api";
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
-import type {
-  ApiUser,
-  CreateUserRequest,
-  UpdateUserRequest,
-} from "@/types/api.types";
+import { useZodForm } from "@/hooks/useZodForm";
+import { createUserSchema, type CreateUserFormData } from "@/schemas";
+import type { ApiUser, UpdateUserRequest } from "@/types/api.types";
 
 // Helpers Visuales
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -98,23 +96,21 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<ApiUser | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const getInitialFormData = (): CreateUserRequest => ({
-    firstName: "",
-    lastName: "",
-    email: "",
-    userName: "",
-    password: "",
-    confirmPassword: "",
-    idCompany: user?.idCompany || 0,
-    idBusinessUnit: undefined,
-    phoneNumber: "",
+  const form = useZodForm<CreateUserFormData>(createUserSchema, {
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      userName: "",
+      password: "",
+      confirmPassword: "",
+      idCompany: user?.idCompany || 0,
+      idBusinessUnit: undefined,
+      phoneNumber: "",
+    },
   });
-
-  const [formData, setFormData] = useState<CreateUserRequest>(
-    getInitialFormData()
-  );
 
   // Queries
   const { data: users = [], isLoading } = useUsers();
@@ -185,16 +181,16 @@ export default function UsersPage() {
 
   // Handlers
   const handleEdit = (u: ApiUser) => {
-    setErrors({});
+    setSubmitError(null);
     setEditingUser(u);
     setSelectedRoleId("");
-    setFormData({
+    form.reset({
       firstName: u.firstName || "",
       lastName: u.lastName || "",
       email: u.email,
       userName: u.userName,
-      password: "",
-      confirmPassword: "",
+      password: "placeholder", // Required by schema but not used for edit
+      confirmPassword: "placeholder",
       idCompany: u.idCompany || user?.idCompany || 0,
       idBusinessUnit: u.idBusinessUnit,
       phoneNumber: u.phoneNumber || "",
@@ -204,16 +200,17 @@ export default function UsersPage() {
     void (async () => {
       try {
         const detailed = await usersApi.getById(u.id);
-        setFormData((prev) => ({
-          ...prev,
-          firstName: detailed?.firstName ?? prev.firstName,
-          lastName: detailed?.lastName ?? prev.lastName,
-          email: detailed?.email ?? prev.email,
-          userName: detailed?.userName ?? prev.userName,
-          idCompany: detailed?.idCompany ?? prev.idCompany,
-          idBusinessUnit: detailed?.idBusinessUnit ?? prev.idBusinessUnit,
-          phoneNumber: detailed?.phoneNumber ?? prev.phoneNumber,
-        }));
+        form.reset({
+          firstName: detailed?.firstName ?? u.firstName ?? "",
+          lastName: detailed?.lastName ?? u.lastName ?? "",
+          email: detailed?.email ?? u.email,
+          userName: detailed?.userName ?? u.userName,
+          password: "placeholder",
+          confirmPassword: "placeholder",
+          idCompany: detailed?.idCompany ?? u.idCompany ?? user?.idCompany ?? 0,
+          idBusinessUnit: detailed?.idBusinessUnit ?? u.idBusinessUnit,
+          phoneNumber: detailed?.phoneNumber ?? u.phoneNumber ?? "",
+        });
       } catch {
         // ignore
       }
@@ -227,46 +224,33 @@ export default function UsersPage() {
     })();
   };
 
-  const handleSave = async () => {
-    setErrors({});
-    if (editingUser) {
-      if (!formData.email?.trim() || !formData.userName?.trim()) {
-        setErrors({ general: "Por favor, completa los campos obligatorios." });
-        return;
-      }
-    } else {
-      if (
-        !formData.firstName?.trim() ||
-        !formData.lastName?.trim() ||
-        !formData.email?.trim() ||
-        !formData.userName?.trim()
-      ) {
-        setErrors({
-          general: "Por favor, completa Nombre, Apellido, Email y Usuario.",
-        });
-        return;
-      }
+  const handleOpenNew = () => {
+    setEditingUser(null);
+    setSelectedRoleId("");
+    setSubmitError(null);
+    form.reset({
+      firstName: "",
+      lastName: "",
+      email: "",
+      userName: "",
+      password: "",
+      confirmPassword: "",
+      idCompany: user?.idCompany || 0,
+      idBusinessUnit: undefined,
+      phoneNumber: "",
+    });
+    setOpenDialog(true);
+  };
 
-      if (!formData.password?.trim() || !formData.confirmPassword?.trim()) {
-        setErrors({
-          general: "Por favor, completa la contraseña y su confirmación.",
-        });
-        return;
-      }
-
-      if (formData.password !== formData.confirmPassword) {
-        setErrors({ general: "Las contraseñas no coinciden." });
-        return;
-      }
-    }
-
+  const onSubmit = async (data: CreateUserFormData) => {
+    setSubmitError(null);
     try {
       if (editingUser) {
         const updateData: UpdateUserRequest = {
           id: editingUser.id,
-          userName: formData.userName,
-          email: formData.email,
-          phoneNumber: formData.phoneNumber,
+          userName: data.userName,
+          email: data.email,
+          phoneNumber: data.phoneNumber || "",
         };
 
         await updateMutation.mutateAsync({
@@ -280,10 +264,10 @@ export default function UsersPage() {
           });
         }
       } else {
-        const payload: CreateUserRequest = {
-          ...formData,
-          idBusinessUnit: formData.idBusinessUnit ?? 0,
-          phoneNumber: formData.phoneNumber || "",
+        const payload = {
+          ...data,
+          idBusinessUnit: data.idBusinessUnit ?? 0,
+          phoneNumber: data.phoneNumber || "",
         };
 
         const newUser = await createMutation.mutateAsync(payload);
@@ -296,7 +280,7 @@ export default function UsersPage() {
       }
       setOpenDialog(false);
     } catch (err: unknown) {
-      setErrors({ general: getErrorMessage(err) });
+      setSubmitError(getErrorMessage(err));
     }
   };
 
@@ -342,15 +326,7 @@ export default function UsersPage() {
                 </Button>
               )}
               {showCreateButtons && canManageUsers && (
-                <Button
-                  onClick={() => {
-                    setEditingUser(null);
-                    setSelectedRoleId("");
-                    setErrors({});
-                    setFormData(getInitialFormData());
-                    setOpenDialog(true);
-                  }}
-                >
+                <Button onClick={handleOpenNew}>
                   <Plus className="mr-2 h-4 w-4" /> Nuevo Usuario
                 </Button>
               )}
@@ -481,8 +457,8 @@ export default function UsersPage() {
           if (!open) {
             setEditingUser(null);
             setSelectedRoleId("");
-            setErrors({});
-            setFormData(getInitialFormData());
+            setSubmitError(null);
+            form.reset();
           }
         }}
       >
@@ -497,14 +473,17 @@ export default function UsersPage() {
             </DialogDescription>
           </div>
 
-          <div className="p-8 bg-white space-y-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
-            {errors.general && (
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="p-8 bg-white space-y-5 max-h-[60vh] overflow-y-auto custom-scrollbar"
+          >
+            {submitError && (
               <Alert
                 variant="destructive"
                 className="rounded-xl border-none bg-rose-50 text-rose-600"
               >
                 <AlertDescription className="text-xs font-bold">
-                  {errors.general}
+                  {submitError}
                 </AlertDescription>
               </Alert>
             )}
@@ -516,26 +495,30 @@ export default function UsersPage() {
                     Nombre
                   </Label>
                   <Input
-                    value={formData.firstName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, firstName: e.target.value })
-                    }
+                    {...form.register("firstName")}
                     className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all"
                     placeholder="Ej: Juan"
                   />
+                  {form.formState.errors.firstName && (
+                    <p className="text-xs text-red-500">
+                      {form.formState.errors.firstName.message}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
                     Apellido
                   </Label>
                   <Input
-                    value={formData.lastName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, lastName: e.target.value })
-                    }
+                    {...form.register("lastName")}
                     className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all"
                     placeholder="Ej: Pérez"
                   />
+                  {form.formState.errors.lastName && (
+                    <p className="text-xs text-red-500">
+                      {form.formState.errors.lastName.message}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -546,13 +529,15 @@ export default function UsersPage() {
               </Label>
               <Input
                 type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                {...form.register("email")}
                 className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all"
                 placeholder="email@empresa.com"
               />
+              {form.formState.errors.email && (
+                <p className="text-xs text-red-500">
+                  {form.formState.errors.email.message}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -561,13 +546,15 @@ export default function UsersPage() {
                   Nombre de Usuario
                 </Label>
                 <Input
-                  value={formData.userName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, userName: e.target.value })
-                  }
+                  {...form.register("userName")}
                   className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all"
                   placeholder="jperez"
                 />
+                {form.formState.errors.userName && (
+                  <p className="text-xs text-red-500">
+                    {form.formState.errors.userName.message}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
@@ -603,12 +590,14 @@ export default function UsersPage() {
                   </Label>
                   <Input
                     type="password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
+                    {...form.register("password")}
                     className="h-10 rounded-lg border-slate-200 bg-white"
                   />
+                  {form.formState.errors.password && (
+                    <p className="text-xs text-red-500">
+                      {form.formState.errors.password.message}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">
@@ -616,15 +605,14 @@ export default function UsersPage() {
                   </Label>
                   <Input
                     type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        confirmPassword: e.target.value,
-                      })
-                    }
+                    {...form.register("confirmPassword")}
                     className="h-10 rounded-lg border-slate-200 bg-white"
                   />
+                  {form.formState.errors.confirmPassword && (
+                    <p className="text-xs text-red-500">
+                      {form.formState.errors.confirmPassword.message}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -634,16 +622,12 @@ export default function UsersPage() {
                 Unidad Asignada
               </Label>
               <Select
-                value={
-                  formData.idBusinessUnit
-                    ? String(formData.idBusinessUnit)
-                    : "none"
-                }
+                value={String(form.watch("idBusinessUnit") || "none")}
                 onValueChange={(v) =>
-                  setFormData({
-                    ...formData,
-                    idBusinessUnit: v === "none" ? undefined : Number(v),
-                  })
+                  form.setValue(
+                    "idBusinessUnit",
+                    v === "none" ? undefined : Number(v)
+                  )
                 }
               >
                 <SelectTrigger className="h-11 w-full rounded-xl border-slate-200 bg-white">
@@ -664,10 +648,11 @@ export default function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          </form>
 
           <DialogFooter className="p-8 bg-slate-50/80 border-t border-slate-100 flex gap-3">
             <Button
+              type="button"
               variant="ghost"
               onClick={() => setOpenDialog(false)}
               className="rounded-xl font-bold text-slate-400 hover:bg-slate-200/50 transition-colors"
@@ -675,7 +660,8 @@ export default function UsersPage() {
               Cancelar
             </Button>
             <Button
-              onClick={handleSave}
+              type="submit"
+              onClick={form.handleSubmit(onSubmit)}
               className="rounded-xl bg-primary text-primary-foreground font-bold px-10 shadow-xl hover:bg-primary/90 transition-all"
             >
               {editingUser ? "Guardar Cambios" : "Crear Usuario"}

@@ -20,6 +20,8 @@ import { Switch } from "@/components/ui/switch";
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
+import { useZodForm } from "@/hooks/useZodForm";
+import { createDriverSchema, type CreateDriverFormData } from "@/schemas";
 import {
   useDrivers,
   useCreateDriver,
@@ -27,11 +29,7 @@ import {
   useDeactivateDriver,
   useCompanies,
 } from "@/hooks/queries";
-import type {
-  Driver,
-  CreateDriverRequest,
-  UpdateDriverRequest,
-} from "@/types/api.types";
+import type { Driver, UpdateDriverRequest } from "@/types/api.types";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -93,21 +91,20 @@ export default function DriversPage() {
 
   const idCompany = user?.idCompany || user?.empresaId || companyIdFilter || 0;
 
-  const getInitialFormData = (): CreateDriverRequest => ({
-    idCompany: idCompany || 0,
-    name: "",
-    dni: "",
-    phoneNumber: "",
-  });
-
   const [searchTerm, setSearchTerm] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [deleteDriver, setDeleteDriver] = useState<Driver | null>(null);
-  const [formData, setFormData] = useState<CreateDriverRequest>(
-    getInitialFormData()
-  );
+
+  const form = useZodForm<CreateDriverFormData>(createDriverSchema, {
+    defaultValues: {
+      idCompany: idCompany || 0,
+      name: "",
+      dni: "",
+      phoneNumber: "",
+    },
+  });
 
   const { data: driversAll = [], isLoading } = useDrivers();
   const { data: companies = [] } = useCompanies();
@@ -149,7 +146,7 @@ export default function DriversPage() {
 
   const handleEdit = (driver: Driver) => {
     setEditingDriver(driver);
-    setFormData({
+    form.reset({
       idCompany: driver.idCompany,
       name: driver.name,
       dni: driver.dni,
@@ -158,14 +155,19 @@ export default function DriversPage() {
     setOpenDialog(true);
   };
 
-  const handleSave = async () => {
-    if (!formData.name.trim() || !formData.dni.trim()) {
-      toast.error("Nombre y DNI son requeridos");
-      return;
-    }
+  const handleOpenNew = () => {
+    setEditingDriver(null);
+    form.reset({
+      idCompany: idCompany || 0,
+      name: "",
+      dni: "",
+      phoneNumber: "",
+    });
+    setOpenDialog(true);
+  };
 
-    const finalCompanyId =
-      formData.idCompany || idCompany || companies[0]?.id || 0;
+  const onSubmit = async (data: CreateDriverFormData) => {
+    const finalCompanyId = data.idCompany || idCompany || companies[0]?.id || 0;
     if (!finalCompanyId) {
       toast.error("Debe existir una empresa para guardar el chofer");
       return;
@@ -175,13 +177,13 @@ export default function DriversPage() {
       if (editingDriver) {
         await updateMutation.mutateAsync({
           id: editingDriver.id,
-          ...formData,
+          ...data,
           idCompany: finalCompanyId,
         } as UpdateDriverRequest);
         toast.success("Chofer actualizado");
       } else {
         await createMutation.mutateAsync({
-          ...formData,
+          ...data,
           idCompany: finalCompanyId,
         });
         toast.success("Chofer registrado");
@@ -241,13 +243,7 @@ export default function DriversPage() {
                 </Button>
               )}
               {showCreateButtons && canManageDrivers && (
-                <Button
-                  onClick={() => {
-                    setEditingDriver(null);
-                    setFormData(getInitialFormData());
-                    setOpenDialog(true);
-                  }}
-                >
+                <Button onClick={handleOpenNew}>
                   <Plus className="mr-2 h-4 w-4" />
                   Nuevo Chofer
                 </Button>
@@ -356,8 +352,16 @@ export default function DriversPage() {
                   </CardContent>
 
                   <div className="px-5 py-3 bg-muted/30 border-t flex items-center justify-between">
-                    <div className={`flex items-center gap-1.5 ${d.active !== false ? "text-green-600" : "text-red-500"}`}>
-                      {d.active !== false ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                    <div
+                      className={`flex items-center gap-1.5 ${
+                        d.active !== false ? "text-green-600" : "text-red-500"
+                      }`}
+                    >
+                      {d.active !== false ? (
+                        <CheckCircle2 size={14} />
+                      ) : (
+                        <XCircle size={14} />
+                      )}
                       <span className="text-xs font-bold uppercase">
                         {d.active !== false ? "Habilitado" : "Deshabilitado"}
                       </span>
@@ -369,7 +373,9 @@ export default function DriversPage() {
                           deactivateMutation.mutate(d.id);
                         }}
                         disabled={deactivateMutation.isPending}
-                        aria-label={d.active !== false ? "Desactivar" : "Activar"}
+                        aria-label={
+                          d.active !== false ? "Desactivar" : "Activar"
+                        }
                       />
                     )}
                   </div>
@@ -387,7 +393,7 @@ export default function DriversPage() {
           setOpenDialog(open);
           if (!open) {
             setEditingDriver(null);
-            setFormData(getInitialFormData());
+            form.reset();
           }
         }}
       >
@@ -404,7 +410,10 @@ export default function DriversPage() {
             </DialogDescription>
           </div>
 
-          <div className="p-8 bg-white space-y-5">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="p-8 bg-white space-y-5"
+          >
             <div className="space-y-2">
               <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
                 Nombre Completo
@@ -415,14 +424,16 @@ export default function DriversPage() {
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300"
                 />
                 <Input
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
+                  {...form.register("name")}
                   className="pl-10 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white"
                   placeholder="Ej: Carlos Alberto García"
                 />
               </div>
+              {form.formState.errors.name && (
+                <p className="text-xs text-red-500">
+                  {form.formState.errors.name.message}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -436,14 +447,16 @@ export default function DriversPage() {
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300"
                   />
                   <Input
-                    value={formData.dni}
-                    onChange={(e) =>
-                      setFormData({ ...formData, dni: e.target.value })
-                    }
+                    {...form.register("dni")}
                     className="pl-10 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white"
                     placeholder="Solo números"
                   />
                 </div>
+                {form.formState.errors.dni && (
+                  <p className="text-xs text-red-500">
+                    {form.formState.errors.dni.message}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">
@@ -455,10 +468,7 @@ export default function DriversPage() {
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300"
                   />
                   <Input
-                    value={formData.phoneNumber}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phoneNumber: e.target.value })
-                    }
+                    {...form.register("phoneNumber")}
                     className="pl-10 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white"
                     placeholder="Ej: 11 1234 5678"
                   />
@@ -472,10 +482,8 @@ export default function DriversPage() {
                   Empresa
                 </Label>
                 <Select
-                  value={String(formData.idCompany)}
-                  onValueChange={(v) =>
-                    setFormData({ ...formData, idCompany: Number(v) })
-                  }
+                  value={String(form.watch("idCompany") || "")}
+                  onValueChange={(v) => form.setValue("idCompany", Number(v))}
                 >
                   <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white">
                     <SelectValue placeholder="Elegir empresa" />
@@ -490,10 +498,11 @@ export default function DriversPage() {
                 </Select>
               </div>
             )}
-          </div>
+          </form>
 
           <DialogFooter className="p-8 bg-slate-50/80 border-t border-slate-100 gap-3">
             <Button
+              type="button"
               variant="ghost"
               onClick={() => setOpenDialog(false)}
               className="rounded-xl font-bold text-slate-400"
@@ -501,7 +510,9 @@ export default function DriversPage() {
               Cancelar
             </Button>
             <Button
-              onClick={handleSave}
+              type="submit"
+              form="driver-form"
+              onClick={form.handleSubmit(onSubmit)}
               className="rounded-xl bg-primary text-primary-foreground font-bold px-10 shadow-xl hover:bg-primary/90 transition-all"
             >
               {editingDriver ? "Guardar Cambios" : "Confirmar Chofer"}

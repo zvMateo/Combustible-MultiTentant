@@ -55,7 +55,6 @@ export function useCreateUser() {
 
   return useMutation({
     mutationFn: (data: CreateUserRequest) => {
-      console.log("🔥 [useCreateUser] Datos a enviar:", data);
       return usersApi.create(data);
     },
     onSuccess: (newUser) => {

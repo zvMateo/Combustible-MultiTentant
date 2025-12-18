@@ -52,15 +52,12 @@ import {
 } from "@/hooks/queries";
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
-import type {
-  LoadLiters,
-  CreateLoadLitersRequest,
-  UpdateLoadLitersRequest,
-} from "@/types/api.types";
-
-interface FormErrors {
-  [key: string]: string;
-}
+import { useZodForm } from "@/hooks/useZodForm";
+import {
+  createLoadLitersSchema,
+  type CreateLoadLitersFormData,
+} from "@/schemas";
+import type { LoadLiters, UpdateLoadLitersRequest } from "@/types/api.types";
 
 export default function LoadLitersTab() {
   const { user } = useAuthStore();
@@ -70,16 +67,18 @@ export default function LoadLitersTab() {
   const [editingLoad, setEditingLoad] = useState<LoadLiters | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedResourceId, setSelectedResourceId] = useState<number>(0);
-  const [formData, setFormData] = useState<CreateLoadLitersRequest>({
-    idResource: 0,
-    loadDate: new Date().toISOString().split("T")[0],
-    initialLiters: 0,
-    finalLiters: 0,
-    totalLiters: 0,
-    detail: "",
-    idFuelType: 0,
+
+  const form = useZodForm<CreateLoadLitersFormData>(createLoadLitersSchema, {
+    defaultValues: {
+      idResource: 0,
+      loadDate: new Date().toISOString().split("T")[0],
+      initialLiters: 0,
+      finalLiters: 0,
+      totalLiters: 0,
+      detail: "",
+      idFuelType: 0,
+    },
   });
-  const [errors, setErrors] = useState<FormErrors>({});
 
   // React Query hooks
   const { data: loads = [], isLoading, error } = useLoadLitersScoped();
@@ -94,12 +93,9 @@ export default function LoadLitersTab() {
   useEffect(() => {
     if (selectedResource && !editingLoad) {
       const resourceInitialLiters = selectedResource.initialLiters ?? 0;
-      setFormData((prev) => ({
-        ...prev,
-        initialLiters: resourceInitialLiters,
-      }));
+      form.setValue("initialLiters", resourceInitialLiters);
     }
-  }, [selectedResource, editingLoad]);
+  }, [selectedResource, editingLoad, form]);
 
   // Helper para obtener nombre de ubicación (BU o Company)
   const getLocationName = (load: LoadLiters): string => {
@@ -148,7 +144,7 @@ export default function LoadLitersTab() {
     setEditingLoad(null);
     const firstResourceId = resources[0]?.id || 0;
     setSelectedResourceId(firstResourceId);
-    setFormData({
+    form.reset({
       idResource: firstResourceId,
       loadDate: new Date().toISOString().split("T")[0],
       initialLiters: 0,
@@ -157,14 +153,13 @@ export default function LoadLitersTab() {
       detail: "",
       idFuelType: fuelTypes[0]?.id || 0,
     });
-    setErrors({});
     setOpenDialog(true);
   };
 
   const handleEdit = (load: LoadLiters) => {
     setEditingLoad(load);
     setSelectedResourceId(load.idResource);
-    setFormData({
+    form.reset({
       idResource: load.idResource,
       loadDate: load.loadDate.split("T")[0],
       initialLiters: load.initialLiters,
@@ -173,55 +168,31 @@ export default function LoadLitersTab() {
       detail: load.detail || "",
       idFuelType: load.idFuelType,
     });
-    setErrors({});
     setOpenDialog(true);
   };
 
-  const validate = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    if (!formData.idResource || formData.idResource === 0) {
-      newErrors.idResource = "Debe seleccionar un recurso";
-    }
-    if (!formData.loadDate) {
-      newErrors.loadDate = "La fecha es obligatoria";
-    }
-    if (!formData.totalLiters || formData.totalLiters <= 0) {
-      newErrors.totalLiters = "Debe ingresar los litros cargados";
-    }
-    if (!formData.idFuelType || formData.idFuelType === 0) {
-      newErrors.idFuelType = "Debe seleccionar un tipo de combustible";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!validate()) return;
-
+  const onSubmit = async (data: CreateLoadLitersFormData) => {
     try {
       if (editingLoad) {
         const updateData: UpdateLoadLitersRequest = {
           id: editingLoad.id,
-          idResource: formData.idResource,
-          loadDate: new Date(formData.loadDate).toISOString(),
-          initialLiters: formData.initialLiters,
-          finalLiters: formData.finalLiters,
-          totalLiters: formData.totalLiters,
-          detail: formData.detail,
-          idFuelType: formData.idFuelType,
+          idResource: data.idResource,
+          loadDate: new Date(data.loadDate).toISOString(),
+          initialLiters: data.initialLiters,
+          finalLiters: data.finalLiters,
+          totalLiters: data.totalLiters,
+          detail: data.detail,
+          idFuelType: data.idFuelType,
         };
         await updateMutation.mutateAsync({
           id: editingLoad.id,
           data: updateData,
         });
       } else {
-        const createData: CreateLoadLitersRequest = {
-          ...formData,
-          loadDate: new Date(formData.loadDate).toISOString(),
-        };
-        await createMutation.mutateAsync(createData);
+        await createMutation.mutateAsync({
+          ...data,
+          loadDate: new Date(data.loadDate).toISOString(),
+        });
       }
       setOpenDialog(false);
     } catch {
@@ -391,7 +362,16 @@ export default function LoadLitersTab() {
         )}
       </div>
 
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+      <Dialog
+        open={openDialog}
+        onOpenChange={(open) => {
+          setOpenDialog(open);
+          if (!open) {
+            setEditingLoad(null);
+            form.reset();
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>
@@ -399,18 +379,23 @@ export default function LoadLitersTab() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="grid gap-4 sm:grid-cols-2"
+          >
             <div className="space-y-2">
               <label className="text-sm font-medium">Recurso *</label>
               <Select
-                value={String(formData.idResource)}
+                value={String(form.watch("idResource") || "")}
                 onValueChange={(value) => {
                   const resourceId = Number(value);
                   setSelectedResourceId(resourceId);
-                  setFormData({ ...formData, idResource: resourceId });
+                  form.setValue("idResource", resourceId);
                 }}
               >
-                <SelectTrigger aria-invalid={!!errors.idResource}>
+                <SelectTrigger
+                  aria-invalid={!!form.formState.errors.idResource}
+                >
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent>
@@ -421,24 +406,25 @@ export default function LoadLitersTab() {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.idResource ? (
-                <p className="text-destructive text-xs">{errors.idResource}</p>
-              ) : null}
+              {form.formState.errors.idResource && (
+                <p className="text-destructive text-xs">
+                  {form.formState.errors.idResource.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Fecha de Carga *</label>
               <Input
                 type="date"
-                value={formData.loadDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, loadDate: e.target.value })
-                }
-                aria-invalid={!!errors.loadDate}
+                {...form.register("loadDate")}
+                aria-invalid={!!form.formState.errors.loadDate}
               />
-              {errors.loadDate ? (
-                <p className="text-destructive text-xs">{errors.loadDate}</p>
-              ) : null}
+              {form.formState.errors.loadDate && (
+                <p className="text-destructive text-xs">
+                  {form.formState.errors.loadDate.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -449,25 +435,29 @@ export default function LoadLitersTab() {
                   min="0"
                   placeholder="Ingrese los litros a cargar"
                   value={
-                    formData.totalLiters > 0 ? String(formData.totalLiters) : ""
+                    form.watch("totalLiters") > 0
+                      ? String(form.watch("totalLiters"))
+                      : ""
                   }
                   onChange={(e) => {
                     const litrosCargados = Number(e.target.value) || 0;
-                    setFormData({
-                      ...formData,
-                      totalLiters: litrosCargados,
-                      finalLiters: formData.initialLiters + litrosCargados,
-                    });
+                    form.setValue("totalLiters", litrosCargados);
+                    form.setValue(
+                      "finalLiters",
+                      form.watch("initialLiters") + litrosCargados
+                    );
                   }}
-                  aria-invalid={!!errors.totalLiters}
+                  aria-invalid={!!form.formState.errors.totalLiters}
                 />
                 <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
                   L
                 </div>
               </div>
-              {errors.totalLiters ? (
-                <p className="text-destructive text-xs">{errors.totalLiters}</p>
-              ) : null}
+              {form.formState.errors.totalLiters && (
+                <p className="text-destructive text-xs">
+                  {form.formState.errors.totalLiters.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -475,7 +465,7 @@ export default function LoadLitersTab() {
               <div className="relative">
                 <Input
                   type="number"
-                  value={String(formData.finalLiters)}
+                  value={String(form.watch("finalLiters"))}
                   disabled
                   className="bg-muted"
                 />
@@ -483,10 +473,6 @@ export default function LoadLitersTab() {
                   L
                 </div>
               </div>
-              {/* <p className="text-muted-foreground text-xs">
-                Calculado: Litros Iniciales ({formData.initialLiters}) +
-                Cargados
-              </p> */}
             </div>
 
             <div className="space-y-2">
@@ -494,12 +480,14 @@ export default function LoadLitersTab() {
                 Tipo de Combustible *
               </label>
               <Select
-                value={String(formData.idFuelType)}
+                value={String(form.watch("idFuelType") || "")}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, idFuelType: Number(value) })
+                  form.setValue("idFuelType", Number(value))
                 }
               >
-                <SelectTrigger aria-invalid={!!errors.idFuelType}>
+                <SelectTrigger
+                  aria-invalid={!!form.formState.errors.idFuelType}
+                >
                   <SelectValue placeholder="Seleccionar" />
                 </SelectTrigger>
                 <SelectContent>
@@ -510,22 +498,18 @@ export default function LoadLitersTab() {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.idFuelType ? (
-                <p className="text-destructive text-xs">{errors.idFuelType}</p>
-              ) : null}
+              {form.formState.errors.idFuelType && (
+                <p className="text-destructive text-xs">
+                  {form.formState.errors.idFuelType.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2 sm:col-span-2">
               <label className="text-sm font-medium">Detalle (opcional)</label>
-              <Textarea
-                value={formData.detail || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, detail: e.target.value })
-                }
-                rows={2}
-              />
+              <Textarea {...form.register("detail")} rows={2} />
             </div>
-          </div>
+          </form>
 
           <DialogFooter>
             <Button
@@ -536,8 +520,8 @@ export default function LoadLitersTab() {
               Cancelar
             </Button>
             <Button
-              type="button"
-              onClick={handleSave}
+              type="submit"
+              onClick={form.handleSubmit(onSubmit)}
               disabled={createMutation.isPending || updateMutation.isPending}
             >
               {createMutation.isPending || updateMutation.isPending

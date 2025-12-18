@@ -215,24 +215,34 @@ export const updateFuelStockMovementSchema =
 // ============================================
 // LOAD LITERS SCHEMAS
 // ============================================
-export const createLoadLitersSchema = z
-  .object({
-    idResource: requiredId,
-    loadDate: requiredString,
-    initialLiters: z.number().min(0),
-    finalLiters: z.number().min(0),
-    totalLiters: z.number(),
-    detail: optionalString.transform((v) => v || undefined),
-    idFuelType: requiredId,
-  })
-  .refine((data) => data.finalLiters >= data.initialLiters, {
-    message: "Los litros finales deben ser mayores o iguales a los iniciales",
-    path: ["finalLiters"],
-  });
-
-export const updateLoadLitersSchema = createLoadLitersSchema.extend({
-  id: requiredId,
+const loadLitersBaseSchema = z.object({
+  idResource: requiredId,
+  loadDate: requiredString,
+  initialLiters: z.number().min(0),
+  finalLiters: z.number().min(0),
+  totalLiters: z.number(),
+  detail: optionalString.transform((v) => v || undefined),
+  idFuelType: requiredId,
 });
+
+const loadLitersRefinement = (data: {
+  initialLiters: number;
+  finalLiters: number;
+}) => data.finalLiters >= data.initialLiters;
+
+const loadLitersRefinementMessage = {
+  message: "Los litros finales deben ser mayores o iguales a los iniciales",
+  path: ["finalLiters"],
+};
+
+export const createLoadLitersSchema = loadLitersBaseSchema.refine(
+  loadLitersRefinement,
+  loadLitersRefinementMessage
+);
+
+export const updateLoadLitersSchema = loadLitersBaseSchema
+  .extend({ id: requiredId })
+  .refine(loadLitersRefinement, loadLitersRefinementMessage);
 
 // ============================================
 // TRIP SCHEMAS

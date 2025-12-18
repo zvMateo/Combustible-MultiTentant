@@ -18,6 +18,8 @@ import {
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
+import { useZodForm } from "@/hooks/useZodForm";
+import { createResourceSchema, type CreateResourceFormData } from "@/schemas";
 import {
   useVehicles,
   useCreateResource,
@@ -27,11 +29,7 @@ import {
   useResourceTypes,
   useCreateResourceType,
 } from "@/hooks/queries";
-import type {
-  Resource,
-  CreateResourceRequest,
-  UpdateResourceRequest,
-} from "@/types/api.types";
+import type { Resource, UpdateResourceRequest } from "@/types/api.types";
 
 // shadcn components
 import { Button } from "@/components/ui/button";
@@ -96,24 +94,16 @@ export default function VehiclesPage() {
     return vehicleType?.id ?? 0;
   }, [resourceTypes]);
 
-  const getInitialFormData = (): CreateResourceRequest => ({
-    idType: vehicleTypeId,
-    idCompany: user?.idCompany || 0,
-    idBusinessUnit: undefined,
-    nativeLiters: undefined,
-    initialLiters: undefined,
-    name: "",
-    identifier: "",
-  });
-
-  const [formData, setFormData] = useState<CreateResourceRequest>({
-    idType: 0,
-    idCompany: user?.idCompany || 0,
-    idBusinessUnit: undefined,
-    nativeLiters: undefined,
-    initialLiters: undefined,
-    name: "",
-    identifier: "",
+  const form = useZodForm<CreateResourceFormData>(createResourceSchema, {
+    defaultValues: {
+      idType: vehicleTypeId || 0,
+      idCompany: user?.idCompany || 0,
+      idBusinessUnit: undefined,
+      nativeLiters: undefined,
+      initialLiters: undefined,
+      name: "",
+      identifier: "",
+    },
   });
 
   const { data: vehicles = [], isLoading } = useVehicles();
@@ -173,7 +163,7 @@ export default function VehiclesPage() {
 
   const handleEdit = (v: Resource) => {
     setEditingVehicle(v);
-    setFormData({
+    form.reset({
       idType: v.idType,
       idCompany: v.idCompany,
       idBusinessUnit: v.idBusinessUnit,
@@ -185,13 +175,22 @@ export default function VehiclesPage() {
     setOpenDialog(true);
   };
 
-  const handleSave = async () => {
-    if (!formData.name.trim() || !formData.identifier.trim()) {
-      toast.error("Faltan datos obligatorios");
-      return;
-    }
+  const handleOpenNew = () => {
+    setEditingVehicle(null);
+    form.reset({
+      idType: vehicleTypeId || 0,
+      idCompany: user?.idCompany || 0,
+      idBusinessUnit: undefined,
+      nativeLiters: undefined,
+      initialLiters: undefined,
+      name: "",
+      identifier: "",
+    });
+    setOpenDialog(true);
+  };
 
-    const finalIdType = formData.idType || vehicleTypeId;
+  const onSubmit = async (data: CreateResourceFormData) => {
+    const finalIdType = data.idType || vehicleTypeId;
     if (!finalIdType || finalIdType === 0) {
       toast.error(
         "No existe el tipo 'Vehículo' en tu empresa. Crealo primero en Recursos."
@@ -199,12 +198,12 @@ export default function VehiclesPage() {
       return;
     }
 
-    const payload: CreateResourceRequest = {
-      ...formData,
+    const payload = {
+      ...data,
       idType: finalIdType,
-      idCompany: formData.idCompany || user?.idCompany || 0,
-      nativeLiters: formData.nativeLiters ?? 0,
-      initialLiters: formData.initialLiters ?? 0,
+      idCompany: data.idCompany || user?.idCompany || 0,
+      nativeLiters: data.nativeLiters ?? 0,
+      initialLiters: data.initialLiters ?? 0,
     };
 
     try {
@@ -282,13 +281,7 @@ export default function VehiclesPage() {
                 </Button>
               )}
               {showCreateButtons && canManageVehicles && vehicleTypeId > 0 && (
-                <Button
-                  onClick={() => {
-                    setEditingVehicle(null);
-                    setFormData(getInitialFormData());
-                    setOpenDialog(true);
-                  }}
-                >
+                <Button onClick={handleOpenNew}>
                   <Plus className="mr-2 h-4 w-4" /> Nuevo Vehículo
                 </Button>
               )}
@@ -435,7 +428,7 @@ export default function VehiclesPage() {
           setOpenDialog(open);
           if (!open) {
             setEditingVehicle(null);
-            setFormData(getInitialFormData());
+            form.reset();
           }
         }}
       >
@@ -449,7 +442,10 @@ export default function VehiclesPage() {
             </DialogDescription>
           </div>
 
-          <div className="p-6 space-y-5 bg-white">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="p-6 space-y-5 bg-white"
+          >
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-[11px] font-bold text-slate-400 uppercase ml-1">
@@ -461,27 +457,31 @@ export default function VehiclesPage() {
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300"
                   />
                   <Input
-                    value={formData.identifier}
-                    onChange={(e) =>
-                      setFormData({ ...formData, identifier: e.target.value })
-                    }
+                    {...form.register("identifier")}
                     className="pl-9 h-10 rounded-xl bg-slate-50/50 border-slate-200"
                     placeholder="Ej: AA123BB"
                   />
                 </div>
+                {form.formState.errors.identifier && (
+                  <p className="text-xs text-red-500">
+                    {form.formState.errors.identifier.message}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[11px] font-bold text-slate-400 uppercase ml-1">
                   Nombre / Modelo
                 </Label>
                 <Input
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
+                  {...form.register("name")}
                   className="h-10 rounded-xl bg-slate-50/50 border-slate-200"
                   placeholder="Ej: Scania G410"
                 />
+                {form.formState.errors.name && (
+                  <p className="text-xs text-red-500">
+                    {form.formState.errors.name.message}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -497,15 +497,7 @@ export default function VehiclesPage() {
                   />
                   <Input
                     type="number"
-                    value={formData.nativeLiters ?? ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        nativeLiters: e.target.value
-                          ? Number(e.target.value)
-                          : undefined,
-                      })
-                    }
+                    {...form.register("nativeLiters", { valueAsNumber: true })}
                     className="pl-9 h-10 rounded-xl bg-slate-50/50 border-slate-200"
                     placeholder="Litros"
                   />
@@ -522,15 +514,7 @@ export default function VehiclesPage() {
                   />
                   <Input
                     type="number"
-                    value={formData.initialLiters ?? ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        initialLiters: e.target.value
-                          ? Number(e.target.value)
-                          : undefined,
-                      })
-                    }
+                    {...form.register("initialLiters", { valueAsNumber: true })}
                     className="pl-9 h-10 rounded-xl bg-slate-50/50 border-slate-200"
                     placeholder="Litros"
                   />
@@ -543,16 +527,12 @@ export default function VehiclesPage() {
                 Unidad de Negocio
               </Label>
               <Select
-                value={
-                  formData.idBusinessUnit
-                    ? String(formData.idBusinessUnit)
-                    : "none"
-                }
+                value={String(form.watch("idBusinessUnit") || "none")}
                 onValueChange={(v) =>
-                  setFormData({
-                    ...formData,
-                    idBusinessUnit: v === "none" ? undefined : Number(v),
-                  })
+                  form.setValue(
+                    "idBusinessUnit",
+                    v === "none" ? undefined : Number(v)
+                  )
                 }
               >
                 <SelectTrigger className="h-10 rounded-xl bg-white border-slate-200">
@@ -568,10 +548,11 @@ export default function VehiclesPage() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          </form>
 
           <DialogFooter className="p-6 bg-slate-50/50 border-t border-slate-100">
             <Button
+              type="button"
               variant="ghost"
               onClick={() => setOpenDialog(false)}
               className="rounded-xl font-semibold text-slate-400 hover:text-slate-600"
@@ -579,7 +560,8 @@ export default function VehiclesPage() {
               Cancelar
             </Button>
             <Button
-              onClick={handleSave}
+              type="submit"
+              onClick={form.handleSubmit(onSubmit)}
               className="rounded-xl bg-primary text-primary-foreground font-semibold px-8 shadow-lg hover:bg-primary/90"
             >
               {editingVehicle ? "Guardar Cambios" : "Registrar Vehículo"}

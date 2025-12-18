@@ -8,10 +8,12 @@ import {
 } from "@/hooks/queries";
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
-import type {
-  BusinessUnit,
-  CreateBusinessUnitRequest,
-} from "@/types/api.types";
+import { useZodForm } from "@/hooks/useZodForm";
+import {
+  createBusinessUnitSchema,
+  type CreateBusinessUnitFormData,
+} from "@/schemas";
+import type { BusinessUnit } from "@/types/api.types";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import {
@@ -56,12 +58,6 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 
-const initialFormData: CreateBusinessUnitRequest = {
-  idCompany: 0,
-  name: "",
-  detail: "",
-};
-
 export default function BusinessUnitsPage() {
   const { user } = useAuthStore();
   const {
@@ -81,9 +77,17 @@ export default function BusinessUnitsPage() {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [editingUnit, setEditingUnit] = useState<BusinessUnit | null>(null);
   const [deleteUnit, setDeleteUnit] = useState<BusinessUnit | null>(null);
-  const [formData, setFormData] =
-    useState<CreateBusinessUnitRequest>(initialFormData);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const form = useZodForm<CreateBusinessUnitFormData>(
+    createBusinessUnitSchema,
+    {
+      defaultValues: {
+        idCompany: idCompany || 0,
+        name: "",
+        detail: "",
+      },
+    }
+  );
 
   const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
   const effectiveCompanyId = idCompany || companies[0]?.id || 0;
@@ -125,19 +129,17 @@ export default function BusinessUnitsPage() {
       return;
     }
     setEditingUnit(null);
-    setFormData({ idCompany: effectiveCompanyId, name: "", detail: "" });
-    setErrors({});
+    form.reset({ idCompany: effectiveCompanyId, name: "", detail: "" });
     setOpenDialog(true);
   };
 
   const handleEdit = (unit: BusinessUnit) => {
     setEditingUnit(unit);
-    setFormData({
+    form.reset({
       idCompany: unit.idCompany,
       name: unit.name,
       detail: unit.detail || "",
     });
-    setErrors({});
     setOpenDialog(true);
   };
 
@@ -146,17 +148,9 @@ export default function BusinessUnitsPage() {
     setOpenDeleteDialog(true);
   };
 
-  const handleSave = async () => {
-    if (!formData.name.trim()) {
-      setErrors({ name: "El nombre es obligatorio" });
-      return;
-    }
-
-    const finalCompanyId = formData.idCompany || effectiveCompanyId;
+  const onSubmit = async (data: CreateBusinessUnitFormData) => {
+    const finalCompanyId = data.idCompany || effectiveCompanyId;
     if (!finalCompanyId) {
-      setErrors({
-        idCompany: "Debe existir una empresa para crear/editar la unidad",
-      });
       toast.error("Debe existir una empresa para guardar la unidad");
       return;
     }
@@ -165,12 +159,12 @@ export default function BusinessUnitsPage() {
       if (editingUnit) {
         await updateMutation.mutateAsync({
           id: editingUnit.id,
-          ...formData,
+          ...data,
           idCompany: finalCompanyId,
         });
       } else {
         await createMutation.mutateAsync({
-          ...formData,
+          ...data,
           idCompany: finalCompanyId,
         });
       }
@@ -455,7 +449,10 @@ export default function BusinessUnitsPage() {
             </DialogDescription>
           </div>
 
-          <div className="p-6 space-y-5 bg-white">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="p-6 space-y-5 bg-white"
+          >
             <div className="space-y-2">
               <Label
                 htmlFor="name"
@@ -467,16 +464,15 @@ export default function BusinessUnitsPage() {
                 id="name"
                 placeholder="Ej: Sucursal Centro / Campo Norte"
                 className={`h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all ${
-                  errors.name ? "border-rose-500 ring-rose-50" : ""
+                  form.formState.errors.name
+                    ? "border-rose-500 ring-rose-50"
+                    : ""
                 }`}
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                {...form.register("name")}
               />
-              {errors.name && (
+              {form.formState.errors.name && (
                 <p className="text-[10px] font-bold text-rose-500 ml-1">
-                  {errors.name}
+                  {form.formState.errors.name.message}
                 </p>
               )}
             </div>
@@ -492,10 +488,7 @@ export default function BusinessUnitsPage() {
                 id="detail"
                 placeholder="Descripción opcional de la ubicación o función..."
                 className="rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all min-h-[100px] resize-none"
-                value={formData.detail || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, detail: e.target.value })
-                }
+                {...form.register("detail")}
               />
             </div>
 
@@ -506,10 +499,11 @@ export default function BusinessUnitsPage() {
                 principal para el reporte de cargas de combustible.
               </p>
             </div>
-          </div>
+          </form>
 
           <DialogFooter className="p-6 bg-slate-50/50 border-t border-slate-100 flex gap-2">
             <Button
+              type="button"
               variant="ghost"
               onClick={() => setOpenDialog(false)}
               disabled={isSaving}
@@ -518,7 +512,8 @@ export default function BusinessUnitsPage() {
               Cancelar
             </Button>
             <Button
-              onClick={handleSave}
+              type="submit"
+              onClick={form.handleSubmit(onSubmit)}
               disabled={isSaving || loadingCompanies || !effectiveCompanyId}
               className="rounded-xl bg-primary font-bold px-6 shadow-lg hover:bg-primary/90"
             >

@@ -37,21 +37,9 @@ import {
   useDrivers,
 } from "@/hooks/queries";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
-import type {
-  Trip,
-  CreateTripRequest,
-  UpdateTripRequest,
-} from "@/types/api.types";
-
-// Tipo local para el formulario (incluye campos adicionales del UI)
-interface TripFormData {
-  idDriver: number;
-  startDate: string;
-  origin: string;
-  destination: string;
-  distance: number;
-  notes: string;
-}
+import { useZodForm } from "@/hooks/useZodForm";
+import { createTripSchema, type CreateTripFormData } from "@/schemas";
+import type { Trip, UpdateTripRequest } from "@/types/api.types";
 
 export default function TripsTab() {
   const { canEdit, showCreateButtons, showEditButtons, isReadOnly } =
@@ -59,18 +47,17 @@ export default function TripsTab() {
 
   const [openDialog, setOpenDialog] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
-  const [formData, setFormData] = useState<TripFormData>({
-    idDriver: 0,
-    startDate: new Date().toISOString().slice(0, 16),
-    origin: "",
-    destination: "",
-    distance: 0,
-    notes: "",
-  });
-  const [errors, setErrors] = useState({
-    idDriver: "",
-    origin: "",
-    destination: "",
+
+  const form = useZodForm<CreateTripFormData>(createTripSchema, {
+    defaultValues: {
+      idDriver: 0,
+      idVehicle: undefined,
+      initialLocation: "",
+      finalLocation: "",
+      totalKm: 0,
+      startDate: new Date().toISOString().slice(0, 16),
+      notes: "",
+    },
   });
 
   // React Query hooks
@@ -81,73 +68,47 @@ export default function TripsTab() {
 
   const handleNew = () => {
     setEditingTrip(null);
-    setFormData({
+    form.reset({
       idDriver: 0,
+      idVehicle: undefined,
+      initialLocation: "",
+      finalLocation: "",
+      totalKm: 0,
       startDate: new Date().toISOString().slice(0, 16),
-      origin: "",
-      destination: "",
-      distance: 0,
       notes: "",
     });
-    setErrors({ idDriver: "", origin: "", destination: "" });
     setOpenDialog(true);
   };
 
   const handleEdit = (trip: Trip) => {
     setEditingTrip(trip);
-    setFormData({
+    form.reset({
       idDriver: trip.idDriver,
+      idVehicle: trip.idVehicle || undefined,
+      initialLocation: trip.initialLocation || "",
+      finalLocation: trip.finalLocation || "",
+      totalKm: trip.totalKm || 0,
       startDate: trip.startDate
         ? new Date(trip.startDate).toISOString().slice(0, 16)
-        : trip.createdAt
-        ? new Date(trip.createdAt).toISOString().slice(0, 16)
         : new Date().toISOString().slice(0, 16),
-      origin: trip.origin || trip.initialLocation || "",
-      destination: trip.destination || trip.finalLocation || "",
-      distance: trip.distance || trip.totalKm || 0,
       notes: trip.notes || "",
     });
-    setErrors({ idDriver: "", origin: "", destination: "" });
     setOpenDialog(true);
   };
 
-  const validate = (): boolean => {
-    const newErrors = {
-      idDriver: "",
-      origin: "",
-      destination: "",
-    };
-
-    if (!formData.idDriver || formData.idDriver === 0)
-      newErrors.idDriver = "El conductor es obligatorio";
-    if (!formData.origin?.trim()) newErrors.origin = "El origen es obligatorio";
-    if (!formData.destination?.trim())
-      newErrors.destination = "El destino es obligatorio";
-
-    setErrors(newErrors);
-    return !Object.values(newErrors).some((err) => err);
-  };
-
-  const handleSave = async () => {
-    if (!validate()) return;
-
+  const onSubmit = async (data: CreateTripFormData) => {
     try {
-      // Preparar datos para la API (mapear campos del formulario a la estructura de la API)
-      const apiData: CreateTripRequest = {
-        idDriver: formData.idDriver,
-        initialLocation: formData.origin || "",
-        finalLocation: formData.destination || "",
-        totalKm: formData.distance || 0,
-      };
-
       if (editingTrip) {
         const updateData: UpdateTripRequest = {
           id: editingTrip.id,
-          ...apiData,
+          idDriver: data.idDriver,
+          initialLocation: data.initialLocation,
+          finalLocation: data.finalLocation,
+          totalKm: data.totalKm,
         };
         await updateMutation.mutateAsync(updateData);
       } else {
-        await createMutation.mutateAsync(apiData);
+        await createMutation.mutateAsync(data);
       }
       setOpenDialog(false);
     } catch {
@@ -262,7 +223,16 @@ export default function TripsTab() {
         )}
       </SectionCard>
 
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+      <Dialog
+        open={openDialog}
+        onOpenChange={(open) => {
+          setOpenDialog(open);
+          if (!open) {
+            setEditingTrip(null);
+            form.reset();
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -270,16 +240,16 @@ export default function TripsTab() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Conductor *</label>
               <Select
-                value={String(formData.idDriver)}
+                value={String(form.watch("idDriver") || "0")}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, idDriver: Number(value) })
+                  form.setValue("idDriver", Number(value))
                 }
               >
-                <SelectTrigger aria-invalid={!!errors.idDriver}>
+                <SelectTrigger aria-invalid={!!form.formState.errors.idDriver}>
                   <SelectValue placeholder="Seleccionar conductor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -293,79 +263,59 @@ export default function TripsTab() {
                     ))}
                 </SelectContent>
               </Select>
-              {errors.idDriver ? (
-                <p className="text-destructive text-xs">{errors.idDriver}</p>
-              ) : null}
+              {form.formState.errors.idDriver && (
+                <p className="text-destructive text-xs">
+                  {form.formState.errors.idDriver.message}
+                </p>
+              )}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Origen *</label>
                 <Input
-                  value={formData.origin}
-                  onChange={(e) =>
-                    setFormData({ ...formData, origin: e.target.value })
-                  }
-                  aria-invalid={!!errors.origin}
+                  {...form.register("initialLocation")}
+                  aria-invalid={!!form.formState.errors.initialLocation}
                 />
-                {errors.origin ? (
-                  <p className="text-destructive text-xs">{errors.origin}</p>
-                ) : null}
+                {form.formState.errors.initialLocation && (
+                  <p className="text-destructive text-xs">
+                    {form.formState.errors.initialLocation.message}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Destino *</label>
                 <Input
-                  value={formData.destination}
-                  onChange={(e) =>
-                    setFormData({ ...formData, destination: e.target.value })
-                  }
-                  aria-invalid={!!errors.destination}
+                  {...form.register("finalLocation")}
+                  aria-invalid={!!form.formState.errors.finalLocation}
                 />
-                {errors.destination ? (
+                {form.formState.errors.finalLocation && (
                   <p className="text-destructive text-xs">
-                    {errors.destination}
+                    {form.formState.errors.finalLocation.message}
                   </p>
-                ) : null}
+                )}
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Fecha de Inicio</label>
-                <Input
-                  type="datetime-local"
-                  value={formData.startDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, startDate: e.target.value })
-                  }
-                />
+                <Input type="datetime-local" {...form.register("startDate")} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Distancia (km)</label>
                 <Input
                   type="number"
-                  value={String(formData.distance)}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      distance: Number(e.target.value),
-                    })
-                  }
+                  {...form.register("totalKm", { valueAsNumber: true })}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Notas</label>
-              <Textarea
-                value={formData.notes}
-                onChange={(e) =>
-                  setFormData({ ...formData, notes: e.target.value })
-                }
-                rows={2}
-              />
+              <Textarea {...form.register("notes")} rows={2} />
             </div>
-          </div>
+          </form>
 
           <DialogFooter>
             <Button
@@ -376,8 +326,8 @@ export default function TripsTab() {
               Cancelar
             </Button>
             <Button
-              type="button"
-              onClick={handleSave}
+              type="submit"
+              onClick={form.handleSubmit(onSubmit)}
               disabled={createMutation.isPending || updateMutation.isPending}
             >
               {createMutation.isPending || updateMutation.isPending

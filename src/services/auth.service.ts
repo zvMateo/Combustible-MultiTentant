@@ -116,16 +116,12 @@ class AuthService {
     password: string;
   }): Promise<User> {
     try {
-      console.log("🔐 [AuthService] Iniciando login...");
-
       // 1️⃣ Login y obtener token
       const response = await authApi.login(credentials);
 
       if (!response.token) {
         throw new Error("Token no encontrado en la respuesta");
       }
-
-      console.log("✅ [AuthService] Login exitoso, token recibido");
 
       // 2️⃣ Obtener claims desde la API (backend deserializa el token)
       const claims = await authApi.getClaims();
@@ -147,7 +143,10 @@ class AuthService {
 
           if (!idCompany) {
             const detailedCompanyId = detailed?.idCompany;
-            if (typeof detailedCompanyId === "number" && detailedCompanyId > 0) {
+            if (
+              typeof detailedCompanyId === "number" &&
+              detailedCompanyId > 0
+            ) {
               idCompany = detailedCompanyId;
             }
           }
@@ -181,15 +180,6 @@ class AuthService {
         telefono: undefined,
       };
 
-      console.log("✅ [AuthService] Usuario completo creado:", {
-        id: user.id,
-        name: user.name,
-        role: user.role,
-        idCompany: user.idCompany,
-        idBusinessUnit: user.idBusinessUnit,
-        empresaId: user.empresaId,
-      });
-
       // 5️⃣ Guardar sesión
       this.saveSession(user);
 
@@ -206,7 +196,6 @@ class AuthService {
    * Cerrar sesión
    */
   logout(): void {
-    console.log("👋 [AuthService] Cerrando sesión...");
     tokenStorage.clearTokens();
     sessionStorage.removeItem("user");
     localStorage.removeItem("user");

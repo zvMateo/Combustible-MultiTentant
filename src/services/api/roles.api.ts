@@ -73,25 +73,12 @@ export const userRolesApi = {
       USER_ROLES_ENDPOINTS.getByUser(userId)
     );
 
-    console.log("🔍 [userRolesApi.getByUser] Respuesta completa:", data);
-
     // ✅ Desempaquetar: {status: 200, message: '...', userRoles: Array(2)}
     if (Array.isArray(data)) {
-      console.log(
-        "✅ [userRolesApi.getByUser] Formato directo:",
-        data.length,
-        "roles"
-      );
       return data as ApiRole[];
     }
 
     if (data && Array.isArray(data.userRoles)) {
-      console.log(
-        "✅ [userRolesApi.getByUser] Formato envuelto:",
-        data.userRoles.length,
-        "roles"
-      );
-
       // ✅ Mapear de {roleId, roleName} a {id, name}
       // Nota: idCompany se obtiene del token JWT, no del endpoint de roles
       interface UserRoleResponse {
@@ -111,13 +98,6 @@ export const userRolesApi = {
   },
 
   async addToUser(userId: string, roleData: AddUserRoleRequest): Promise<void> {
-    console.log("🔍 [userRolesApi.addToUser] userId:", userId);
-    console.log("🔍 [userRolesApi.addToUser] roleData:", roleData);
-    console.log(
-      "🔍 [userRolesApi.addToUser] JSON.stringify:",
-      JSON.stringify(roleData)
-    );
-
     await axiosInstance.post(USER_ROLES_ENDPOINTS.addToUser(userId), roleData, {
       headers: {
         "Content-Type": "application/json", // ✅ Forzar Content-Type
@@ -125,7 +105,10 @@ export const userRolesApi = {
     });
   },
 
-  async updateUserRoles(userId: string, roleData: AddUserRoleRequest): Promise<void> {
+  async updateUserRoles(
+    userId: string,
+    roleData: AddUserRoleRequest
+  ): Promise<void> {
     await axiosInstance.post(
       USER_ROLES_ENDPOINTS.updateUserRoles(userId),
       roleData,

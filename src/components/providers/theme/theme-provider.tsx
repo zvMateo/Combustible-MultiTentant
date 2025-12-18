@@ -29,22 +29,18 @@ export function ThemeProvider({
     if (savedTheme) {
       try {
         const parsed = JSON.parse(savedTheme);
-        console.log("🎨 Tema cargado desde localStorage:", parsed);
         return parsed;
       } catch (e) {
         console.error("Error parsing saved theme:", e);
       }
     }
 
-    console.log("🎨 Usando tema por defecto");
     return DEFAULT_TENANT_THEME;
   });
 
   // Aplicar CSS variables cuando cambia el tema
   useEffect(() => {
     const root = document.documentElement;
-
-    console.log("🎨 Aplicando tema:", tenantTheme);
 
     // Aplicar variables CSS
     root.style.setProperty("--primary-color", tenantTheme.primaryColor);
@@ -59,12 +55,11 @@ export function ThemeProvider({
   }, [tenantTheme]);
 
   // ✅ Cambiar el tipo para aceptar objeto completo O parcial
-  const updateTenantTheme = (config: TenantThemeConfig | Partial<TenantThemeConfig>) => {
-    console.log("🎨 updateTenantTheme llamado con:", config);
-    
+  const updateTenantTheme = (
+    config: TenantThemeConfig | Partial<TenantThemeConfig>
+  ) => {
     setTenantTheme((prev) => {
       const newTheme = { ...prev, ...config };
-      console.log("🎨 Nuevo tema calculado:", newTheme);
       return newTheme;
     });
   };

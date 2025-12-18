@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
+import { useZodForm } from "@/hooks/useZodForm";
+import { loginSchema, type LoginFormData } from "@/schemas";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -14,9 +16,9 @@ export default function LoginPage() {
   const { login, isAuthenticated, isLoading, error, clearError } =
     useAuthStore();
 
-  const [userName, setUserName] = useState("");
-  const [password, setPassword] = useState("");
-  const [localError, setLocalError] = useState("");
+  const form = useZodForm<LoginFormData>(loginSchema, {
+    defaultValues: { userName: "", password: "" },
+  });
 
   const primaryColor = "#1E2C56";
   const secondaryColor = "#3b82f6";
@@ -27,24 +29,19 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLocalError("");
+  const onSubmit = async (data: LoginFormData) => {
     clearError();
-
-    if (!userName || !password) {
-      setLocalError("Por favor ingresa usuario y contraseña");
-      return;
-    }
-
     try {
-      await login(userName, password);
+      await login(data.userName, data.password);
     } catch {
       // Error manejado en el store
     }
   };
 
-  const displayError = localError || error;
+  const formError =
+    form.formState.errors.userName?.message ||
+    form.formState.errors.password?.message;
+  const displayError = formError || error;
 
   return (
     <AuthShell onBack={() => navigate("/")}>
@@ -76,15 +73,15 @@ export default function LoginPage() {
           </div>
 
           <CardContent className="px-8 py-10">
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <AuthField
                 id="username"
                 label="Usuario"
                 placeholder="Tu usuario"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
                 disabled={isLoading}
                 icon={<User className="h-4 w-4" />}
+                error={form.formState.errors.userName?.message}
+                {...form.register("userName")}
               />
 
               <AuthField
@@ -92,10 +89,10 @@ export default function LoginPage() {
                 label="Contraseña"
                 type="password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
                 icon={<Lock className="h-4 w-4" />}
+                error={form.formState.errors.password?.message}
+                {...form.register("password")}
               />
 
               {displayError ? (

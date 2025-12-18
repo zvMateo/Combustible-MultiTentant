@@ -31,11 +31,6 @@ export const authApi = {
     if (data.token) {
       tokenStorage.setToken(data.token, true);
       if (import.meta.env.DEV) {
-        console.log("🔐 Token guardado correctamente");
-        console.log(
-          "🔐 Token (primeros 30 chars):",
-          data.token.substring(0, 30) + "..."
-        );
         // Verificar que se guardó
         const savedToken = tokenStorage.getToken();
         console.log(
