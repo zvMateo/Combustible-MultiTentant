@@ -1,9 +1,23 @@
 // src/pages/Dashboard/Settings/SettingsPage.tsx
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
@@ -23,6 +37,9 @@ import {
   Camera,
   Car,
   Fuel,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   MapPin,
   Mic,
   Pencil,
@@ -32,6 +49,8 @@ import {
   Save,
   Shield,
   TriangleAlert,
+  TrendingDown,
+  TrendingUp,
   Users,
   Palette,
 } from "lucide-react";
@@ -652,68 +671,219 @@ function PoliticasTab() {
 
 // ==================== PRECIOS DE COMBUSTIBLE ====================
 function PreciosTab() {
-  const [precios, setPrecios] = useState([
-    {
-      id: 1,
-      tipo: "Diésel",
-      precio: 850,
-      moneda: "ARS",
-      vigenciaDesde: "2024-12-01",
-      activo: true,
-    },
-    {
-      id: 2,
-      tipo: "Nafta Super",
-      precio: 920,
-      moneda: "ARS",
-      vigenciaDesde: "2024-12-01",
-      activo: true,
-    },
-    {
-      id: 3,
-      tipo: "Nafta Premium",
-      precio: 1050,
-      moneda: "ARS",
-      vigenciaDesde: "2024-12-01",
-      activo: true,
-    },
-    {
-      id: 4,
-      tipo: "GNC",
-      precio: 350,
-      moneda: "ARS",
-      vigenciaDesde: "2024-12-01",
-      activo: false,
-    },
-  ]);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editValue, setEditValue] = useState<number>(0);
-
-  const handleEdit = (id: number, currentPrice: number) => {
-    setEditingId(id);
-    setEditValue(currentPrice);
+  type CiudadSearchItem = {
+    nombre: string;
+    lat: number;
+    long: number;
   };
 
-  const handleSave = (id: number) => {
-    setPrecios(
-      precios.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              precio: editValue,
-              vigenciaDesde: new Date().toISOString().split("T")[0],
-            }
-          : p
-      )
-    );
-    setEditingId(null);
-    toast.success("Precio actualizado");
+  type PrecioBaseResponse = Record<
+    string,
+    {
+      coordenadas: { latitud: number; longitud: number };
+      horario: string;
+      empresas: Record<
+        string,
+        Record<string, { precio: number; fecha_vigencia: string }>
+      >;
+    }
+  >;
+
+  const [selectedCity, setSelectedCity] = useState<string>(() => {
+    if (typeof window === "undefined") return "CORDOBA";
+    return window.localStorage.getItem("naftas:selectedCity") || "CORDOBA";
+  });
+
+  const [locationDialogOpen, setLocationDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<CiudadSearchItem[]>([]);
+
+  const [precioLoading, setPrecioLoading] = useState(false);
+  const [precioError, setPrecioError] = useState<string | null>(null);
+  const [precioData, setPrecioData] = useState<PrecioBaseResponse[string] | null>(
+    null
+  );
+  const precioRequestSeq = useRef(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("naftas:selectedCity", selectedCity);
+  }, [selectedCity]);
+
+  useEffect(() => {
+    if (!locationDialogOpen) return;
+    setSearchQuery("");
+    setSearchResults([]);
+    setSearchError(null);
+  }, [locationDialogOpen]);
+
+  useEffect(() => {
+    if (!locationDialogOpen) return;
+
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchResults([]);
+      setSearchError(null);
+      setSearchLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        setSearchError(null);
+
+        const url = `/naftas/api/search?q=${encodeURIComponent(q)}`;
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) {
+          throw new Error(`Error al buscar ciudades (${res.status})`);
+        }
+        const data = (await res.json()) as { cities?: CiudadSearchItem[] };
+        setSearchResults(data.cities ?? []);
+      } catch (e) {
+        if (controller.signal.aborted) return;
+        setSearchError(
+          e instanceof Error ? e.message : "Error desconocido al buscar ciudades"
+        );
+        setSearchResults([]);
+      } finally {
+        if (!controller.signal.aborted) setSearchLoading(false);
+      }
+    }, 350);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [locationDialogOpen, searchQuery]);
+
+  const fetchPrecios = useCallback(
+    async (city: string, signal?: AbortSignal) => {
+      const url = `/naftas/api/precio-base?ciudad=${encodeURIComponent(
+        city
+      )}&tipohorario=auto`;
+      const res = await fetch(url, { signal });
+      if (!res.ok) throw new Error(`Error al cargar precios (${res.status})`);
+      const json = (await res.json()) as PrecioBaseResponse;
+      const cityKey = Object.keys(json)[0];
+      if (!cityKey || !json[cityKey])
+        throw new Error("Respuesta inválida de precios");
+      return json[cityKey];
+    },
+    []
+  );
+
+  useEffect(() => {
+    const seq = ++precioRequestSeq.current;
+
+    (async () => {
+      try {
+        setPrecioLoading(true);
+        setPrecioError(null);
+        const data = await fetchPrecios(selectedCity);
+        if (seq !== precioRequestSeq.current) return;
+        setPrecioData(data);
+      } catch (e) {
+        if (seq !== precioRequestSeq.current) return;
+        const message =
+          e instanceof Error ? e.message : "Error desconocido al cargar precios";
+        setPrecioError(message);
+        setPrecioData(null);
+        toast.error(message);
+      } finally {
+        if (seq === precioRequestSeq.current) {
+          setPrecioLoading(false);
+        }
+      }
+    })();
+  }, [fetchPrecios, selectedCity]);
+
+  const formatRelativeTimeEs = (iso: string) => {
+    const now = Date.now();
+    const dt = new Date(iso).getTime();
+    if (Number.isNaN(dt)) return "";
+    const diffMs = Math.max(0, now - dt);
+    const minutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(diffMs / 3600000);
+    const days = Math.floor(diffMs / 86400000);
+    const months = Math.floor(days / 30);
+    const years = Math.floor(days / 365);
+
+    const plural = (n: number, s: string) => (n === 1 ? s : `${s}s`);
+
+    if (minutes < 1) return "Actualizado recién";
+    if (minutes < 60) return `Actualizado hace ${minutes} ${plural(minutes, "minuto")}`;
+    if (hours < 24) return `Actualizado hace ${hours} ${plural(hours, "hora")}`;
+    if (days < 30) return `Actualizado hace ${days} ${plural(days, "día")}`;
+    if (days < 365)
+      return `Actualizado hace ${months} ${plural(months, "mes")}`;
+    return `Actualizado hace ${years} ${plural(years, "año")}`;
   };
 
-  const handleToggle = (id: number) => {
-    setPrecios(
-      precios.map((p) => (p.id === id ? { ...p, activo: !p.activo } : p))
-    );
+  const brandStyles: Record<string, { bg: string; text: string; label: string }> = {
+    YPF: { bg: "bg-blue-600", text: "text-white", label: "YPF" },
+    PUMA: { bg: "bg-red-600", text: "text-white", label: "PUMA" },
+    AXION: { bg: "bg-purple-600", text: "text-white", label: "AXION" },
+    "SHELL C.A.P.S.A.": { bg: "bg-red-600", text: "text-white", label: "SHELL" },
+  };
+
+  const empresas = useMemo(() => {
+    const e = precioData?.empresas ?? {};
+    return Object.entries(e).map(([empresa, combustibles]) => {
+      const fuels = Object.entries(combustibles).map(([nombre, info]) => ({
+        nombre,
+        precio: info.precio,
+        fecha_vigencia: info.fecha_vigencia,
+      }));
+      const avg =
+        fuels.length > 0
+          ? fuels.reduce((acc, f) => acc + (typeof f.precio === "number" ? f.precio : 0), 0) /
+            fuels.length
+          : 0;
+      return { empresa, fuels, avgPrice: avg };
+    });
+  }, [precioData]);
+
+  const priceScoreByEmpresa = useMemo(() => {
+    if (empresas.length === 0) return new Map<string, number>();
+    const avgs = empresas.map((e) => e.avgPrice);
+    const min = Math.min(...avgs);
+    const max = Math.max(...avgs);
+    const map = new Map<string, number>();
+    for (const e of empresas) {
+      const score =
+        max === min
+          ? 50
+          : Math.round(100 - ((e.avgPrice - min) / (max - min)) * 100);
+      map.set(e.empresa, Math.max(0, Math.min(100, score)));
+    }
+    return map;
+  }, [empresas]);
+
+  const getScoreUI = (score: number) => {
+    if (score >= 60) {
+      return {
+        icon: <TrendingUp className="size-3" />,
+        className: "bg-emerald-50 text-emerald-700",
+      };
+    }
+    if (score >= 40) {
+      return {
+        icon: <TrendingDown className="size-3" />,
+        className: "bg-amber-50 text-amber-700",
+      };
+    }
+    return {
+      icon: <TrendingDown className="size-3" />,
+      className: "bg-red-50 text-red-700",
+    };
+  };
+
+  const getUnit = (fuelName: string) => {
+    return fuelName.toUpperCase().includes("GNC") ? "m³" : "l";
   };
 
   return (
@@ -722,141 +892,211 @@ function PreciosTab() {
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">Precios de Combustible</h2>
           <p className="text-muted-foreground text-sm">
-            Configure los precios por tipo de combustible para el cálculo de
-            costos.
+            Consulte precios promedio por empresa y tipo de combustible.
           </p>
         </div>
 
-        <Alert className="mt-4">
-          <AlertTitle>Info</AlertTitle>
-          <AlertDescription>
-            Los precios se utilizan para calcular el costo total de cada carga.
-            Actualice los precios cuando cambien en sus proveedores.
-          </AlertDescription>
-        </Alert>
-
-        <div className="mt-4 overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tipo de Combustible</TableHead>
-                <TableHead className="text-right">Precio por Litro</TableHead>
-                <TableHead>Vigencia Desde</TableHead>
-                <TableHead className="text-center">Estado</TableHead>
-                <TableHead className="text-center">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {precios.map((precio) => (
-                <TableRow key={precio.id} className="hover:bg-muted/50">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Fuel
-                        className={
-                          precio.activo
-                            ? "text-emerald-600"
-                            : "text-muted-foreground"
-                        }
-                        size={16}
-                      />
-                      <span className="font-medium">{precio.tipo}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {editingId === precio.id ? (
-                      <div className="relative ml-auto w-[140px]">
-                        <span className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm">
-                          $
-                        </span>
-                        <Input
-                          type="number"
-                          value={String(editValue)}
-                          onChange={(e) =>
-                            setEditValue(Number(e.target.value) || 0)
-                          }
-                          className="pl-7"
-                          autoFocus
-                        />
-                      </div>
-                    ) : (
-                      <span
-                        className={
-                          precio.activo
-                            ? "font-semibold"
-                            : "text-muted-foreground font-semibold"
-                        }
-                      >
-                        ${precio.precio.toLocaleString()}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {new Date(precio.vigenciaDesde).toLocaleDateString("es-AR")}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Switch
-                      checked={precio.activo}
-                      onCheckedChange={() => handleToggle(precio.id)}
-                    />
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {editingId === precio.id ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleSave(precio.id)}
-                        aria-label="Guardar"
-                      >
-                        <Save className="size-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleEdit(precio.id, precio.precio)}
-                        aria-label="Editar"
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        <Separator className="my-6" />
-
-        <div className="space-y-2">
-          <div className="text-sm font-medium">
-            Agregar Nuevo Tipo de Combustible
-          </div>
-          <div className="grid gap-2 md:grid-cols-[1fr_200px_auto] md:items-end">
-            <Input placeholder="Ej: Biodiesel" />
-            <div className="relative">
-              <span className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm">
-                $
-              </span>
-              <Input
-                type="number"
-                placeholder="Precio/Litro"
-                className="pl-7"
-              />
-            </div>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
             <Button
               type="button"
               variant="outline"
-              onClick={() =>
-                toast.info("Funcionalidad disponible próximamente")
-              }
+              className="h-9 gap-2"
+              onClick={() => setLocationDialogOpen(true)}
             >
-              Agregar
+              <MapPin className="size-4" />
+              <span>Mostrando precios en</span>
+              <span className="font-semibold">{selectedCity}</span>
+              <ChevronDown className="size-4" />
             </Button>
-          </div>
+
+            <DialogContent className="max-w-[560px] p-0">
+              <div className="p-6 pb-0">
+                <DialogHeader>
+                  <DialogTitle>Configuración</DialogTitle>
+                </DialogHeader>
+              </div>
+
+              <div className="px-6 pb-6">
+                <div className="mt-4 flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setLocationDialogOpen(false)}
+                    aria-label="Volver"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <div className="text-sm font-semibold">Buscar ubicación</div>
+                </div>
+
+                <div className="mt-3">
+                  <Command>
+                    <CommandInput
+                      value={searchQuery}
+                      onValueChange={setSearchQuery}
+                      placeholder="Buscar ciudad..."
+                    />
+                    <CommandList>
+                      {searchLoading ? (
+                        <div className="flex items-center justify-center py-6">
+                          <Spinner />
+                        </div>
+                      ) : null}
+                      {searchError ? (
+                        <div className="text-muted-foreground px-3 py-3 text-sm">
+                          {searchError}
+                        </div>
+                      ) : null}
+                      <CommandEmpty>
+                        {searchQuery.trim().length < 2
+                          ? "Escribí al menos 2 letras"
+                          : "Sin resultados"}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {searchResults.map((c) => (
+                          <CommandItem
+                            key={c.nombre}
+                            value={c.nombre}
+                            onSelect={() => {
+                              setSelectedCity(c.nombre);
+                              setLocationDialogOpen(false);
+                            }}
+                            className="rounded-md border"
+                          >
+                            <MapPin className="size-4" />
+                            <span className="font-medium">{c.nombre}</span>
+                            <ChevronRight className="ml-auto size-4 opacity-60" />
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
+
+        <Alert className="mt-4 border-gray-200">
+          <AlertTitle>Info</AlertTitle>
+          <AlertDescription>
+            Los valores son referenciales (promedios por empresa/ciudad) y pueden
+            variar por estación.
+          </AlertDescription>
+        </Alert>
+
+        {precioError ? (
+          <Alert className="mt-4" variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              <div className="flex items-center justify-between gap-3">
+                <span>{precioError}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      setPrecioLoading(true);
+                      setPrecioError(null);
+                      const data = await fetchPrecios(selectedCity);
+                      setPrecioData(data);
+                    } catch (e) {
+                      const message =
+                        e instanceof Error
+                          ? e.message
+                          : "Error desconocido al cargar precios";
+                      setPrecioError(message);
+                      setPrecioData(null);
+                    } finally {
+                      setPrecioLoading(false);
+                    }
+                  }}
+                >
+                  Reintentar
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="mt-6">
+          {precioLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Spinner />
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {empresas.map((e) => {
+                const brand = brandStyles[e.empresa] || {
+                  bg: "bg-muted",
+                  text: "text-foreground",
+                  label: e.empresa,
+                };
+                const score = priceScoreByEmpresa.get(e.empresa) ?? 50;
+                const scoreUI = getScoreUI(score);
+                return (
+                  <Card key={e.empresa} className="border-border">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`${brand.bg} ${brand.text} flex h-11 w-11 items-center justify-center rounded-lg text-xs font-bold`}
+                          >
+                            {brand.label}
+                          </div>
+                          <div>
+                            <div className="font-semibold">
+                              {brand.label === e.empresa ? e.empresa : brand.label}
+                            </div>
+                            <div className="text-muted-foreground text-xs">
+                              {selectedCity}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div
+                          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${scoreUI.className}`}
+                        >
+                          {scoreUI.icon}
+                          {score}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 divide-y divide-gray-200 ">
+                        {e.fuels.map((f) => (
+                          <button
+                            key={`${e.empresa}:${f.nombre}`}
+                            type="button"
+                            className="hover:bg-muted/40 flex w-full items-center justify-between gap-4 px-4 py-3 text-left"
+                          >
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-semibold">
+                                {f.nombre}
+                              </div>
+                              <div className="text-muted-foreground text-xs">
+                                {formatRelativeTimeEs(f.fecha_vigencia)}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-semibold whitespace-nowrap">
+                                ${f.precio.toLocaleString("es-AR")} / {getUnit(f.nombre)}
+                              </div>
+                              <ChevronRight className="text-muted-foreground size-4" />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
       </CardContent>
     </Card>
   );
