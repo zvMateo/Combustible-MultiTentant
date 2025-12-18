@@ -1,24 +1,6 @@
 // src/hooks/usePermissions.ts
 /**
  * Hook centralizado para validar permisos y roles
- *
- * Este hook proporciona una API consistente para validar permisos
- * en toda la aplicación, usando el store de autenticación.
- *
- * @example
- * const { can, canAll, canAny, hasRole, isAdmin } = usePermissions();
- *
- * if (can("eventos:crear")) {
- *   // Mostrar botón de crear evento
- * }
- *
- * if (canAll(["eventos:editar", "eventos:eliminar"])) {
- *   // Mostrar panel de administración
- * }
- *
- * if (canAny(["reportes:ver", "dashboard:ver"])) {
- *   // Mostrar sección de analytics
- * }
  */
 
 import { useMemo } from "react";

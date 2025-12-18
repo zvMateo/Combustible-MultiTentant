@@ -1,8 +1,11 @@
-import { useState, useMemo } from "react";
+/**
+ * VehiclesPage - Gestión de Flota de Vehículos
+ * Implementa patrón CRUD con useCrudPage
+ */
+import { useMemo } from "react";
 import { toast } from "sonner";
 import {
   Plus,
-  Search,
   Car,
   Edit,
   Trash2,
@@ -18,7 +21,7 @@ import {
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
-import { useZodForm } from "@/hooks/useZodForm";
+import { useCrudPage } from "@/hooks/useCrudPage";
 import { createResourceSchema, type CreateResourceFormData } from "@/schemas";
 import {
   useVehicles,
@@ -61,7 +64,52 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { SearchInput } from "@/components/common/DataTable";
 
+// ============================================
+// HELPERS
+// ============================================
+const DEFAULT_FORM_VALUES: CreateResourceFormData = {
+  idType: 0,
+  idCompany: 0,
+  idBusinessUnit: undefined,
+  nativeLiters: undefined,
+  initialLiters: undefined,
+  name: "",
+  identifier: "",
+};
+
+const filterVehicle = (vehicle: Resource, searchTerm: string): boolean => {
+  const term = searchTerm.toLowerCase();
+  return (
+    vehicle.name.toLowerCase().includes(term) ||
+    vehicle.identifier.toLowerCase().includes(term)
+  );
+};
+
+const vehicleToFormData = (vehicle: Resource): CreateResourceFormData => ({
+  idType: vehicle.idType,
+  idCompany: vehicle.idCompany,
+  idBusinessUnit: vehicle.idBusinessUnit,
+  nativeLiters: vehicle.nativeLiters,
+  initialLiters: vehicle.initialLiters,
+  name: vehicle.name,
+  identifier: vehicle.identifier,
+});
+
+const prepareUpdateData = (
+  data: CreateResourceFormData,
+  vehicle: Resource
+): UpdateResourceRequest => ({
+  id: vehicle.id,
+  ...data,
+  nativeLiters: data.nativeLiters ?? 0,
+  initialLiters: data.initialLiters ?? 0,
+});
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 export default function VehiclesPage() {
   const { user } = useAuthStore();
   const {
@@ -76,13 +124,9 @@ export default function VehiclesPage() {
     companyIdFilter,
   } = useRoleLogic();
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [openDialog, setOpenDialog] = useState(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState<Resource | null>(null);
-  const [deleteVehicle, setDeleteVehicle] = useState<Resource | null>(null);
-
   const { data: resourceTypes = [] } = useResourceTypes();
+  const { data: businessUnits = [] } = useBusinessUnits();
+  const createResourceTypeMutation = useCreateResourceType();
 
   // Buscar el idType de "Vehiculo" dinámicamente
   const vehicleTypeId = useMemo(() => {
@@ -94,25 +138,61 @@ export default function VehiclesPage() {
     return vehicleType?.id ?? 0;
   }, [resourceTypes]);
 
-  const form = useZodForm<CreateResourceFormData>(createResourceSchema, {
+  // Hook CRUD genérico
+  const crud = useCrudPage<
+    Resource,
+    CreateResourceFormData,
+    CreateResourceFormData,
+    UpdateResourceRequest
+  >({
+    useListQuery: useVehicles,
+    createMutation: useCreateResource(),
+    updateMutation: useUpdateResource(),
+    deleteMutation: useDeactivateResource(),
+    schema: createResourceSchema,
     defaultValues: {
-      idType: vehicleTypeId || 0,
+      ...DEFAULT_FORM_VALUES,
+      idType: vehicleTypeId,
       idCompany: user?.idCompany || 0,
-      idBusinessUnit: undefined,
-      nativeLiters: undefined,
-      initialLiters: undefined,
-      name: "",
-      identifier: "",
     },
+    filterFn: filterVehicle,
+    entityToFormData: vehicleToFormData,
+    prepareCreateData: (data) => ({
+      ...data,
+      idType: data.idType || vehicleTypeId,
+      idCompany: data.idCompany || user?.idCompany || 0,
+      nativeLiters: data.nativeLiters ?? 0,
+      initialLiters: data.initialLiters ?? 0,
+    }),
+    prepareUpdateData,
+    onCreateSuccess: () => toast.success("Vehículo registrado"),
+    onUpdateSuccess: () => toast.success("Vehículo actualizado"),
+    onDeleteSuccess: () => toast.success("Vehículo eliminado"),
   });
 
-  const { data: vehicles = [], isLoading } = useVehicles();
-  const { data: businessUnits = [] } = useBusinessUnits();
+  // Filtrar por empresa y unidad de negocio
+  const filteredVehicles = useMemo(() => {
+    let filtered = crud.filteredItems.filter(
+      (v) => v.active !== false && v.isActive !== false
+    );
+    if (companyIdFilter && companyIdFilter > 0) {
+      filtered = filtered.filter((v) => v.idCompany === companyIdFilter);
+    }
+    if ((isSupervisor || isAuditor) && unidadIdsFilter?.length) {
+      filtered = filtered.filter(
+        (v) => v.idBusinessUnit && unidadIdsFilter.includes(v.idBusinessUnit)
+      );
+    }
+    return filtered;
+  }, [
+    crud.filteredItems,
+    companyIdFilter,
+    isSupervisor,
+    isAuditor,
+    unidadIdsFilter,
+  ]);
 
-  const createMutation = useCreateResource();
-  const updateMutation = useUpdateResource();
-  const deactivateMutation = useDeactivateResource();
-  const createResourceTypeMutation = useCreateResourceType();
+  const { form } = crud;
 
   const handleCreateVehicleType = async () => {
     const companyId = user?.idCompany || 0;
@@ -131,110 +211,18 @@ export default function VehiclesPage() {
     }
   };
 
-  const filteredVehicles = useMemo(() => {
-    let filtered = Array.isArray(vehicles) ? vehicles : [];
-    filtered = filtered.filter(
-      (v) => v.active !== false && v.isActive !== false
-    );
-    if (companyIdFilter && companyIdFilter > 0)
-      filtered = filtered.filter((v) => v.idCompany === companyIdFilter);
-    if ((isSupervisor || isAuditor) && unidadIdsFilter?.length) {
-      filtered = filtered.filter(
-        (v) => v.idBusinessUnit && unidadIdsFilter.includes(v.idBusinessUnit)
-      );
-    }
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (v) =>
-          v.name.toLowerCase().includes(term) ||
-          v.identifier.toLowerCase().includes(term)
-      );
-    }
-    return filtered;
-  }, [
-    vehicles,
-    searchTerm,
-    companyIdFilter,
-    isSupervisor,
-    isAuditor,
-    unidadIdsFilter,
-  ]);
-
-  const handleEdit = (v: Resource) => {
-    setEditingVehicle(v);
-    form.reset({
-      idType: v.idType,
-      idCompany: v.idCompany,
-      idBusinessUnit: v.idBusinessUnit,
-      nativeLiters: v.nativeLiters,
-      initialLiters: v.initialLiters,
-      name: v.name,
-      identifier: v.identifier,
-    });
-    setOpenDialog(true);
-  };
-
-  const handleOpenNew = () => {
-    setEditingVehicle(null);
-    form.reset({
-      idType: vehicleTypeId || 0,
-      idCompany: user?.idCompany || 0,
-      idBusinessUnit: undefined,
-      nativeLiters: undefined,
-      initialLiters: undefined,
-      name: "",
-      identifier: "",
-    });
-    setOpenDialog(true);
-  };
-
-  const onSubmit = async (data: CreateResourceFormData) => {
-    const finalIdType = data.idType || vehicleTypeId;
-    if (!finalIdType || finalIdType === 0) {
+  // Validar tipo antes de crear
+  const handleNew = () => {
+    if (!vehicleTypeId || vehicleTypeId === 0) {
       toast.error(
-        "No existe el tipo 'Vehículo' en tu empresa. Crealo primero en Recursos."
+        "No existe el tipo 'Vehículo' en tu empresa. Crealo primero."
       );
       return;
     }
-
-    const payload = {
-      ...data,
-      idType: finalIdType,
-      idCompany: data.idCompany || user?.idCompany || 0,
-      nativeLiters: data.nativeLiters ?? 0,
-      initialLiters: data.initialLiters ?? 0,
-    };
-
-    try {
-      if (editingVehicle) {
-        await updateMutation.mutateAsync({
-          id: editingVehicle.id,
-          ...payload,
-        } as UpdateResourceRequest);
-        toast.success("Vehículo actualizado");
-      } else {
-        await createMutation.mutateAsync(payload);
-        toast.success("Vehículo registrado");
-      }
-      setOpenDialog(false);
-    } catch {
-      toast.error("Error al guardar");
-    }
+    crud.handleNew();
   };
 
-  const handleDelete = async () => {
-    if (!deleteVehicle) return;
-    try {
-      await deactivateMutation.mutateAsync(deleteVehicle.id);
-      toast.success("Vehículo eliminado");
-      setOpenDeleteDialog(false);
-    } catch {
-      toast.error("No se pudo eliminar");
-    }
-  };
-
-  if (isLoading)
+  if (crud.isLoading)
     return (
       <div className="space-y-4">
         <div className="bg-background px-6 pt-4 pb-2">
@@ -281,7 +269,7 @@ export default function VehiclesPage() {
                 </Button>
               )}
               {showCreateButtons && canManageVehicles && vehicleTypeId > 0 && (
-                <Button onClick={handleOpenNew}>
+                <Button onClick={handleNew}>
                   <Plus className="mr-2 h-4 w-4" /> Nuevo Vehículo
                 </Button>
               )}
@@ -292,15 +280,12 @@ export default function VehiclesPage() {
 
       <div className="px-6 pb-6 space-y-4">
         <SectionCard>
-          <div className="relative max-w-xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por patente, modelo o marca..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+          <SearchInput
+            value={crud.searchTerm}
+            onChange={crud.setSearchTerm}
+            placeholder="Buscar por patente, modelo o marca..."
+            className="max-w-xl"
+          />
         </SectionCard>
 
         <SectionCard>
@@ -344,14 +329,13 @@ export default function VehiclesPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(v)}>
+                            <DropdownMenuItem
+                              onClick={() => crud.handleEdit(v)}
+                            >
                               <Edit size={14} className="mr-2" /> Editar
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => {
-                                setDeleteVehicle(v);
-                                setOpenDeleteDialog(true);
-                              }}
+                              onClick={() => crud.handleDelete(v)}
                               className="text-destructive"
                             >
                               <Trash2 size={14} className="mr-2" /> Desactivar
@@ -423,14 +407,8 @@ export default function VehiclesPage() {
 
       {/* DIALOG: Formulario compacto */}
       <Dialog
-        open={openDialog}
-        onOpenChange={(open) => {
-          setOpenDialog(open);
-          if (!open) {
-            setEditingVehicle(null);
-            form.reset();
-          }
-        }}
+        open={crud.isDialogOpen}
+        onOpenChange={(open) => !open && crud.closeDialog()}
       >
         <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
           <div className="bg-primary px-6 py-8 text-primary-foreground">
@@ -443,7 +421,7 @@ export default function VehiclesPage() {
           </div>
 
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={form.handleSubmit(crud.onSubmit)}
             className="p-6 space-y-5 bg-white"
           >
             <div className="grid grid-cols-2 gap-4">
@@ -554,17 +532,22 @@ export default function VehiclesPage() {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => setOpenDialog(false)}
+              onClick={crud.closeDialog}
               className="rounded-xl font-semibold text-slate-400 hover:text-slate-600"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              onClick={form.handleSubmit(onSubmit)}
+              onClick={form.handleSubmit(crud.onSubmit)}
+              disabled={crud.isSaving}
               className="rounded-xl bg-primary text-primary-foreground font-semibold px-8 shadow-lg hover:bg-primary/90"
             >
-              {editingVehicle ? "Guardar Cambios" : "Registrar Vehículo"}
+              {crud.isSaving
+                ? "Guardando..."
+                : crud.isEditing
+                ? "Guardar Cambios"
+                : "Registrar Vehículo"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -572,19 +555,20 @@ export default function VehiclesPage() {
 
       {/* DELETE CONFIRMATION */}
       <ConfirmDialog
-        open={openDeleteDialog}
-        onOpenChange={setOpenDeleteDialog}
+        open={crud.isDeleteDialogOpen}
+        onOpenChange={(open) => !open && crud.closeDeleteDialog()}
         title="¿Eliminar vehículo?"
         description={
           <>
             Se desactivará el vehículo{" "}
-            <strong>{deleteVehicle?.identifier}</strong>. Esta acción no se
+            <strong>{crud.deletingItem?.identifier}</strong>. Esta acción no se
             puede deshacer.
           </>
         }
-        confirmLabel="Sí, eliminar"
+        confirmLabel={crud.isDeleting ? "Eliminando..." : "Sí, eliminar"}
         cancelLabel="No, cancelar"
-        onConfirm={handleDelete}
+        onConfirm={crud.confirmDelete}
+        confirmDisabled={crud.isDeleting}
       />
     </div>
   );

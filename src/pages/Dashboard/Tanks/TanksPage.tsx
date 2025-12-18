@@ -1,5 +1,12 @@
-// src/pages/Dashboard/Tanks/TanksPage.tsx
-import { useState, useMemo } from "react";
+/**
+ * TanksPage - Gestión de Tanques de Combustible
+ *
+ * Implementa el patrón CRUD usando el hook useCrudPage
+ * Principios Clean Code aplicados:
+ * - Single Responsibility: Componentes separados por responsabilidad
+ * - DRY: Lógica CRUD centralizada en hook
+ * - Composition: UI compuesta de componentes reutilizables
+ */
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
@@ -25,12 +32,12 @@ import { Spinner } from "@/components/ui/spinner";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { SectionCard } from "@/components/common/SectionCard";
+import { SearchInput } from "@/components/common/DataTable";
 import {
   Download,
   Fuel,
   Pencil,
   Plus,
-  Search,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
@@ -39,167 +46,125 @@ import { toast } from "sonner";
 
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
-import { useZodForm } from "@/hooks/useZodForm";
+import { useCrudPage } from "@/hooks/useCrudPage";
 import { createResourceSchema, type CreateResourceFormData } from "@/schemas";
 import {
   useTanks,
   useCreateResource,
   useUpdateResource,
   useDeactivateResource,
+  useCompanies,
+  useBusinessUnits,
 } from "@/hooks/queries";
-import { useCompanies, useBusinessUnits } from "@/hooks/queries";
 import type { Resource, UpdateResourceRequest } from "@/types/api.types";
 import { RESOURCE_TYPES } from "@/types/api.types";
 
+// ============================================
+// CONSTANTES
+// ============================================
+const DEFAULT_FORM_VALUES: CreateResourceFormData = {
+  idType: RESOURCE_TYPES.TANK,
+  idCompany: 0,
+  idBusinessUnit: undefined,
+  nativeLiters: undefined,
+  name: "",
+  identifier: "",
+};
+
+// ============================================
+// HELPERS
+// ============================================
+/** Filtra tanques por término de búsqueda */
+const filterTank = (tank: Resource, searchTerm: string): boolean => {
+  const term = searchTerm.toLowerCase();
+  return (
+    tank.name.toLowerCase().includes(term) ||
+    tank.identifier.toLowerCase().includes(term)
+  );
+};
+
+/** Convierte un tanque a datos del formulario */
+const tankToFormData = (tank: Resource): CreateResourceFormData => ({
+  idType: tank.idType,
+  idCompany: tank.idCompany,
+  idBusinessUnit: tank.idBusinessUnit,
+  nativeLiters: tank.nativeLiters,
+  name: tank.name,
+  identifier: tank.identifier,
+});
+
+/** Prepara datos para actualización */
+const prepareUpdateData = (
+  data: CreateResourceFormData,
+  tank: Resource
+): UpdateResourceRequest => ({
+  id: tank.id,
+  ...data,
+});
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 export default function TanksPage() {
   const { user } = useAuthStore();
   const idCompany = user?.idCompany ?? 0;
 
-  // Estados locales
-  const [searchTerm, setSearchTerm] = useState("");
-  const [openDialog, setOpenDialog] = useState(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [editingTank, setEditingTank] = useState<Resource | null>(null);
-  const [deleteTank, setDeleteTank] = useState<Resource | null>(null);
-
-  const form = useZodForm<CreateResourceFormData>(createResourceSchema, {
-    defaultValues: {
-      idType: RESOURCE_TYPES.TANK,
-      idCompany: idCompany || 0,
-      idBusinessUnit: undefined,
-      nativeLiters: undefined,
-      name: "",
-      identifier: "",
-    },
-  });
-
-  // React Query hooks
-  const { data: tanks = [], isLoading, error } = useTanks();
+  // Queries auxiliares
   const { data: companies = [] } = useCompanies();
   const { data: businessUnits = [] } = useBusinessUnits();
-  const createMutation = useCreateResource();
-  const updateMutation = useUpdateResource();
-  const deactivateMutation = useDeactivateResource();
 
-  // Filtrar tanques por búsqueda y empresa
-  const filteredTanks = useMemo(() => {
-    let filtered = tanks;
+  // Hook CRUD genérico
+  const crud = useCrudPage<
+    Resource,
+    CreateResourceFormData,
+    CreateResourceFormData,
+    UpdateResourceRequest
+  >({
+    useListQuery: useTanks,
+    createMutation: useCreateResource(),
+    updateMutation: useUpdateResource(),
+    deleteMutation: useDeactivateResource(),
+    schema: createResourceSchema,
+    defaultValues: { ...DEFAULT_FORM_VALUES, idCompany },
+    filterFn: filterTank,
+    entityToFormData: tankToFormData,
+    prepareUpdateData,
+  });
 
-    // Filtrar por empresa del usuario
-    if (idCompany) {
-      filtered = filtered.filter((t) => t.idCompany === idCompany);
-    }
+  // Filtrar por empresa del usuario
+  const filteredByCompany = crud.filteredItems.filter(
+    (t) => !idCompany || t.idCompany === idCompany
+  );
 
-    // Filtrar por búsqueda
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (t) =>
-          t.name.toLowerCase().includes(term) ||
-          t.identifier.toLowerCase().includes(term)
-      );
-    }
-
-    return filtered;
-  }, [tanks, searchTerm, idCompany, user?.role]);
-
-  // Handlers
-  const handleNew = () => {
-    setEditingTank(null);
-    form.reset({
-      idType: RESOURCE_TYPES.TANK,
-      idCompany: idCompany || companies[0]?.id || 0,
-      idBusinessUnit: undefined,
-      nativeLiters: undefined,
-      name: "",
-      identifier: "",
-    });
-    setOpenDialog(true);
-  };
-
-  const handleEdit = (tank: Resource) => {
-    setEditingTank(tank);
-    form.reset({
-      idType: tank.idType,
-      idCompany: tank.idCompany,
-      idBusinessUnit: tank.idBusinessUnit,
-      nativeLiters: tank.nativeLiters,
-      name: tank.name,
-      identifier: tank.identifier,
-    });
-    setOpenDialog(true);
-  };
-
-  const handleDeleteClick = (tank: Resource) => {
-    setDeleteTank(tank);
-    setOpenDeleteDialog(true);
-  };
-
-  const onSubmit = async (data: CreateResourceFormData) => {
-    try {
-      if (editingTank) {
-        const updateData: UpdateResourceRequest = {
-          id: editingTank.id,
-          idType: data.idType,
-          idCompany: data.idCompany,
-          idBusinessUnit: data.idBusinessUnit,
-          nativeLiters: data.nativeLiters,
-          name: data.name,
-          identifier: data.identifier,
-        };
-        await updateMutation.mutateAsync(updateData);
-      } else {
-        await createMutation.mutateAsync(data);
-      }
-      setOpenDialog(false);
-    } catch {
-      // Error manejado por el mutation
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTank) return;
-
-    try {
-      await deactivateMutation.mutateAsync(deleteTank.id);
-      setOpenDeleteDialog(false);
-      setDeleteTank(null);
-    } catch {
-      // Error manejado por el mutation
-    }
-  };
-
+  // Export handler
   const handleExport = () => {
-    const dataToExport = filteredTanks.map((t) => {
-      const company = companies.find((c) => c.id === t.idCompany);
-      const businessUnit = businessUnits.find(
-        (bu) => bu.id === t.idBusinessUnit
-      );
-      return {
-        Nombre: t.name,
-        Identificador: t.identifier,
-        "Capacidad (L)": t.nativeLiters || 0,
-        Empresa: company?.name || "",
-        "Unidad de Negocio": businessUnit?.name || "",
-        Estado: t.isActive !== false ? "Activo" : "Inactivo",
-      };
-    });
+    const dataToExport = filteredByCompany.map((t) => ({
+      Nombre: t.name,
+      Identificador: t.identifier,
+      "Capacidad (L)": t.nativeLiters || 0,
+      Empresa: companies.find((c) => c.id === t.idCompany)?.name || "",
+      "Unidad de Negocio":
+        businessUnits.find((bu) => bu.id === t.idBusinessUnit)?.name || "",
+      Estado: t.isActive !== false ? "Activo" : "Inactivo",
+    }));
 
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Tanks");
-    XLSX.writeFile(wb, `tanks_${new Date().toISOString().split("T")[0]}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Tanques");
+    XLSX.writeFile(
+      wb,
+      `tanques_${new Date().toISOString().split("T")[0]}.xlsx`
+    );
     toast.success("Archivo exportado correctamente");
   };
 
   // Loading state
-  if (isLoading) {
+  if (crud.isLoading) {
     return (
       <div className="space-y-4">
         <div className="bg-background px-6 pt-4 pb-2">
           <PageHeader title="Tanques" description="Cargando tanques..." />
         </div>
-
         <div className="p-6">
           <SectionCard>
             <div className="flex items-center gap-2">
@@ -209,7 +174,6 @@ export default function TanksPage() {
               </span>
             </div>
           </SectionCard>
-
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-[200px] w-full" />
@@ -221,21 +185,19 @@ export default function TanksPage() {
   }
 
   // Error state
-  if (error) {
+  if (crud.error) {
     return (
       <div className="space-y-4">
         <div className="bg-background px-6 pt-4 pb-2">
           <PageHeader title="Tanques" description="No se pudieron cargar" />
         </div>
-
         <div className="p-6">
           <SectionCard>
             <Alert variant="destructive">
               <TriangleAlert className="size-4" />
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>
-                Error al cargar tanques:{" "}
-                {error instanceof Error ? error.message : "Error desconocido"}
+                Error al cargar tanques: {crud.error.message}
               </AlertDescription>
             </Alert>
           </SectionCard>
@@ -244,13 +206,17 @@ export default function TanksPage() {
     );
   }
 
+  // Desestructurar form del crud para acceso más limpio
+  const { form } = crud;
+
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="bg-background px-6 pt-4 pb-2">
         <PageHeader
           title="Tanques"
-          description={`${filteredTanks.length} ${
-            filteredTanks.length === 1 ? "tanque" : "tanques"
+          description={`${filteredByCompany.length} ${
+            filteredByCompany.length === 1 ? "tanque" : "tanques"
           } registrados`}
           actions={
             <>
@@ -258,17 +224,16 @@ export default function TanksPage() {
                 type="button"
                 variant="outline"
                 onClick={handleExport}
-                disabled={filteredTanks.length === 0}
+                disabled={filteredByCompany.length === 0}
                 className="h-10 rounded-xl border-slate-200 bg-white font-bold text-slate-700 shadow-sm hover:bg-slate-50"
               >
                 <Download className="mr-2 h-4 w-4 text-slate-400" />
                 Exportar
               </Button>
-
               <Button
                 type="button"
-                onClick={handleNew}
-                disabled={createMutation.isPending}
+                onClick={crud.handleNew}
+                disabled={crud.isSaving}
                 className="h-10 rounded-xl bg-primary px-6 font-bold text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-95"
               >
                 <Plus className="mr-2 h-4 w-4 text-white" />
@@ -280,134 +245,61 @@ export default function TanksPage() {
       </div>
 
       <div className="p-6 space-y-4">
-        {/* Filtros */}
+        {/* Búsqueda */}
         <SectionCard>
-          <div className="relative max-w-md">
-            <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
-            <Input
-              placeholder="Buscar por nombre o identificador..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-11 rounded-2xl border-slate-200 bg-white pl-9 shadow-sm"
-            />
-          </div>
+          <SearchInput
+            value={crud.searchTerm}
+            onChange={crud.setSearchTerm}
+            placeholder="Buscar por nombre o identificador..."
+            className="max-w-md"
+          />
         </SectionCard>
 
         {/* Grid de tanques */}
         <SectionCard>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {filteredTanks.map((tank) => {
-              const company = companies.find((c) => c.id === tank.idCompany);
-              const businessUnit = businessUnits.find(
-                (bu) => bu.id === tank.idBusinessUnit
-              );
-
-              return (
-                <Card
-                  key={tank.id}
-                  className="border-border transition-shadow hover:shadow-md"
-                >
-                  <CardContent className="flex h-full flex-col gap-3 pt-6">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
-                        <Fuel className="size-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-semibold">
-                          {tank.name}
-                        </div>
-                        <Badge variant="outline" className="mt-1">
-                          {tank.identifier}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {tank.nativeLiters ? (
-                        <Badge variant="secondary">{tank.nativeLiters} L</Badge>
-                      ) : null}
-                      <Badge
-                        variant="secondary"
-                        className={
-                          tank.isActive !== false
-                            ? "text-emerald-700 bg-emerald-100"
-                            : "text-amber-700 bg-amber-100"
-                        }
-                      >
-                        {tank.isActive !== false ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </div>
-
-                    <div className="text-muted-foreground space-y-1 text-xs">
-                      {company ? (
-                        <div className="truncate">{company.name}</div>
-                      ) : null}
-                      {businessUnit ? (
-                        <div className="truncate">{businessUnit.name}</div>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-auto flex gap-2 pt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleEdit(tank)}
-                        disabled={updateMutation.isPending}
-                        aria-label="Editar"
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => handleDeleteClick(tank)}
-                        disabled={deactivateMutation.isPending}
-                        aria-label="Desactivar"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Empty state */}
-          {filteredTanks.length === 0 ? (
+          {filteredByCompany.length === 0 ? (
             <EmptyState
               icon={<Fuel className="size-10" />}
               title="No hay tanques registrados"
               description='Haz clic en "Nuevo Tanque" para agregar uno'
             />
-          ) : null}
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {filteredByCompany.map((tank) => (
+                <TankCard
+                  key={tank.id}
+                  tank={tank}
+                  company={companies.find((c) => c.id === tank.idCompany)}
+                  businessUnit={businessUnits.find(
+                    (bu) => bu.id === tank.idBusinessUnit
+                  )}
+                  onEdit={() => crud.handleEdit(tank)}
+                  onDelete={() => crud.handleDelete(tank)}
+                  isUpdating={crud.isSaving}
+                  isDeleting={crud.isDeleting}
+                />
+              ))}
+            </div>
+          )}
         </SectionCard>
 
-        {/* Diálogo de crear/editar */}
+        {/* Dialog de crear/editar */}
         <Dialog
-          open={openDialog}
-          onOpenChange={(open) => {
-            setOpenDialog(open);
-            if (!open) {
-              setEditingTank(null);
-              form.reset();
-            }
-          }}
+          open={crud.isDialogOpen}
+          onOpenChange={(open) => !open && crud.closeDialog()}
         >
           <DialogContent className="sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>
-                {editingTank ? "Editar Tanque" : "Nuevo Tanque"}
+                {crud.isEditing ? "Editar Tanque" : "Nuevo Tanque"}
               </DialogTitle>
             </DialogHeader>
 
             <form
-              onSubmit={form.handleSubmit(onSubmit)}
+              onSubmit={form.handleSubmit(crud.onSubmit)}
               className="grid gap-4 sm:grid-cols-2"
             >
-              {companies.length > 1 ? (
+              {companies.length > 1 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Empresa *</label>
                   <Select
@@ -435,7 +327,7 @@ export default function TanksPage() {
                     </p>
                   )}
                 </div>
-              ) : null}
+              )}
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">
@@ -515,18 +407,18 @@ export default function TanksPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setOpenDialog(false)}
+                onClick={crud.closeDialog}
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                onClick={form.handleSubmit(onSubmit)}
-                disabled={createMutation.isPending || updateMutation.isPending}
+                onClick={form.handleSubmit(crud.onSubmit)}
+                disabled={crud.isSaving}
               >
-                {createMutation.isPending || updateMutation.isPending
+                {crud.isSaving
                   ? "Guardando..."
-                  : editingTank
+                  : crud.isEditing
                   ? "Guardar Cambios"
                   : "Crear Tanque"}
               </Button>
@@ -536,23 +428,112 @@ export default function TanksPage() {
 
         {/* Confirmación de eliminación */}
         <ConfirmDialog
-          open={openDeleteDialog}
-          onOpenChange={setOpenDeleteDialog}
+          open={crud.isDeleteDialogOpen}
+          onOpenChange={(open) => !open && crud.closeDeleteDialog()}
           title="Confirmar Desactivación"
           description={
             <>
               ¿Estás seguro de desactivar el tanque{" "}
-              <strong>{deleteTank?.name}</strong>? Esta acción no se puede
-              deshacer.
+              <strong>{crud.deletingItem?.name}</strong>? Esta acción no se
+              puede deshacer.
             </>
           }
-          confirmLabel={
-            deactivateMutation.isPending ? "Desactivando..." : "Desactivar"
-          }
-          onConfirm={handleDelete}
-          confirmDisabled={deactivateMutation.isPending}
+          confirmLabel={crud.isDeleting ? "Desactivando..." : "Desactivar"}
+          onConfirm={crud.confirmDelete}
+          confirmDisabled={crud.isDeleting}
         />
       </div>
     </div>
+  );
+}
+
+// ============================================
+// COMPONENTES AUXILIARES
+// ============================================
+
+interface TankCardProps {
+  tank: Resource;
+  company?: { name: string };
+  businessUnit?: { name: string };
+  onEdit: () => void;
+  onDelete: () => void;
+  isUpdating: boolean;
+  isDeleting: boolean;
+}
+
+/** Tarjeta individual de tanque - Componente puro */
+function TankCard({
+  tank,
+  company,
+  businessUnit,
+  onEdit,
+  onDelete,
+  isUpdating,
+  isDeleting,
+}: TankCardProps) {
+  return (
+    <Card className="border-border transition-shadow hover:shadow-md">
+      <CardContent className="flex h-full flex-col gap-3 pt-6">
+        {/* Header */}
+        <div className="flex items-start gap-3">
+          <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
+            <Fuel className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-semibold">{tank.name}</div>
+            <Badge variant="outline" className="mt-1">
+              {tank.identifier}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Badges */}
+        <div className="flex flex-wrap gap-2">
+          {tank.nativeLiters && (
+            <Badge variant="secondary">{tank.nativeLiters} L</Badge>
+          )}
+          <Badge
+            variant="secondary"
+            className={
+              tank.isActive !== false
+                ? "text-emerald-700 bg-emerald-100"
+                : "text-amber-700 bg-amber-100"
+            }
+          >
+            {tank.isActive !== false ? "Activo" : "Inactivo"}
+          </Badge>
+        </div>
+
+        {/* Info */}
+        <div className="text-muted-foreground space-y-1 text-xs">
+          {company && <div className="truncate">{company.name}</div>}
+          {businessUnit && <div className="truncate">{businessUnit.name}</div>}
+        </div>
+
+        {/* Actions */}
+        <div className="mt-auto flex gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onEdit}
+            disabled={isUpdating}
+            aria-label="Editar"
+          >
+            <Pencil className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            onClick={onDelete}
+            disabled={isDeleting}
+            aria-label="Desactivar"
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,9 +1,11 @@
-import { useState, useMemo } from "react";
+/**
+ * DriversPage - Gestión de Choferes
+ * Implementa patrón CRUD con useCrudPage
+ */
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import {
   Plus,
-  Search,
   User,
   Edit,
   Trash2,
@@ -20,7 +22,7 @@ import { Switch } from "@/components/ui/switch";
 // Hooks
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
-import { useZodForm } from "@/hooks/useZodForm";
+import { useCrudPage } from "@/hooks/useCrudPage";
 import { createDriverSchema, type CreateDriverFormData } from "@/schemas";
 import {
   useDrivers,
@@ -29,7 +31,11 @@ import {
   useDeactivateDriver,
   useCompanies,
 } from "@/hooks/queries";
-import type { Driver, UpdateDriverRequest } from "@/types/api.types";
+import type {
+  Driver,
+  CreateDriverRequest,
+  UpdateDriverRequest,
+} from "@/types/api.types";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -63,7 +69,11 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { SearchInput } from "@/components/common/DataTable";
 
+// ============================================
+// HELPERS
+// ============================================
 const getAvatarColor = (name: string): string => {
   const colors = ["#1e2c56", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6"];
   return colors[name.charCodeAt(0) % colors.length] || "#1e2c56";
@@ -78,6 +88,36 @@ const getInitials = (name: string): string => {
     .slice(0, 2);
 };
 
+const DEFAULT_FORM_VALUES: CreateDriverFormData = {
+  idCompany: 0,
+  name: "",
+  dni: "",
+  phoneNumber: "",
+};
+
+const filterDriver = (driver: Driver, searchTerm: string): boolean => {
+  const term = searchTerm.toLowerCase();
+  return driver.name.toLowerCase().includes(term) || driver.dni.includes(term);
+};
+
+const driverToFormData = (driver: Driver): CreateDriverFormData => ({
+  idCompany: driver.idCompany,
+  name: driver.name,
+  dni: driver.dni,
+  phoneNumber: driver.phoneNumber || "",
+});
+
+const prepareUpdateData = (
+  data: CreateDriverFormData,
+  driver: Driver
+): UpdateDriverRequest => ({
+  id: driver.id,
+  ...data,
+});
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 export default function DriversPage() {
   const { user } = useAuthStore();
   const {
@@ -90,39 +130,55 @@ export default function DriversPage() {
   } = useRoleLogic();
 
   const idCompany = user?.idCompany || user?.empresaId || companyIdFilter || 0;
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [openDialog, setOpenDialog] = useState(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
-  const [deleteDriver, setDeleteDriver] = useState<Driver | null>(null);
-
-  const form = useZodForm<CreateDriverFormData>(createDriverSchema, {
-    defaultValues: {
-      idCompany: idCompany || 0,
-      name: "",
-      dni: "",
-      phoneNumber: "",
-    },
-  });
-
-  const { data: driversAll = [], isLoading } = useDrivers();
   const { data: companies = [] } = useCompanies();
-  const createMutation = useCreateDriver();
-  const updateMutation = useUpdateDriver();
+
   const deactivateMutation = useDeactivateDriver();
 
+  // Hook CRUD genérico
+  const crud = useCrudPage<
+    Driver,
+    CreateDriverFormData,
+    CreateDriverRequest,
+    UpdateDriverRequest
+  >({
+    useListQuery: useDrivers,
+    createMutation: useCreateDriver(),
+    updateMutation: useUpdateDriver(),
+    deleteMutation: deactivateMutation,
+    schema: createDriverSchema,
+    defaultValues: { ...DEFAULT_FORM_VALUES, idCompany },
+    filterFn: filterDriver,
+    entityToFormData: driverToFormData,
+    prepareCreateData: (data) => ({
+      idCompany: data.idCompany,
+      name: data.name,
+      dni: data.dni,
+      phoneNumber: data.phoneNumber || undefined,
+    }),
+    prepareUpdateData,
+    onCreateSuccess: () => toast.success("Chofer registrado"),
+    onUpdateSuccess: () => toast.success("Chofer actualizado"),
+    onDeleteSuccess: () => toast.success("Chofer desactivado"),
+  });
+
+  // Filtrar por empresa
+  const filteredDrivers = crud.filteredItems.filter(
+    (d) =>
+      !companyIdFilter ||
+      companyIdFilter <= 0 ||
+      d.idCompany === companyIdFilter
+  );
+
+  const { form } = crud;
+
   const handleExport = () => {
-    const dataToExport = filteredDrivers.map((d) => {
-      const company = companies.find((c) => c.id === d.idCompany);
-      return {
-        Nombre: d.name,
-        DNI: d.dni,
-        Telefono: d.phoneNumber || "",
-        Empresa: company?.name || "",
-        Estado: d.active !== false ? "Activo" : "Inactivo",
-      };
-    });
+    const dataToExport = filteredDrivers.map((d) => ({
+      Nombre: d.name,
+      DNI: d.dni,
+      Telefono: d.phoneNumber || "",
+      Empresa: companies.find((c) => c.id === d.idCompany)?.name || "",
+      Estado: d.active !== false ? "Activo" : "Inactivo",
+    }));
 
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
@@ -130,83 +186,7 @@ export default function DriversPage() {
     XLSX.writeFile(wb, "choferes.xlsx");
   };
 
-  const filteredDrivers = useMemo(() => {
-    let filtered = Array.isArray(driversAll) ? driversAll : [];
-    if (companyIdFilter && companyIdFilter > 0) {
-      filtered = filtered.filter((d) => d.idCompany === companyIdFilter);
-    }
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (d) => d.name.toLowerCase().includes(term) || d.dni.includes(term)
-      );
-    }
-    return filtered;
-  }, [driversAll, searchTerm, companyIdFilter]);
-
-  const handleEdit = (driver: Driver) => {
-    setEditingDriver(driver);
-    form.reset({
-      idCompany: driver.idCompany,
-      name: driver.name,
-      dni: driver.dni,
-      phoneNumber: driver.phoneNumber || "",
-    });
-    setOpenDialog(true);
-  };
-
-  const handleOpenNew = () => {
-    setEditingDriver(null);
-    form.reset({
-      idCompany: idCompany || 0,
-      name: "",
-      dni: "",
-      phoneNumber: "",
-    });
-    setOpenDialog(true);
-  };
-
-  const onSubmit = async (data: CreateDriverFormData) => {
-    const finalCompanyId = data.idCompany || idCompany || companies[0]?.id || 0;
-    if (!finalCompanyId) {
-      toast.error("Debe existir una empresa para guardar el chofer");
-      return;
-    }
-
-    try {
-      if (editingDriver) {
-        await updateMutation.mutateAsync({
-          id: editingDriver.id,
-          ...data,
-          idCompany: finalCompanyId,
-        } as UpdateDriverRequest);
-        toast.success("Chofer actualizado");
-      } else {
-        await createMutation.mutateAsync({
-          ...data,
-          idCompany: finalCompanyId,
-        });
-        toast.success("Chofer registrado");
-      }
-      setOpenDialog(false);
-    } catch {
-      toast.error("Error en la operación");
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteDriver) return;
-    try {
-      await deactivateMutation.mutateAsync(deleteDriver.id);
-      toast.success("Chofer desactivado");
-      setOpenDeleteDialog(false);
-      setDeleteDriver(null);
-    } catch {
-      toast.error("Error al desactivar");
-    }
-  };
-
-  if (isLoading)
+  if (crud.isLoading)
     return (
       <div className="space-y-4">
         <div className="bg-background px-6 pt-4 pb-2">
@@ -243,7 +223,7 @@ export default function DriversPage() {
                 </Button>
               )}
               {showCreateButtons && canManageDrivers && (
-                <Button onClick={handleOpenNew}>
+                <Button onClick={crud.handleNew}>
                   <Plus className="mr-2 h-4 w-4" />
                   Nuevo Chofer
                 </Button>
@@ -255,15 +235,12 @@ export default function DriversPage() {
 
       <div className="px-6 pb-6 space-y-4">
         <SectionCard>
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nombre o DNI..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+          <SearchInput
+            value={crud.searchTerm}
+            onChange={crud.setSearchTerm}
+            placeholder="Buscar por nombre o DNI..."
+            className="max-w-md"
+          />
         </SectionCard>
 
         <SectionCard>
@@ -303,14 +280,13 @@ export default function DriversPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(d)}>
+                            <DropdownMenuItem
+                              onClick={() => crud.handleEdit(d)}
+                            >
                               <Edit size={14} className="mr-2" /> Editar
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => {
-                                setDeleteDriver(d);
-                                setOpenDeleteDialog(true);
-                              }}
+                              onClick={() => crud.handleDelete(d)}
                               className="text-destructive"
                             >
                               <Trash2 size={14} className="mr-2" /> Desactivar
@@ -388,20 +364,14 @@ export default function DriversPage() {
 
       {/* MODAL CREAR/EDITAR */}
       <Dialog
-        open={openDialog}
-        onOpenChange={(open) => {
-          setOpenDialog(open);
-          if (!open) {
-            setEditingDriver(null);
-            form.reset();
-          }
-        }}
+        open={crud.isDialogOpen}
+        onOpenChange={(open) => !open && crud.closeDialog()}
       >
         <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden rounded-3xl border-none shadow-2xl bg-white">
           <div className="bg-primary px-8 py-10 text-primary-foreground relative">
             <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/5" />
             <DialogTitle className="text-2xl font-bold text-white tracking-tight">
-              {editingDriver
+              {crud.isEditing
                 ? "Editar Datos del Chofer"
                 : "Registrar Nuevo Chofer"}
             </DialogTitle>
@@ -411,7 +381,7 @@ export default function DriversPage() {
           </div>
 
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={form.handleSubmit(crud.onSubmit)}
             className="p-8 bg-white space-y-5"
           >
             <div className="space-y-2">
@@ -504,18 +474,22 @@ export default function DriversPage() {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => setOpenDialog(false)}
+              onClick={crud.closeDialog}
               className="rounded-xl font-bold text-slate-400"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              form="driver-form"
-              onClick={form.handleSubmit(onSubmit)}
+              onClick={form.handleSubmit(crud.onSubmit)}
+              disabled={crud.isSaving}
               className="rounded-xl bg-primary text-primary-foreground font-bold px-10 shadow-xl hover:bg-primary/90 transition-all"
             >
-              {editingDriver ? "Guardar Cambios" : "Confirmar Chofer"}
+              {crud.isSaving
+                ? "Guardando..."
+                : crud.isEditing
+                ? "Guardar Cambios"
+                : "Confirmar Chofer"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -523,18 +497,19 @@ export default function DriversPage() {
 
       {/* DELETE CONFIRMATION */}
       <ConfirmDialog
-        open={openDeleteDialog}
-        onOpenChange={setOpenDeleteDialog}
+        open={crud.isDeleteDialogOpen}
+        onOpenChange={(open) => !open && crud.closeDeleteDialog()}
         title="¿Desactivar chofer?"
         description={
           <>
-            El chofer <strong>"{deleteDriver?.name}"</strong> dejará de estar
-            disponible para asignar a nuevas cargas de combustible.
+            El chofer <strong>"{crud.deletingItem?.name}"</strong> dejará de
+            estar disponible para asignar a nuevas cargas de combustible.
           </>
         }
-        confirmLabel="Sí, desactivar"
+        confirmLabel={crud.isDeleting ? "Desactivando..." : "Sí, desactivar"}
         cancelLabel="Cancelar"
-        onConfirm={handleDelete}
+        onConfirm={crud.confirmDelete}
+        confirmDisabled={crud.isDeleting}
       />
     </div>
   );

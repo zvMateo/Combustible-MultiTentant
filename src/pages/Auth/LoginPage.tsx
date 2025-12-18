@@ -5,7 +5,6 @@ import { useZodForm } from "@/hooks/useZodForm";
 import { loginSchema, type LoginFormData } from "@/schemas";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { AuthShell } from "@/pages/Auth/components/AuthShell";
 import { AuthField } from "@/pages/Auth/components/AuthField";
@@ -13,8 +12,7 @@ import { Fuel, Lock, User } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated, isLoading, error, clearError } =
-    useAuthStore();
+  const { login, isAuthenticated, isLoading, clearError } = useAuthStore();
 
   const form = useZodForm<LoginFormData>(loginSchema, {
     defaultValues: { userName: "", password: "" },
@@ -38,13 +36,8 @@ export default function LoginPage() {
     }
   };
 
-  const formError =
-    form.formState.errors.userName?.message ||
-    form.formState.errors.password?.message;
-  const displayError = formError || error;
-
   return (
-    <AuthShell onBack={() => navigate("/")}>
+    <AuthShell>
       <div className="mx-auto w-full max-w-[440px] py-8 animate-fade-in">
         <Card className="overflow-hidden rounded-3xl border-0 bg-white/98 shadow-2xl backdrop-blur-xl">
           <div
@@ -94,17 +87,6 @@ export default function LoginPage() {
                 error={form.formState.errors.password?.message}
                 {...form.register("password")}
               />
-
-              {displayError ? (
-                <Alert
-                  variant="destructive"
-                  className="rounded-xl border-none bg-red-50/80 py-3 text-red-600 animate-scale-in"
-                >
-                  <AlertDescription className="text-center text-xs font-semibold">
-                    {displayError}
-                  </AlertDescription>
-                </Alert>
-              ) : null}
 
               <Button
                 type="submit"

@@ -150,7 +150,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <AuthShell onBack={() => navigate("/")}>
+    <AuthShell>
       <div className="mx-auto w-full max-w-[500px] py-10">
         <Card className="overflow-hidden rounded-2xl border-0 bg-white/95 shadow-2xl backdrop-blur-md">
           <div className="bg-primary px-8 py-8 text-center text-primary-foreground">

@@ -23,7 +23,7 @@ const ProgressBar = ({ visible }: { visible: boolean }) => {
   if (!visible) return null;
 
   return (
-    <div className="fixed top-0 left-0 w-full z-[1300]">
+    <div className="fixed top-0 left-0 w-full z-1300">
       <Progress value={progress} className="h-1 rounded-none" />
     </div>
   );
