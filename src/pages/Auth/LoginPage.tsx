@@ -142,7 +142,7 @@ export default function LoginPage() {
         </Card>
 
         <p className="mt-8 text-center text-xs font-medium tracking-widest text-white/50">
-          © 2025 GOODAPPS · v2.0
+          © 2025 GOODAPPS
         </p>
       </div>
     </AuthShell>
