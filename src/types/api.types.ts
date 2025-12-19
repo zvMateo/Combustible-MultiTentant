@@ -1,6 +1,6 @@
 /**
  * Tipos de la API de Combustibles
- * Basado en: https://apicombustibles.ubiko.com.ar/swagger/index.html
+ * Basado en: https://api.controlcombustible.com.ar/swagger/index.html
  */
 
 // ============================================

@@ -2,7 +2,7 @@
  * Servicios de API - Índice de exportaciones
  * 
  * Todos los servicios para comunicarse con la API de Combustibles
- * https://apicombustibles.ubiko.com.ar/swagger/index.html
+ * https://api.controlcombustible.com.ar/swagger/index.html
  */
 
 // Auth

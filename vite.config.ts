@@ -22,7 +22,7 @@ export default defineConfig({
     host: true,
     proxy: {
       "/api": {
-        target: "https://apicombustibles.ubiko.com.ar",
+        target: "https://api.controlcombustible.com.ar",
         changeOrigin: true,
         secure: false,
       },
