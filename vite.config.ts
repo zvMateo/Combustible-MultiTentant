@@ -21,11 +21,11 @@ export default defineConfig({
     port: 5177,
     host: true,
     proxy: {
-      "/api": {
-        target: "https://api.controlcombustible.com.ar",
-        changeOrigin: true,
-        secure: false,
-      },
+      // "/api": {
+      //   target: "https://api.controlcombustible.com.ar",
+      //   changeOrigin: true,
+      //   secure: false,
+      // },
       "/naftas": {
         target: "https://naftas.com.ar",
         changeOrigin: true,
