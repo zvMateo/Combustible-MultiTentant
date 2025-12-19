@@ -23,7 +23,7 @@ import {
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
 } from "recharts";
-import { DollarSign, Fuel, Minus, RefreshCw, User } from "lucide-react";
+import { DollarSign, Fuel, RefreshCw, User } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -221,15 +221,6 @@ export default function Dashboard() {
             trend="up"
             icon={DollarSign}
             color="#10b981"
-            loading={loadingLoads}
-          />
-          <KPICard
-            label="Consumo Prom"
-            value="450 L"
-            change="2%"
-            trend="down"
-            icon={Minus}
-            color="#3b82f6"
             loading={loadingLoads}
           />
           <KPICard
