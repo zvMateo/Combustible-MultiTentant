@@ -1,23 +1,23 @@
 // src/pages/Dashboard/Settings/SettingsPage.tsx
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+// import {
+//   Command,
+//   CommandEmpty,
+//   CommandGroup,
+//   CommandInput,
+//   CommandItem,
+//   CommandList,
+// } from "@/components/ui/command";
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogHeader,
+//   DialogTitle,
+// } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
@@ -36,10 +36,6 @@ import {
   Bell,
   Camera,
   Car,
-  Fuel,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   MapPin,
   Mic,
   Pencil,
@@ -49,8 +45,6 @@ import {
   Save,
   Shield,
   TriangleAlert,
-  TrendingDown,
-  TrendingUp,
   Users,
   Palette,
 } from "lucide-react";
@@ -669,458 +663,6 @@ function PoliticasTab() {
   );
 }
 
-// ==================== PRECIOS DE COMBUSTIBLE ====================
-function PreciosTab() {
-  type CiudadSearchItem = {
-    nombre: string;
-    lat: number;
-    long: number;
-  };
-
-  type PrecioBaseResponse = Record<
-    string,
-    {
-      coordenadas: { latitud: number; longitud: number };
-      horario: string;
-      empresas: Record<
-        string,
-        Record<string, { precio: number; fecha_vigencia: string }>
-      >;
-    }
-  >;
-
-  const [selectedCity, setSelectedCity] = useState<string>(() => {
-    if (typeof window === "undefined") return "CORDOBA";
-    return window.localStorage.getItem("naftas:selectedCity") || "CORDOBA";
-  });
-
-  const [locationDialogOpen, setLocationDialogOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [searchResults, setSearchResults] = useState<CiudadSearchItem[]>([]);
-
-  const [precioLoading, setPrecioLoading] = useState(false);
-  const [precioError, setPrecioError] = useState<string | null>(null);
-  const [precioData, setPrecioData] = useState<
-    PrecioBaseResponse[string] | null
-  >(null);
-  const precioRequestSeq = useRef(0);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("naftas:selectedCity", selectedCity);
-  }, [selectedCity]);
-
-  useEffect(() => {
-    if (!locationDialogOpen) return;
-    setSearchQuery("");
-    setSearchResults([]);
-    setSearchError(null);
-  }, [locationDialogOpen]);
-
-  useEffect(() => {
-    if (!locationDialogOpen) return;
-
-    const q = searchQuery.trim();
-    if (q.length < 2) {
-      setSearchResults([]);
-      setSearchError(null);
-      setSearchLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(async () => {
-      try {
-        setSearchLoading(true);
-        setSearchError(null);
-
-        const url = `/naftas/api/search?q=${encodeURIComponent(q)}`;
-        const res = await fetch(url, { signal: controller.signal });
-        if (!res.ok) {
-          throw new Error(`Error al buscar ciudades (${res.status})`);
-        }
-        const data = (await res.json()) as { cities?: CiudadSearchItem[] };
-        setSearchResults(data.cities ?? []);
-      } catch (e) {
-        if (controller.signal.aborted) return;
-        setSearchError(
-          e instanceof Error
-            ? e.message
-            : "Error desconocido al buscar ciudades"
-        );
-        setSearchResults([]);
-      } finally {
-        if (!controller.signal.aborted) setSearchLoading(false);
-      }
-    }, 350);
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(timeoutId);
-    };
-  }, [locationDialogOpen, searchQuery]);
-
-  const fetchPrecios = useCallback(
-    async (city: string, signal?: AbortSignal) => {
-      const url = `/naftas/api/precio-base?ciudad=${encodeURIComponent(
-        city
-      )}&tipohorario=auto`;
-      const res = await fetch(url, { signal });
-      if (!res.ok) throw new Error(`Error al cargar precios (${res.status})`);
-      const json = (await res.json()) as PrecioBaseResponse;
-      const cityKey = Object.keys(json)[0];
-      if (!cityKey || !json[cityKey])
-        throw new Error("Respuesta inválida de precios");
-      return json[cityKey];
-    },
-    []
-  );
-
-  useEffect(() => {
-    const seq = ++precioRequestSeq.current;
-
-    (async () => {
-      try {
-        setPrecioLoading(true);
-        setPrecioError(null);
-        const data = await fetchPrecios(selectedCity);
-        if (seq !== precioRequestSeq.current) return;
-        setPrecioData(data);
-      } catch (e) {
-        if (seq !== precioRequestSeq.current) return;
-        const message =
-          e instanceof Error
-            ? e.message
-            : "Error desconocido al cargar precios";
-        setPrecioError(message);
-        setPrecioData(null);
-        toast.error(message);
-      } finally {
-        if (seq === precioRequestSeq.current) {
-          setPrecioLoading(false);
-        }
-      }
-    })();
-  }, [fetchPrecios, selectedCity]);
-
-  const formatRelativeTimeEs = (iso: string) => {
-    const now = Date.now();
-    const dt = new Date(iso).getTime();
-    if (Number.isNaN(dt)) return "";
-    const diffMs = Math.max(0, now - dt);
-    const minutes = Math.floor(diffMs / 60000);
-    const hours = Math.floor(diffMs / 3600000);
-    const days = Math.floor(diffMs / 86400000);
-    const months = Math.floor(days / 30);
-    const years = Math.floor(days / 365);
-
-    const plural = (n: number, s: string) => (n === 1 ? s : `${s}s`);
-
-    if (minutes < 1) return "Actualizado recién";
-    if (minutes < 60)
-      return `Actualizado hace ${minutes} ${plural(minutes, "minuto")}`;
-    if (hours < 24) return `Actualizado hace ${hours} ${plural(hours, "hora")}`;
-    if (days < 30) return `Actualizado hace ${days} ${plural(days, "día")}`;
-    if (days < 365)
-      return `Actualizado hace ${months} ${plural(months, "mes")}`;
-    return `Actualizado hace ${years} ${plural(years, "año")}`;
-  };
-
-  const brandStyles: Record<
-    string,
-    { bg: string; text: string; label: string }
-  > = {
-    YPF: { bg: "bg-blue-600", text: "text-white", label: "YPF" },
-    PUMA: { bg: "bg-red-600", text: "text-white", label: "PUMA" },
-    AXION: { bg: "bg-purple-600", text: "text-white", label: "AXION" },
-    "SHELL C.A.P.S.A.": {
-      bg: "bg-red-600",
-      text: "text-white",
-      label: "SHELL",
-    },
-  };
-
-  const empresas = useMemo(() => {
-    const e = precioData?.empresas ?? {};
-    return Object.entries(e).map(([empresa, combustibles]) => {
-      const fuels = Object.entries(combustibles).map(([nombre, info]) => ({
-        nombre,
-        precio: info.precio,
-        fecha_vigencia: info.fecha_vigencia,
-      }));
-      const avg =
-        fuels.length > 0
-          ? fuels.reduce(
-              (acc, f) => acc + (typeof f.precio === "number" ? f.precio : 0),
-              0
-            ) / fuels.length
-          : 0;
-      return { empresa, fuels, avgPrice: avg };
-    });
-  }, [precioData]);
-
-  const priceScoreByEmpresa = useMemo(() => {
-    if (empresas.length === 0) return new Map<string, number>();
-    const avgs = empresas.map((e) => e.avgPrice);
-    const min = Math.min(...avgs);
-    const max = Math.max(...avgs);
-    const map = new Map<string, number>();
-    for (const e of empresas) {
-      const score =
-        max === min
-          ? 50
-          : Math.round(100 - ((e.avgPrice - min) / (max - min)) * 100);
-      map.set(e.empresa, Math.max(0, Math.min(100, score)));
-    }
-    return map;
-  }, [empresas]);
-
-  const getScoreUI = (score: number) => {
-    if (score >= 60) {
-      return {
-        icon: <TrendingUp className="size-3" />,
-        className: "bg-emerald-50 text-emerald-700",
-      };
-    }
-    if (score >= 40) {
-      return {
-        icon: <TrendingDown className="size-3" />,
-        className: "bg-amber-50 text-amber-700",
-      };
-    }
-    return {
-      icon: <TrendingDown className="size-3" />,
-      className: "bg-red-50 text-red-700",
-    };
-  };
-
-  const getUnit = (fuelName: string) => {
-    return fuelName.toUpperCase().includes("GNC") ? "m³" : "l";
-  };
-
-  return (
-    <Card className="border-border">
-      <CardContent className="pt-6">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold">Precios de Combustible</h2>
-          <p className="text-muted-foreground text-sm">
-            Consulte precios promedio por empresa y tipo de combustible.
-          </p>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <Dialog
-            open={locationDialogOpen}
-            onOpenChange={setLocationDialogOpen}
-          >
-            <Button
-              type="button"
-              variant="outline"
-              className="h-9 gap-2"
-              onClick={() => setLocationDialogOpen(true)}
-            >
-              <MapPin className="size-4" />
-              <span>Mostrando precios en</span>
-              <span className="font-semibold">{selectedCity}</span>
-              <ChevronDown className="size-4" />
-            </Button>
-
-            <DialogContent className="max-w-[560px] p-0">
-              <div className="p-6 pb-0">
-                <DialogHeader>
-                  <DialogTitle>Configuración</DialogTitle>
-                </DialogHeader>
-              </div>
-
-              <div className="px-6 pb-6">
-                <div className="mt-4 flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setLocationDialogOpen(false)}
-                    aria-label="Volver"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </Button>
-                  <div className="text-sm font-semibold">Buscar ubicación</div>
-                </div>
-
-                <div className="mt-3">
-                  <Command className="rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <CommandInput
-                      value={searchQuery}
-                      onValueChange={setSearchQuery}
-                      placeholder="Buscar ciudad..."
-                      className="border-b border-slate-100"
-                    />
-                    <CommandList className="max-h-[280px]">
-                      {searchLoading ? (
-                        <div className="flex items-center justify-center py-6">
-                          <Spinner />
-                        </div>
-                      ) : null}
-                      {searchError ? (
-                        <div className="text-muted-foreground px-3 py-3 text-sm">
-                          {searchError}
-                        </div>
-                      ) : null}
-                      <CommandEmpty className="py-6 text-center text-sm text-slate-500">
-                        {searchQuery.trim().length < 2
-                          ? "Escribí al menos 2 letras"
-                          : "Sin resultados"}
-                      </CommandEmpty>
-                      <CommandGroup className="p-2">
-                        {searchResults.map((c) => (
-                          <CommandItem
-                            key={c.nombre}
-                            value={c.nombre}
-                            onSelect={() => {
-                              setSelectedCity(c.nombre);
-                              setLocationDialogOpen(false);
-                            }}
-                            className="rounded-lg px-3 py-2.5 cursor-pointer hover:bg-slate-50 data-[selected=true]:bg-slate-100"
-                          >
-                            <MapPin className="size-4 text-slate-400" />
-                            <span className="font-medium">{c.nombre}</span>
-                            <ChevronRight className="ml-auto size-4 text-slate-300" />
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        <Alert className="mt-4 border-gray-200">
-          <AlertTitle>Info</AlertTitle>
-          <AlertDescription>
-            Los valores son referenciales (promedios por empresa/ciudad) y
-            pueden variar por estación.
-          </AlertDescription>
-        </Alert>
-
-        {precioError ? (
-          <Alert className="mt-4" variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              <div className="flex items-center justify-between gap-3">
-                <span>{precioError}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      setPrecioLoading(true);
-                      setPrecioError(null);
-                      const data = await fetchPrecios(selectedCity);
-                      setPrecioData(data);
-                    } catch (e) {
-                      const message =
-                        e instanceof Error
-                          ? e.message
-                          : "Error desconocido al cargar precios";
-                      setPrecioError(message);
-                      setPrecioData(null);
-                    } finally {
-                      setPrecioLoading(false);
-                    }
-                  }}
-                >
-                  Reintentar
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        ) : null}
-
-        <div className="mt-6">
-          {precioLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Spinner />
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {empresas.map((e) => {
-                const brand = brandStyles[e.empresa] || {
-                  bg: "bg-muted",
-                  text: "text-foreground",
-                  label: e.empresa,
-                };
-                const score = priceScoreByEmpresa.get(e.empresa) ?? 50;
-                const scoreUI = getScoreUI(score);
-                return (
-                  <Card key={e.empresa} className="border-border">
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`${brand.bg} ${brand.text} flex h-11 w-11 items-center justify-center rounded-lg text-xs font-bold`}
-                          >
-                            {brand.label}
-                          </div>
-                          <div>
-                            <div className="font-semibold">
-                              {brand.label === e.empresa
-                                ? e.empresa
-                                : brand.label}
-                            </div>
-                            <div className="text-muted-foreground text-xs">
-                              {selectedCity}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div
-                          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${scoreUI.className}`}
-                        >
-                          {scoreUI.icon}
-                          {score}
-                        </div>
-                      </div>
-
-                      <div className="mt-4 divide-y divide-gray-200 ">
-                        {e.fuels.map((f) => (
-                          <button
-                            key={`${e.empresa}:${f.nombre}`}
-                            type="button"
-                            className="hover:bg-muted/40 flex w-full items-center justify-between gap-4 px-4 py-3 text-left"
-                          >
-                            <div className="min-w-0">
-                              <div className="truncate text-sm font-semibold">
-                                {f.nombre}
-                              </div>
-                              <div className="text-muted-foreground text-xs">
-                                {formatRelativeTimeEs(f.fecha_vigencia)}
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <div className="text-sm font-semibold whitespace-nowrap">
-                                ${f.precio.toLocaleString("es-AR")} /{" "}
-                                {getUnit(f.nombre)}
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 // ==================== UMBRALES POR VEHÍCULO ====================
 function UmbralesTab() {
   const [umbrales, setUmbrales] = useState([
@@ -1724,6 +1266,11 @@ function WhiteListTab() {
   );
 }
 
+void PersonalizacionTab;
+void PoliticasTab;
+void UmbralesTab;
+void AlertasTab;
+
 // ==================== PÁGINA PRINCIPAL ====================
 export default function SettingsPage() {
   const [tab, setTab] = useState("politicas");
@@ -1753,21 +1300,14 @@ export default function SettingsPage() {
         <TabsList className="mb-6 h-auto w-full flex-wrap justify-start gap-2 rounded-2xl bg-secondary/50 p-1.5">
           <TabsTrigger
             value="politicas"
-            className="h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            className=" hidden h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
             <Shield className="size-4" />
             Políticas
           </TabsTrigger>
           <TabsTrigger
-            value="precios"
-            className="h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
-          >
-            <Fuel className="size-4" />
-            Precios
-          </TabsTrigger>
-          <TabsTrigger
             value="umbrales"
-            className="h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            className="hidden h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
             <Car className="size-4" />
             Umbrales
@@ -1781,14 +1321,14 @@ export default function SettingsPage() {
           </TabsTrigger>
           <TabsTrigger
             value="alertas"
-            className="h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            className="hidden h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
             <Bell className="size-4" />
             Alertas
           </TabsTrigger>
           <TabsTrigger
             value="personalizacion"
-            className="h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            className="hidden h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
             <Palette className="size-4" />
             Personalización
@@ -1796,12 +1336,11 @@ export default function SettingsPage() {
         </TabsList>
       </Tabs>
 
-      {tab === "politicas" && <PoliticasTab />}
-      {tab === "precios" && <PreciosTab />}
-      {tab === "umbrales" && <UmbralesTab />}
+      {/* {tab === "politicas" && <PoliticasTab />} */}
+      {/* {tab === "umbrales" && <UmbralesTab />} */}
       {tab === "whitelist" && <WhiteListTab />}
-      {tab === "alertas" && <AlertasTab />}
-      {tab === "personalizacion" && <PersonalizacionTab />}
+      {/* {tab === "alertas" && <AlertasTab />} */}
+      {/* {tab === "personalizacion" && <PersonalizacionTab />} */}
     </div>
   );
 }
