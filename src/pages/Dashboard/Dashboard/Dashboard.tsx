@@ -197,13 +197,12 @@ function FuelPricesCard() {
         setSearchLoading(true);
         setSearchError(null);
 
-        const { data } = await axiosInstance.get<{ cities?: CiudadSearchItem[] }>(
-          "/naftaAPI/Search",
-          {
-            params: { q },
-            signal: controller.signal,
-          }
-        );
+        const { data } = await axiosInstance.get<{
+          cities?: CiudadSearchItem[];
+        }>("/naftaAPI/Search", {
+          params: { q },
+          signal: controller.signal,
+        });
         setSearchResults(data?.cities ?? []);
       } catch (e) {
         if (controller.signal.aborted) return;
@@ -234,7 +233,8 @@ function FuelPricesCard() {
         }
       );
       const cityKey = Object.keys(data ?? {})[0];
-      if (!cityKey || !data?.[cityKey]) throw new Error("Respuesta inválida de precios");
+      if (!cityKey || !data?.[cityKey])
+        throw new Error("Respuesta inválida de precios");
       return data[cityKey];
     },
     []
@@ -709,7 +709,7 @@ export default function Dashboard() {
           <FuelPricesCard />
 
           {/* Consumo por Tipo - Donut Chart */}
-          <Card className="lg:col-span-4">
+          <Card className="lg:col-span-4 h-fit">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg font-semibold">
                 Distribución
