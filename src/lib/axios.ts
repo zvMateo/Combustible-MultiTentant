@@ -25,8 +25,7 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
 // ============================================
 // CONFIGURACIÓN
 // ============================================
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://api.controlcombustible.com.ar/api";
+const API_BASE_URL = "https://api.controlcombustible.com.ar/api";
 const TIMEOUT = 30000;
 
 // ============================================
