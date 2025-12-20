@@ -35,6 +35,7 @@ export function useIaWhiteList(idCompany?: number, idBusinessUnit?: number) {
   return useQuery({
     queryKey: iaWhiteListKeys.list(idCompany, idBusinessUnit),
     queryFn: () => iaWhiteListApi.getAll(idCompany, idBusinessUnit),
+    enabled: typeof idCompany === "number" && Number.isFinite(idCompany),
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
@@ -53,7 +54,8 @@ export function useIaWhiteListContact(
   return useQuery({
     queryKey: iaWhiteListKeys.detail(id),
     queryFn: () => iaWhiteListApi.getById(id, idCompany, idBusinessUnit),
-    enabled: !!id,
+    enabled:
+      !!id && typeof idCompany === "number" && Number.isFinite(idCompany),
     staleTime: 1000 * 60 * 5,
   });
 }

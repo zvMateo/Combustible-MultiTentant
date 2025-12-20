@@ -46,17 +46,63 @@ export const companiesApi = {
    * Crear nueva empresa
    */
   async create(companyData: CreateCompanyRequest): Promise<Company> {
-    const response = await axiosInstance.post<Company>(
+    const response = await axiosInstance.post<unknown>(
       COMPANIES_ENDPOINTS.create,
       companyData
     );
 
-    if (
-      response.data &&
-      typeof response.data === "object" &&
-      "id" in response.data
-    ) {
-      return response.data;
+    const data = response.data as unknown;
+
+    const extractCompany = (value: unknown): Company | null => {
+      if (!value || typeof value !== "object") return null;
+
+      const v = value as Record<string, unknown>;
+
+      if (typeof v.id === "number") {
+        return v as unknown as Company;
+      }
+
+      // Algunos endpoints devuelven { data: { ... } } o { result: { ... } }
+      const nestedCandidates = [v.data, v.result, v.company];
+      for (const c of nestedCandidates) {
+        const nested = extractCompany(c);
+        if (nested) return nested;
+      }
+      return null;
+    };
+
+    const createdCompany = extractCompany(data);
+    if (createdCompany) {
+      return createdCompany;
+    }
+
+    const extractCompanyId = (value: unknown): number | null => {
+      if (typeof value === "number") return Number.isFinite(value) ? value : null;
+      if (typeof value === "string") {
+        const n = Number.parseInt(value, 10);
+        return Number.isFinite(n) ? n : null;
+      }
+      if (!value || typeof value !== "object") return null;
+
+      const v = value as Record<string, unknown>;
+      const candidates = [v.id, v.companyId, v.idCompany];
+      for (const c of candidates) {
+        const n = extractCompanyId(c);
+        if (typeof n === "number") return n;
+      }
+
+      const nestedCandidates = [v.data, v.result];
+      for (const c of nestedCandidates) {
+        const n = extractCompanyId(c);
+        if (typeof n === "number") return n;
+      }
+
+      return null;
+    };
+
+    const createdId = extractCompanyId(data);
+    if (createdId) {
+      return await this.getById(createdId);
     }
 
     await new Promise((resolve) => setTimeout(resolve, 500));

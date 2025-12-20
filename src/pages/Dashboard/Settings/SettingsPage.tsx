@@ -20,7 +20,6 @@ import { Card, CardContent } from "@/components/ui/card";
 // } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/common/PageHeader";
 import {
@@ -47,6 +46,7 @@ import {
   TriangleAlert,
   Users,
   Palette,
+  Loader2,
 } from "lucide-react";
 
 import {
@@ -61,6 +61,7 @@ import { toast } from "sonner";
 import { useTheme } from "@/components/providers/theme/use-theme";
 import { useAuthStore } from "@/stores/auth.store";
 import { useRoleLogic } from "@/hooks/useRoleLogic";
+import { useUnidadStore } from "@/stores/unidad.store";
 
 // ==================== PERSONALIZACIÓN ====================
 function PersonalizacionTab() {
@@ -995,12 +996,25 @@ function AlertasTab() {
   );
 }
 // ==================== WHITELIST DE IA ====================
-function WhiteListTab() {
+export function WhiteListTab() {
   const { user } = useAuthStore();
-  const { data: contacts, isLoading } = useIaWhiteList(
-    user?.idCompany,
-    user?.idBusinessUnit
-  );
+  const { unidadActiva } = useUnidadStore();
+
+  // 1. Obtener ID de Empresa
+  const idCompany =
+    typeof user?.idCompany === "number"
+      ? user.idCompany
+      : typeof user?.empresaId === "number"
+      ? user.empresaId
+      : undefined;
+  const idBusinessUnit =
+    typeof user?.idBusinessUnit === "number"
+      ? user.idBusinessUnit
+      : typeof unidadActiva?.id === "number"
+      ? unidadActiva.id
+      : 0;
+
+  const { data: contacts, isLoading } = useIaWhiteList(idCompany, undefined);
 
   const createContact = useCreateIaWhiteListContact();
   const updateContact = useUpdateIaWhiteListContact();
@@ -1021,8 +1035,8 @@ function WhiteListTab() {
       return;
     }
 
-    if (!user?.idCompany || !user?.idBusinessUnit) {
-      toast.error("No se pudo identificar la empresa/unidad");
+    if (typeof idCompany !== "number") {
+      toast.error("No se pudo identificar la empresa");
       return;
     }
 
@@ -1030,8 +1044,8 @@ function WhiteListTab() {
       {
         name: newContact.name,
         phoneNumber: newContact.phoneNumber,
-        idCompany: user.idCompany,
-        idBusinessUnit: user.idBusinessUnit,
+        idCompany,
+        idBusinessUnit,
       },
       {
         onSuccess: () => {
@@ -1055,8 +1069,8 @@ function WhiteListTab() {
       return;
     }
 
-    if (!user?.idCompany || !user?.idBusinessUnit) {
-      toast.error("No se pudo identificar la empresa/unidad");
+    if (typeof idCompany !== "number") {
+      toast.error("No se pudo identificar la empresa");
       return;
     }
 
@@ -1065,8 +1079,9 @@ function WhiteListTab() {
         id,
         name: editData.name,
         phoneNumber: editData.phoneNumber,
-        idCompany: user.idCompany,
-        idBusinessUnit: user.idBusinessUnit,
+        idCompany,
+        // Mantenemos la unidad actual (o podrías usar la original del contacto si viniera en el objeto contact)
+        idBusinessUnit,
       },
       {
         onSuccess: () => {
@@ -1103,7 +1118,7 @@ function WhiteListTab() {
         <div className="mt-4 overflow-x-auto">
           {isLoading ? (
             <div className="flex items-center justify-center gap-2 py-8">
-              <Spinner className="size-4" />
+              <Loader2 className="size-4 animate-spin" />
               <span className="text-sm text-muted-foreground">Cargando...</span>
             </div>
           ) : (
@@ -1196,7 +1211,8 @@ function WhiteListTab() {
                         {isEditing === contact.id ? (
                           <Button
                             type="button"
-                            size="icon-sm"
+                            size="icon" // Ajustado de 'icon-sm' a 'icon' estandar o usa una clase h-8 w-8
+                            className="h-8 w-8"
                             variant="outline"
                             onClick={() => handleUpdate(contact.id)}
                             disabled={updateContact.isPending}
@@ -1207,7 +1223,8 @@ function WhiteListTab() {
                         ) : (
                           <Button
                             type="button"
-                            size="icon-sm"
+                            size="icon"
+                            className="h-8 w-8"
                             variant="outline"
                             onClick={() => handleEdit(contact)}
                             aria-label="Editar"
@@ -1246,9 +1263,6 @@ function WhiteListTab() {
                 }
                 className="pl-9"
               />
-              <p className="text-muted-foreground mt-1 text-xs">
-                Formato: +5491123456789 (código país + área + número)
-              </p>
             </div>
             <Button
               type="button"
@@ -1256,7 +1270,7 @@ function WhiteListTab() {
               disabled={createContact.isPending}
               className="h-9"
             >
-              <Plus className="size-4" />
+              <Plus className="size-4 mr-2" />
               Agregar
             </Button>
           </div>

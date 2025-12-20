@@ -57,15 +57,13 @@ export const iaWhiteListApi = {
     idCompany?: number,
     idBusinessUnit?: number
   ): Promise<IaWhiteListContact[]> {
-    const params = new URLSearchParams();
-    if (idCompany !== undefined)
-      params.append("IdCompany", idCompany.toString());
-    if (idBusinessUnit !== undefined)
-      params.append("IdBusinessUnit", idBusinessUnit.toString());
+    const params: Record<string, number> = {};
+    if (typeof idCompany === "number") params.IdCompany = idCompany;
+    if (typeof idBusinessUnit === "number") params.IdBusinessUnit = idBusinessUnit;
 
-    const response = await axiosInstance.get<IaWhiteListContact[]>(
-      `${ENDPOINTS.getAll}?${params.toString()}`
-    );
+    const response = await axiosInstance.get<IaWhiteListContact[]>(ENDPOINTS.getAll, {
+      params,
+    });
     return response.data;
   },
 
@@ -77,16 +75,13 @@ export const iaWhiteListApi = {
     idCompany?: number,
     idBusinessUnit?: number
   ): Promise<IaWhiteListContact> {
-    const params = new URLSearchParams();
-    params.append("id", id.toString());
-    if (idCompany !== undefined)
-      params.append("IdCompany", idCompany.toString());
-    if (idBusinessUnit !== undefined)
-      params.append("IdBusinessUnit", idBusinessUnit.toString());
+    const params: Record<string, number> = { id };
+    if (typeof idCompany === "number") params.IdCompany = idCompany;
+    if (typeof idBusinessUnit === "number") params.IdBusinessUnit = idBusinessUnit;
 
-    const response = await axiosInstance.get<IaWhiteListContact>(
-      `${ENDPOINTS.getById}?${params.toString()}`
-    );
+    const response = await axiosInstance.get<IaWhiteListContact>(ENDPOINTS.getById, {
+      params,
+    });
     return response.data;
   },
 

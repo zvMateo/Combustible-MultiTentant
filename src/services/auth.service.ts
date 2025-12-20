@@ -76,11 +76,27 @@ function parseBusinessUnitId(claims: AuthClaimDto[]): number | null {
 }
 
 function parseRole(claims: AuthClaimDto[]): UserRole {
-  const role = getFirstClaimValue(
-    claims,
-    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+  const roleClaimType =
+    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+
+  const roleValues = getClaimValues(claims, roleClaimType);
+  const normalizedRoles = (roleValues.length ? roleValues : ["Operador"]).map(
+    (r) => normalizeRole(r)
   );
-  return normalizeRole(role ?? "Operador");
+
+  const priority: UserRole[] = [
+    "superadmin",
+    "admin",
+    "supervisor",
+    "auditor",
+    "operador",
+  ];
+
+  for (const p of priority) {
+    if (normalizedRoles.includes(p)) return p;
+  }
+
+  return "operador";
 }
 
 function parseUserName(claims: AuthClaimDto[], fallback: string): string {
@@ -171,9 +187,9 @@ class AuthService {
         email: credentials.userName, // El backend no devuelve email
         name: userName || credentials.userName,
         role: userRole,
-        idCompany: idCompany || undefined,
-        idBusinessUnit: idBusinessUnit || undefined,
-        empresaId: idCompany || null,
+        idCompany: idCompany ?? undefined,
+        idBusinessUnit: idBusinessUnit ?? undefined,
+        empresaId: idCompany ?? null,
         empresaNombre: undefined,
         empresaSubdomain: undefined,
         unidadesAsignadas: idBusinessUnit ? [idBusinessUnit] : [],
