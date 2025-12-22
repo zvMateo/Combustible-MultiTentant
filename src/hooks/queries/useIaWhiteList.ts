@@ -156,8 +156,8 @@ export function useToggleIaWhiteListContact() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, activate }: { id: number; activate: boolean }) => {
-      return iaWhiteListApi.toggleActive(id, activate);
+    mutationFn: ({ id }: { id: number; activate: boolean }) => {
+      return iaWhiteListApi.toggleActive(id);
     },
     onSuccess: (_, { id, activate }) => {
       toast.success(activate ? "Contacto activado" : "Contacto desactivado");

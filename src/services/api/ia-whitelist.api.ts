@@ -59,11 +59,15 @@ export const iaWhiteListApi = {
   ): Promise<IaWhiteListContact[]> {
     const params: Record<string, number> = {};
     if (typeof idCompany === "number") params.IdCompany = idCompany;
-    if (typeof idBusinessUnit === "number") params.IdBusinessUnit = idBusinessUnit;
+    if (typeof idBusinessUnit === "number")
+      params.IdBusinessUnit = idBusinessUnit;
 
-    const response = await axiosInstance.get<IaWhiteListContact[]>(ENDPOINTS.getAll, {
-      params,
-    });
+    const response = await axiosInstance.get<IaWhiteListContact[]>(
+      ENDPOINTS.getAll,
+      {
+        params,
+      }
+    );
     return response.data;
   },
 
@@ -77,11 +81,15 @@ export const iaWhiteListApi = {
   ): Promise<IaWhiteListContact> {
     const params: Record<string, number> = { id };
     if (typeof idCompany === "number") params.IdCompany = idCompany;
-    if (typeof idBusinessUnit === "number") params.IdBusinessUnit = idBusinessUnit;
+    if (typeof idBusinessUnit === "number")
+      params.IdBusinessUnit = idBusinessUnit;
 
-    const response = await axiosInstance.get<IaWhiteListContact>(ENDPOINTS.getById, {
-      params,
-    });
+    const response = await axiosInstance.get<IaWhiteListContact>(
+      ENDPOINTS.getById,
+      {
+        params,
+      }
+    );
     return response.data;
   },
 
@@ -107,24 +115,21 @@ export const iaWhiteListApi = {
     return response.data;
   },
   /**
-   * Activar un contacto
+   * Activar un contacto (mismo endpoint PATCH /IaWhiteList/Desactivate)
    */
   async activate(id: number): Promise<void> {
-    await axiosInstance.patch(`/IaWhiteList/Activate?id=${id}`);
+    await axiosInstance.patch(`${ENDPOINTS.desactivate}?id=${id}`);
   },
 
   /**
-   * Cambiar estado (toggle)
+   * Cambiar estado (toggle). El backend usa el mismo endpoint para activar/desactivar.
    */
-  async toggleActive(id: number, activate: boolean): Promise<void> {
-    const endpoint = activate
-      ? "/IaWhiteList/Activate"
-      : "/IaWhiteList/Desactivate";
-    await axiosInstance.patch(`${endpoint}?id=${id}`);
+  async toggleActive(id: number): Promise<void> {
+    await axiosInstance.patch(`${ENDPOINTS.desactivate}?id=${id}`);
   },
 
   /**
-   * Desactivar un contacto (soft delete)
+   * Desactivar un contacto (mismo endpoint PATCH /IaWhiteList/Desactivate)
    */
   async desactivate(id: number): Promise<void> {
     await axiosInstance.patch(`${ENDPOINTS.desactivate}?id=${id}`);
