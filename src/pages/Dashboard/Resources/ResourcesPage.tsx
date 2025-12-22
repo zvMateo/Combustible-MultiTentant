@@ -201,12 +201,7 @@ export default function ResourcesPage() {
     }
 
     return filtered;
-  }, [
-    allResources,
-    searchTerm,
-    unidadIdsFilter,
-    filterType,
-  ]);
+  }, [allResources, searchTerm, unidadIdsFilter, filterType]);
 
   // Obtener tipos de recursos que no sean vehículos
   const nonVehicleTypes = useMemo(() => {
@@ -289,6 +284,14 @@ export default function ResourcesPage() {
     }
     if (!formData.idType || formData.idType === 0) {
       newErrors.idType = "Debe seleccionar un tipo de recurso";
+    }
+
+    if (
+      typeof formData.initialLiters === "number" &&
+      Number.isFinite(formData.initialLiters) &&
+      formData.initialLiters < 0
+    ) {
+      newErrors.initialLiters = "Los litros iniciales no pueden ser negativos";
     }
 
     setErrors(newErrors);
@@ -433,7 +436,8 @@ export default function ResourcesPage() {
         await createResourceTypeMutation.mutateAsync({
           ...resourceTypeFormData,
           idCompany: idCompany,
-          idBusinessUnit: resourceTypeFormData.idBusinessUnit ?? defaultBusinessUnitId,
+          idBusinessUnit:
+            resourceTypeFormData.idBusinessUnit ?? defaultBusinessUnitId,
         });
       }
       setOpenResourceTypeFormDialog(false);
@@ -816,16 +820,15 @@ export default function ResourcesPage() {
                 onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    idBusinessUnit:
-                      value === "none" ? null : Number(value),
+                    idBusinessUnit: value === "none" ? null : Number(value),
                   })
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Sin asignar" />
+                  <SelectValue placeholder="Todas las unidades" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Sin asignar</SelectItem>
+                  <SelectItem value="none">Todas las unidades</SelectItem>
                   {(() => {
                     const companyIdToFilter =
                       formData.idCompany && formData.idCompany !== 0
@@ -897,6 +900,36 @@ export default function ResourcesPage() {
                   L
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Litros iniciales / actuales
+              </label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.initialLiters ?? ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      initialLiters: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
+                    })
+                  }
+                  aria-invalid={!!errors.initialLiters}
+                />
+                <div className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                  L
+                </div>
+              </div>
+              {errors.initialLiters ? (
+                <p className="text-destructive text-xs">
+                  {errors.initialLiters}
+                </p>
+              ) : null}
             </div>
           </div>
 

@@ -18,6 +18,13 @@ import { Card, CardContent } from "@/components/ui/card";
 //   DialogHeader,
 //   DialogTitle,
 // } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -30,9 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Bell,
   Camera,
   Car,
   MapPin,
@@ -42,10 +47,8 @@ import {
   Plus,
   Receipt,
   Save,
-  Shield,
   TriangleAlert,
   Users,
-  Palette,
   Loader2,
 } from "lucide-react";
 
@@ -1029,6 +1032,8 @@ export function WhiteListTab() {
     phoneNumber: "",
   });
 
+  const [openCreate, setOpenCreate] = useState(false);
+
   const handleCreate = () => {
     if (!newContact.name || !newContact.phoneNumber) {
       toast.error("Complete todos los campos");
@@ -1050,6 +1055,7 @@ export function WhiteListTab() {
       {
         onSuccess: () => {
           setNewContact({ name: "", phoneNumber: "" });
+          setOpenCreate(false);
         },
       }
     );
@@ -1098,12 +1104,24 @@ export function WhiteListTab() {
   return (
     <Card className="border-border">
       <CardContent className="pt-6">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold">WhiteList de IA</h2>
-          <p className="text-muted-foreground text-sm">
-            Números de teléfono autorizados para interactuar con el bot de
-            WhatsApp/IA
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">WhiteList de IA</h2>
+            <p className="text-muted-foreground text-sm">
+              Números de teléfono autorizados para interactuar con el bot de
+              WhatsApp/IA
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            onClick={() => setOpenCreate(true)}
+            disabled={createContact.isPending}
+            className="h-9"
+          >
+            <Plus className="size-4 mr-2" />
+            Agregar
+          </Button>
         </div>
 
         <Alert className="mt-4">
@@ -1241,40 +1259,63 @@ export function WhiteListTab() {
           )}
         </div>
 
-        <Separator className="my-6" />
+        <Dialog
+          open={openCreate}
+          onOpenChange={(o) => {
+            setOpenCreate(o);
+            if (!o) setNewContact({ name: "", phoneNumber: "" });
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Agregar contacto a WhiteList IA</DialogTitle>
+            </DialogHeader>
 
-        <div className="space-y-2">
-          <div className="text-sm font-medium">Agregar Nuevo Contacto</div>
-          <div className="grid gap-2 md:grid-cols-[1.2fr_1.5fr_auto] md:items-center">
-            <Input
-              placeholder="Nombre"
-              value={newContact.name}
-              onChange={(e) =>
-                setNewContact({ ...newContact, name: e.target.value })
-              }
-            />
-            <div className="relative">
-              <Phone className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
-              <Input
-                placeholder="+5491123456789"
-                value={newContact.phoneNumber}
-                onChange={(e) =>
-                  setNewContact({ ...newContact, phoneNumber: e.target.value })
-                }
-                className="pl-9"
-              />
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nombre</label>
+                <Input
+                  placeholder="Nombre"
+                  value={newContact.name}
+                  onChange={(e) =>
+                    setNewContact({ ...newContact, name: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Número de teléfono</label>
+                <div className="relative">
+                  <Phone className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+                  <Input
+                    placeholder="+5491123456789"
+                    value={newContact.phoneNumber}
+                    onChange={(e) =>
+                      setNewContact({
+                        ...newContact,
+                        phoneNumber: e.target.value,
+                      })
+                    }
+                    className="pl-9"
+                  />
+                </div>
+              </div>
             </div>
-            <Button
-              type="button"
-              onClick={handleCreate}
-              disabled={createContact.isPending}
-              className="h-9"
-            >
-              <Plus className="size-4 mr-2" />
-              Agregar
-            </Button>
-          </div>
-        </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpenCreate(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleCreate}
+                disabled={createContact.isPending}
+              >
+                {createContact.isPending ? "Guardando..." : "Agregar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
@@ -1287,7 +1328,6 @@ void AlertasTab;
 
 // ==================== PÁGINA PRINCIPAL ====================
 export default function SettingsPage() {
-  const [tab, setTab] = useState("politicas");
   const { canManageSettings } = useRoleLogic();
   const { hasPermission } = useAuthStore();
   const canEdit = hasPermission("configuracion:editar") && canManageSettings;
@@ -1310,51 +1350,7 @@ export default function SettingsPage() {
         </Alert>
       ) : null}
 
-      <Tabs value={tab} onValueChange={setTab} className="w-full">
-        <TabsList className="mb-6 h-auto w-full flex-wrap justify-start gap-2 rounded-2xl bg-secondary/50 p-1.5">
-          <TabsTrigger
-            value="politicas"
-            className=" hidden h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
-          >
-            <Shield className="size-4" />
-            Políticas
-          </TabsTrigger>
-          <TabsTrigger
-            value="umbrales"
-            className="hidden h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
-          >
-            <Car className="size-4" />
-            Umbrales
-          </TabsTrigger>
-          <TabsTrigger
-            value="whitelist"
-            className="h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
-          >
-            <Users className="size-4" />
-            WhiteList IA
-          </TabsTrigger>
-          <TabsTrigger
-            value="alertas"
-            className="hidden h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
-          >
-            <Bell className="size-4" />
-            Alertas
-          </TabsTrigger>
-          <TabsTrigger
-            value="personalizacion"
-            className="hidden h-10 gap-2 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm"
-          >
-            <Palette className="size-4" />
-            Personalización
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {/* {tab === "politicas" && <PoliticasTab />} */}
-      {/* {tab === "umbrales" && <UmbralesTab />} */}
-      {tab === "whitelist" && <WhiteListTab />}
-      {/* {tab === "alertas" && <AlertasTab />} */}
-      {/* {tab === "personalizacion" && <PersonalizacionTab />} */}
+      <WhiteListTab />
     </div>
   );
 }
