@@ -1,5 +1,5 @@
 // src/pages/Dashboard/Fuel/tabs/StockMovementsTab.tsx
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ import {
   useCreateFuelStockMovement,
   useUpdateFuelStockMovement,
   useResources,
+  useResource,
   useFuelTypes,
   useMovementTypes,
   useBusinessUnits,
@@ -75,6 +76,8 @@ export default function StockMovementsTab() {
   const [editingMovement, setEditingMovement] =
     useState<FuelStockMovement | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedResourceId, setSelectedResourceId] = useState<number>(0);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const form = useZodForm<CreateFuelStockMovementFormData>(
     createFuelStockMovementSchema,
@@ -94,6 +97,7 @@ export default function StockMovementsTab() {
   // React Query hooks
   const { data: movements = [], isLoading, error } = useFuelStockMovements();
   const { data: resources = [] } = useResources();
+  const { data: selectedResource } = useResource(selectedResourceId);
   const { data: fuelTypes = [] } = useFuelTypes();
   const { data: movementTypes = [] } = useMovementTypes();
   const { data: businessUnits = [] } = useBusinessUnits();
@@ -126,6 +130,21 @@ export default function StockMovementsTab() {
   };
   const createMutation = useCreateFuelStockMovement();
   const updateMutation = useUpdateFuelStockMovement();
+
+  useEffect(() => {
+    if (!openDialog) {
+      setValidationError(null);
+      return;
+    }
+
+    if (editingMovement) {
+      setSelectedResourceId(editingMovement.idResource);
+      return;
+    }
+
+    const currentResourceId = form.getValues("idResource");
+    if (currentResourceId) setSelectedResourceId(currentResourceId);
+  }, [editingMovement, form, openDialog]);
 
   // Filtrar movimientos
   const filteredMovements = useMemo(() => {
@@ -169,6 +188,7 @@ export default function StockMovementsTab() {
 
   const handleNew = () => {
     setEditingMovement(null);
+    setValidationError(null);
     form.reset({
       idFuelType: fuelTypes[0]?.id || 0,
       idResource: resources[0]?.id || 0,
@@ -178,11 +198,14 @@ export default function StockMovementsTab() {
       idBusinessUnit: businessUnitId,
       liters: 0,
     });
+    setSelectedResourceId(resources[0]?.id || 0);
     setOpenDialog(true);
   };
 
   const handleEdit = (movement: FuelStockMovement) => {
     setEditingMovement(movement);
+    setValidationError(null);
+    setSelectedResourceId(movement.idResource);
     form.reset({
       idFuelType: movement.idFuelType,
       idResource: movement.idResource,
@@ -199,6 +222,23 @@ export default function StockMovementsTab() {
     const finalIdCompany = idCompany || user?.idCompany || user?.empresaId || 0;
     const finalIdBusinessUnit =
       data.idBusinessUnit ?? businessUnitId;
+
+    setValidationError(null);
+
+    const resourceStock = selectedResource?.initialLiters ?? 0;
+    const isEditingSameResource =
+      !!editingMovement && editingMovement.idResource === data.idResource;
+    const stockBeforeEditedMovement = isEditingSameResource
+      ? resourceStock + (editingMovement?.liters ?? 0)
+      : resourceStock;
+    const nextStock = stockBeforeEditedMovement - data.liters;
+
+    if (nextStock < 0) {
+      setValidationError(
+        `No se puede guardar el movimiento: el recurso quedaría con ${nextStock} L. Disponible: ${stockBeforeEditedMovement} L.`
+      );
+      return;
+    }
 
     try {
       if (editingMovement) {
@@ -395,6 +435,8 @@ export default function StockMovementsTab() {
           setOpenDialog(open);
           if (!open) {
             setEditingMovement(null);
+            setSelectedResourceId(0);
+            setValidationError(null);
             form.reset();
           }
         }}
@@ -407,6 +449,14 @@ export default function StockMovementsTab() {
                 : "Nuevo Movimiento de Stock"}
             </DialogTitle>
           </DialogHeader>
+
+          {validationError ? (
+            <Alert variant="destructive">
+              <TriangleAlert className="size-4" />
+              <AlertTitle>Error de validación</AlertTitle>
+              <AlertDescription>{validationError}</AlertDescription>
+            </Alert>
+          ) : null}
 
           <form
             onSubmit={form.handleSubmit(onSubmit)}
@@ -479,9 +529,11 @@ export default function StockMovementsTab() {
               <label className="text-sm font-medium">Recurso *</label>
               <Select
                 value={String(form.watch("idResource") || "")}
-                onValueChange={(value) =>
-                  form.setValue("idResource", Number(value))
-                }
+                onValueChange={(value) => {
+                  const nextId = Number(value);
+                  form.setValue("idResource", nextId);
+                  setSelectedResourceId(nextId);
+                }}
               >
                 <SelectTrigger
                   aria-invalid={!!form.formState.errors.idResource}

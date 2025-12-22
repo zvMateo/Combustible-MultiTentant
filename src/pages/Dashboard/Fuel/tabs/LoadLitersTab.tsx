@@ -74,6 +74,7 @@ export default function LoadLitersTab() {
   const [editingLoad, setEditingLoad] = useState<LoadLiters | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedResourceId, setSelectedResourceId] = useState<number>(0);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const form = useZodForm<CreateLoadLitersFormData>(createLoadLitersSchema, {
     defaultValues: {
@@ -102,8 +103,31 @@ export default function LoadLitersTab() {
     if (selectedResource && !editingLoad) {
       const resourceInitialLiters = selectedResource.initialLiters ?? 0;
       form.setValue("initialLiters", resourceInitialLiters);
+      form.setValue("finalLiters", resourceInitialLiters + (form.getValues("totalLiters") ?? 0));
     }
   }, [selectedResource, editingLoad, form]);
+
+  useEffect(() => {
+    if (!openDialog || editingLoad) return;
+
+    const currentResourceId = form.getValues("idResource");
+    if ((!currentResourceId || currentResourceId === 0) && resources.length > 0) {
+      const nextResourceId = resources[0]?.id || 0;
+      form.setValue("idResource", nextResourceId);
+      setSelectedResourceId(nextResourceId);
+    }
+
+    const currentFuelTypeId = form.getValues("idFuelType");
+    if ((!currentFuelTypeId || currentFuelTypeId === 0) && fuelTypes.length > 0) {
+      form.setValue("idFuelType", fuelTypes[0]?.id || 0);
+    }
+  }, [editingLoad, fuelTypes, form, openDialog, resources]);
+
+  useEffect(() => {
+    if (!openDialog) {
+      setValidationError(null);
+    }
+  }, [openDialog]);
 
   // Helper para obtener nombre de ubicación (BU o Company)
   const getLocationName = (load: LoadLiters): string => {
@@ -150,6 +174,7 @@ export default function LoadLitersTab() {
 
   const handleNew = () => {
     setEditingLoad(null);
+    setValidationError(null);
     const firstResourceId = resources[0]?.id || 0;
     setSelectedResourceId(firstResourceId);
     form.reset({
@@ -167,6 +192,7 @@ export default function LoadLitersTab() {
 
   const handleEdit = (load: LoadLiters) => {
     setEditingLoad(load);
+    setValidationError(null);
     setSelectedResourceId(load.idResource);
     const inferredBusinessUnitId =
       load.resource?.idBusinessUnit ??
@@ -186,6 +212,18 @@ export default function LoadLitersTab() {
   };
 
   const onSubmit = async (data: CreateLoadLitersFormData) => {
+    setValidationError(null);
+
+    const resourceInitial = selectedResource?.initialLiters ?? data.initialLiters ?? 0;
+    const calculatedFinal = resourceInitial + (data.totalLiters ?? 0);
+
+    if (resourceInitial < 0 || calculatedFinal < 0) {
+      setValidationError(
+        `No se puede guardar la carga: el recurso quedaría con ${calculatedFinal} L. Stock actual: ${resourceInitial} L.`
+      );
+      return;
+    }
+
     try {
       if (editingLoad) {
         const updateData: UpdateLoadLitersRequest = {
@@ -193,8 +231,8 @@ export default function LoadLitersTab() {
           idResource: data.idResource,
           idBusinessUnit: data.idBusinessUnit,
           loadDate: new Date(data.loadDate).toISOString(),
-          initialLiters: data.initialLiters,
-          finalLiters: data.finalLiters,
+          initialLiters: resourceInitial,
+          finalLiters: calculatedFinal,
           totalLiters: data.totalLiters,
           detail: data.detail,
           idFuelType: data.idFuelType,
@@ -208,6 +246,8 @@ export default function LoadLitersTab() {
           ...data,
           idBusinessUnit: data.idBusinessUnit ?? businessUnitId,
           loadDate: new Date(data.loadDate).toISOString(),
+          initialLiters: resourceInitial,
+          finalLiters: calculatedFinal,
         });
       }
       setOpenDialog(false);
@@ -381,6 +421,8 @@ export default function LoadLitersTab() {
           setOpenDialog(open);
           if (!open) {
             setEditingLoad(null);
+            setSelectedResourceId(0);
+            setValidationError(null);
             form.reset();
           }
         }}
@@ -392,10 +434,45 @@ export default function LoadLitersTab() {
             </DialogTitle>
           </DialogHeader>
 
+          {validationError ? (
+            <Alert variant="destructive">
+              <TriangleAlert className="size-4" />
+              <AlertTitle>Error de validación</AlertTitle>
+              <AlertDescription>{validationError}</AlertDescription>
+            </Alert>
+          ) : null}
+
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            id="load-liters-form"
+            onSubmit={form.handleSubmit(onSubmit, () => {
+              const errors = form.formState.errors;
+              const firstError = Object.values(errors)[0];
+              const message =
+                typeof firstError?.message === "string" && firstError.message
+                  ? firstError.message
+                  : "Revisá los campos obligatorios antes de guardar.";
+              setValidationError(message);
+            })}
             className="grid gap-4 sm:grid-cols-2"
           >
+            <input type="hidden" {...form.register("idResource", { valueAsNumber: true })} />
+            <input
+              type="hidden"
+              {...form.register("idBusinessUnit", { valueAsNumber: true })}
+            />
+            <input type="hidden" {...form.register("idFuelType", { valueAsNumber: true })} />
+            <input
+              type="hidden"
+              {...form.register("initialLiters", { valueAsNumber: true })}
+            />
+            <input
+              type="hidden"
+              {...form.register("finalLiters", { valueAsNumber: true })}
+            />
+            <input
+              type="hidden"
+              {...form.register("totalLiters", { valueAsNumber: true })}
+            />
             <div className="space-y-2">
               <label className="text-sm font-medium">Recurso *</label>
               <Select
@@ -404,6 +481,7 @@ export default function LoadLitersTab() {
                   const resourceId = Number(value);
                   setSelectedResourceId(resourceId);
                   form.setValue("idResource", resourceId);
+                  setValidationError(null);
                 }}
               >
                 <SelectTrigger
@@ -492,6 +570,7 @@ export default function LoadLitersTab() {
                       "finalLiters",
                       form.watch("initialLiters") + litrosCargados
                     );
+                    setValidationError(null);
                   }}
                   aria-invalid={!!form.formState.errors.totalLiters}
                 />
@@ -555,28 +634,27 @@ export default function LoadLitersTab() {
               <label className="text-sm font-medium">Detalle (opcional)</label>
               <Textarea {...form.register("detail")} rows={2} />
             </div>
-          </form>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpenDialog(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={createMutation.isPending || updateMutation.isPending}
-            >
-              {createMutation.isPending || updateMutation.isPending
-                ? "Guardando..."
-                : editingLoad
-                ? "Guardar Cambios"
-                : "Crear Carga"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="sm:col-span-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpenDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {createMutation.isPending || updateMutation.isPending
+                  ? "Guardando..."
+                  : editingLoad
+                  ? "Guardar Cambios"
+                  : "Crear Carga"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </SectionCard>
