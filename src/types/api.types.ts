@@ -235,6 +235,8 @@ export interface UpdateResourceRequest extends CreateResourceRequest {
 export interface FuelType {
   id: number;
   name: string;
+  fuelCompany?: string;
+  price?: number;
   active?: boolean;
   idCompany?: number | null;
   idBusinessUnit?: number | null;
@@ -242,6 +244,8 @@ export interface FuelType {
 
 export interface CreateFuelTypeRequest {
   name: string;
+  fuelCompany: string;
+  price: number;
   idCompany: number;
   idBusinessUnit?: number | null;
 }
@@ -283,6 +287,8 @@ export interface FuelStockMovement {
   idCompany: number;
   idBusinessUnit?: number;
   liters: number;
+  fuelPriceAtMoment?: number;
+  totalCost?: number;
   fuelType?: FuelType;
   resource?: Resource;
   movementType?: MovementType;
@@ -314,6 +320,8 @@ export interface LoadLiters {
   initialLiters: number;
   finalLiters: number;
   totalLiters: number;
+  fuelPriceAtMoment?: number;
+  totalCost?: number;
   detail?: string;
   idFuelType: number;
   nameFuelType?: string | null; // Nombre del tipo de combustible desde la API

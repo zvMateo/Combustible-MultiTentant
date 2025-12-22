@@ -49,13 +49,15 @@ import axiosInstance from "@/lib/axios";
 
 import {
   useLoadLitersScoped,
+  useFuelStockMovements,
   useDrivers,
   loadLitersKeys,
+  fuelStockMovementKeys,
   resourcesKeys,
   driversKeys,
 } from "@/hooks/queries";
 import { useUnidadActivaNombre, useUnidadActiva } from "@/stores/unidad.store";
-import type { Driver, LoadLiters } from "@/types/api.types";
+import type { Driver, FuelStockMovement, LoadLiters } from "@/types/api.types";
 import { toast } from "sonner";
 
 const COLORS = [
@@ -547,6 +549,8 @@ export default function Dashboard() {
   const unidadActiva = useUnidadActiva();
 
   const { data: loadsData, isLoading: loadingLoads } = useLoadLitersScoped();
+  const { data: movementsData, isLoading: loadingMovements } =
+    useFuelStockMovements();
   const { data: driversData, isLoading: loadingChoferes } = useDrivers();
 
   const toArray = <T,>(value: unknown): T[] => {
@@ -561,30 +565,91 @@ export default function Dashboard() {
     () => toArray<LoadLiters>(loadsData),
     [loadsData]
   );
+  const movements = useMemo<FuelStockMovement[]>(
+    () => toArray<FuelStockMovement>(movementsData),
+    [movementsData]
+  );
   const drivers = useMemo<Driver[]>(
     () => toArray<Driver>(driversData),
     [driversData]
   );
 
+  const rangeStart = useMemo(() => {
+    const now = new Date();
+    const d = new Date(now);
+    if (periodo === "semana") d.setDate(d.getDate() - 7);
+    else if (periodo === "mes") d.setMonth(d.getMonth() - 1);
+    else d.setFullYear(d.getFullYear() - 1);
+    return d;
+  }, [periodo]);
+
+  const loadsInRange = useMemo(() => {
+    return loads.filter((l) => {
+      const dt = new Date(l.loadDate);
+      return Number.isFinite(dt.getTime()) && dt >= rangeStart;
+    });
+  }, [loads, rangeStart]);
+
+  const movementsInRange = useMemo(() => {
+    return movements.filter((m) => {
+      const dt = new Date(m.date);
+      return Number.isFinite(dt.getTime()) && dt >= rangeStart;
+    });
+  }, [movements, rangeStart]);
+
   // Cálculos de Resumen
   const totalLiters = useMemo(
-    () => loads.reduce((sum, l) => sum + (l.totalLiters || 0), 0),
-    [loads]
+    () => loadsInRange.reduce((sum, l) => sum + (l.totalLiters || 0), 0),
+    [loadsInRange]
+  );
+
+  const totalCostLoads = useMemo(() => {
+    return loadsInRange.reduce((sum, l) => {
+      const cost =
+        typeof l.totalCost === "number"
+          ? l.totalCost
+          : typeof l.fuelPriceAtMoment === "number"
+          ? l.fuelPriceAtMoment * (l.totalLiters || 0)
+          : typeof l.fuelType?.price === "number"
+          ? l.fuelType.price * (l.totalLiters || 0)
+          : 0;
+      return sum + (Number.isFinite(cost) ? cost : 0);
+    }, 0);
+  }, [loadsInRange]);
+
+  const totalCostMovements = useMemo(() => {
+    return movementsInRange.reduce((sum, m) => {
+      const cost =
+        typeof m.totalCost === "number"
+          ? m.totalCost
+          : typeof m.fuelPriceAtMoment === "number"
+          ? m.fuelPriceAtMoment * (m.liters || 0)
+          : typeof m.fuelType?.price === "number"
+          ? m.fuelType.price * (m.liters || 0)
+          : 0;
+      return sum + (Number.isFinite(cost) ? cost : 0);
+    }, 0);
+  }, [movementsInRange]);
+
+  const totalCost = useMemo(
+    () => totalCostLoads + totalCostMovements,
+    [totalCostLoads, totalCostMovements]
   );
 
   const consumoPorTipo = useMemo(() => {
     const map: Record<string, number> = {};
-    loads.forEach((l) => {
+    loadsInRange.forEach((l) => {
       const tipo = l.resource?.resourceType?.name || "Otros";
       map[tipo] = (map[tipo] || 0) + (l.totalLiters || 0);
     });
     return Object.entries(map)
       .map(([tipo, litros]) => ({ tipo, litros }))
       .sort((a, b) => b.litros - a.litros);
-  }, [loads]);
+  }, [loadsInRange]);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: loadLitersKeys.all });
+    queryClient.invalidateQueries({ queryKey: fuelStockMovementKeys.all });
     queryClient.invalidateQueries({ queryKey: resourcesKeys.all });
     queryClient.invalidateQueries({ queryKey: driversKeys.all });
   };
@@ -640,12 +705,12 @@ export default function Dashboard() {
           />
           <KPICard
             label="Costo Total"
-            value={`$ ${(totalLiters * 850).toLocaleString()}`}
+            value={`$ ${Math.round(totalCost).toLocaleString("es-AR")}`}
             change="8%"
             trend="up"
             icon={DollarSign}
             color="#10b981"
-            loading={loadingLoads}
+            loading={loadingLoads || loadingMovements}
           />
           <KPICard
             label="Choferes"

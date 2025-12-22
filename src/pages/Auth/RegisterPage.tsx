@@ -4,7 +4,8 @@ import { useAuthStore } from "@/stores/auth.store";
 import { toast } from "sonner";
 import { companiesApi } from "@/services/api/companies.api";
 import { usersApi } from "@/services/api/users.api";
-import { getErrorMessage } from "@/lib/axios";
+import { movementTypesApi } from "@/services/api/movement-types.api";
+import axiosInstance, { getErrorMessage, tokenStorage } from "@/lib/axios";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -139,6 +140,37 @@ export default function RegisterPage() {
         idCompany: newCompany.id,
         phoneNumber: formData.adminPhoneNumber || "",
       });
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const loginResponse = await axiosInstance.post<{ token?: string }>(
+        "/Auth/Login",
+        {
+          userName: formData.adminUserName,
+          password: formData.adminPassword,
+        }
+      );
+
+      const token = loginResponse.data?.token;
+      if (!token) throw new Error("No se pudo obtener token para inicializar la empresa");
+      tokenStorage.setToken(token, false);
+
+      try {
+        await Promise.all([
+          movementTypesApi.create({
+            name: "Carga",
+            idCompany: newCompany.id,
+            idBusinessUnit: 0,
+          }),
+          movementTypesApi.create({
+            name: "Descarga",
+            idCompany: newCompany.id,
+            idBusinessUnit: 0,
+          }),
+        ]);
+      } finally {
+        tokenStorage.clearTokens();
+      }
 
       setSuccess(true);
       toast.success("¡Registro exitoso!");

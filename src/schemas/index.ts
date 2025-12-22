@@ -176,6 +176,8 @@ export const updateResourceSchema = createResourceSchema.extend({
 // ============================================
 export const createFuelTypeSchema = z.object({
   name: requiredString.max(50, msg.maxLength(50)),
+  fuelCompany: requiredString.max(80, msg.maxLength(80)),
+  price: z.number().min(0, msg.positive),
   idCompany: requiredId,
   idBusinessUnit: optionalNullableId,
 });
