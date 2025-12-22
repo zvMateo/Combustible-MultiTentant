@@ -66,6 +66,11 @@ const movementTypeToFormData = (
   idBusinessUnit: type.idBusinessUnit ?? undefined,
 });
 
+const isProtectedMovementType = (name: string): boolean => {
+  const normalized = name.trim().toLowerCase();
+  return normalized === "carga" || normalized === "descarga";
+};
+
 // ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
@@ -133,6 +138,7 @@ export default function MovementTypesTab() {
   };
 
   const handleToggleClick = (type: MovementType) => {
+    if (isProtectedMovementType(type.name)) return;
     setToggleType(type);
     setOpenToggleDialog(true);
   };
@@ -225,8 +231,11 @@ export default function MovementTypesTab() {
                           type="button"
                           variant="outline"
                           size="icon"
-                          onClick={() => crud.handleEdit(type)}
-                          disabled={crud.isSaving}
+                          onClick={() => {
+                            if (isProtectedMovementType(type.name)) return;
+                            crud.handleEdit(type);
+                          }}
+                          disabled={crud.isSaving || isProtectedMovementType(type.name)}
                           aria-label="Editar"
                         >
                           <Pencil className="size-4" />
@@ -234,7 +243,10 @@ export default function MovementTypesTab() {
                         <Switch
                           checked={type.active !== false}
                           onCheckedChange={() => handleToggleClick(type)}
-                          disabled={deactivateMutation.isPending}
+                          disabled={
+                            deactivateMutation.isPending ||
+                            isProtectedMovementType(type.name)
+                          }
                           aria-label={
                             type.active !== false ? "Desactivar" : "Activar"
                           }

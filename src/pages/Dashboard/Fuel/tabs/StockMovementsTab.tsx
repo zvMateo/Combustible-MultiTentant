@@ -374,7 +374,9 @@ export default function StockMovementsTab() {
                   <TableHead>Recurso</TableHead>
                   <TableHead>Tipo Movimiento</TableHead>
                   <TableHead>Empresa</TableHead>
+                  <TableHead className="text-right">Precio</TableHead>
                   <TableHead className="text-right">Litros</TableHead>
+                  <TableHead className="text-right">Costo</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -407,7 +409,27 @@ export default function StockMovementsTab() {
                     </TableCell>
                     <TableCell>{getLocationName(movement)}</TableCell>
                     <TableCell className="text-right">
-                      <Badge variant="secondary">{movement.liters} L</Badge>
+                      {typeof movement.fuelPriceAtMoment === "number"
+                        ? `$${movement.fuelPriceAtMoment.toLocaleString("es-AR")}`
+                        : typeof movement.fuelType?.price === "number"
+                        ? `$${movement.fuelType.price.toLocaleString("es-AR")}`
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {movement.liters.toLocaleString("es-AR")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {typeof movement.totalCost === "number"
+                        ? `$${movement.totalCost.toLocaleString("es-AR")}`
+                        : typeof movement.fuelPriceAtMoment === "number"
+                        ? `$${(movement.liters * movement.fuelPriceAtMoment).toLocaleString(
+                            "es-AR"
+                          )}`
+                        : typeof movement.fuelType?.price === "number"
+                        ? `$${(movement.liters * movement.fuelType.price).toLocaleString(
+                            "es-AR"
+                          )}`
+                        : "-"}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

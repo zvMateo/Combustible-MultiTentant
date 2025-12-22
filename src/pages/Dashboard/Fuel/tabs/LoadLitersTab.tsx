@@ -370,6 +370,8 @@ export default function LoadLitersTab() {
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Combustible</TableHead>
                   <TableHead>Unidad/Empresa</TableHead>
+                  <TableHead className="text-right">Precio</TableHead>
+                  <TableHead className="text-right">Costo</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -395,6 +397,20 @@ export default function LoadLitersTab() {
                       {load.nameFuelType || load.fuelType?.name || "-"}
                     </TableCell>
                     <TableCell>{getLocationName(load)}</TableCell>
+                    <TableCell className="text-right">
+                      {typeof load.fuelPriceAtMoment === "number"
+                        ? `$${load.fuelPriceAtMoment.toLocaleString("es-AR")}`
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {typeof load.totalCost === "number"
+                        ? `$${load.totalCost.toLocaleString("es-AR")}`
+                        : typeof load.fuelPriceAtMoment === "number"
+                        ? `$${(load.totalLiters * load.fuelPriceAtMoment).toLocaleString(
+                            "es-AR"
+                          )}`
+                        : "-"}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button
                         type="button"
