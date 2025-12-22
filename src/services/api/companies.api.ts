@@ -139,5 +139,3 @@ export const companiesApi = {
     });
   },
 };
-
-export default companiesApi;

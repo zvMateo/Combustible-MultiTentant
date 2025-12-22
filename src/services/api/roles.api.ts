@@ -120,5 +120,3 @@ export const userRolesApi = {
     );
   },
 };
-
-export default rolesApi;

@@ -76,5 +76,3 @@ export const movementTypesApi = {
     );
   },
 };
-
-export default movementTypesApi;

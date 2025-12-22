@@ -76,5 +76,3 @@ export const tripsApi = {
     return data;
   },
 };
-
-export default tripsApi;

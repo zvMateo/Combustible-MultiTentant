@@ -89,5 +89,3 @@ export const usersApi = {
     await axiosInstance.put(USERS_ENDPOINTS.changePassword(userId), passwords);
   },
 };
-
-export default usersApi;

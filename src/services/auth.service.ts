@@ -46,7 +46,6 @@ function normalizeRole(apiRoleName: string): UserRole {
   }
 
   // Por defecto, operador (menor privilegio)
-  console.warn(`⚠️ Rol desconocido: "${apiRoleName}", asignando "operador"`);
   return "operador";
 }
 

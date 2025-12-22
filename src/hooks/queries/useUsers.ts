@@ -57,8 +57,7 @@ export function useCreateUser() {
     mutationFn: (data: CreateUserRequest) => {
       return usersApi.create(data);
     },
-    onSuccess: (newUser) => {
-      console.log("✅ [useCreateUser] Usuario creado:", newUser);
+    onSuccess: () => {
       toast.success("Usuario creado correctamente");
       queryClient.invalidateQueries({ queryKey: usersKeys.all });
     },

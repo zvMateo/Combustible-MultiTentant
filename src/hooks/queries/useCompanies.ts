@@ -34,7 +34,6 @@ export function useCompanies() {
           "response" in error &&
           (error as { response?: { status?: number } }).response?.status === 403
         ) {
-          console.warn("⚠️ Sin permisos para ver empresas, usando array vacío");
           return [];
         }
         throw error;

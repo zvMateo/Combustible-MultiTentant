@@ -210,5 +210,3 @@ export const resourceTypesApi = {
     });
   },
 };
-
-export default resourcesApi;

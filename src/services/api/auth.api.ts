@@ -32,15 +32,8 @@ export const authApi = {
       tokenStorage.setToken(data.token, true);
       if (import.meta.env.DEV) {
         // Verificar que se guardó
-        const savedToken = tokenStorage.getToken();
-        console.log(
-          "🔐 Token verificado en storage:",
-          savedToken ? savedToken.substring(0, 30) + "..." : "NO ENCONTRADO"
-        );
+        tokenStorage.getToken();
       }
-    } else {
-      console.warn("⚠️ No se recibió token en la respuesta del login");
-      console.warn("⚠️ Respuesta completa:", data);
     }
 
     return data;
@@ -67,5 +60,3 @@ export const authApi = {
     return !!tokenStorage.getToken();
   },
 };
-
-export default authApi;

@@ -95,40 +95,6 @@ axiosInstance.interceptors.request.use(
     if (token && config.headers) {
       // Formato estándar: Bearer {token}
       config.headers.Authorization = `Bearer ${token}`;
-      if (import.meta.env.DEV) {
-        console.log(`🔐 [API] Token encontrado: ${token.substring(0, 20)}...`);
-        console.log(
-          `🔐 [API] Header Authorization configurado para ${config.method?.toUpperCase()} ${
-            config.url
-          }`
-        );
-      }
-    } else {
-      if (import.meta.env.DEV) {
-        console.warn(
-          `⚠️ [API] No hay token disponible para ${config.method?.toUpperCase()} ${
-            config.url
-          }`
-        );
-      }
-    }
-
-    // Log en desarrollo
-    if (import.meta.env.DEV) {
-      console.log(
-        `🚀 [API] ${config.method?.toUpperCase()} ${config.url}`,
-        config.data || ""
-      );
-      if (token && config.headers) {
-        const authHeaderValue = config.headers.Authorization;
-        const authHeaderPreview = authHeaderValue
-          ? String(authHeaderValue).substring(0, 30) + "..."
-          : undefined;
-        console.log(`🔐 [API] Headers enviados:`, {
-          Authorization: authHeaderPreview,
-          "Content-Type": config.headers["Content-Type"],
-        });
-      }
     }
 
     return config;
@@ -143,16 +109,6 @@ axiosInstance.interceptors.request.use(
 // ============================================
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Log en desarrollo
-    if (import.meta.env.DEV) {
-      console.log(
-        `✅ [API] ${response.config.method?.toUpperCase()} ${
-          response.config.url
-        }`,
-        response.data
-      );
-    }
-
     return response;
   },
   async (error: AxiosError<ApiError>) => {

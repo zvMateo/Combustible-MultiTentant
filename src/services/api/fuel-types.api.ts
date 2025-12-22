@@ -73,5 +73,3 @@ export const fuelTypesApi = {
     });
   },
 };
-
-export default fuelTypesApi;

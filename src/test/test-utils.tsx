@@ -37,7 +37,7 @@ function AllProviders({ children }: AllProvidersProps) {
 const customRender = (
   ui: ReactElement,
   options?: Omit<RenderOptions, "wrapper">
-) => render(ui, { wrapper: AllProviders, ...options });
+): ReturnType<typeof render> => render(ui, { wrapper: AllProviders, ...options });
 
 // Re-export everything
 export * from "@testing-library/react";

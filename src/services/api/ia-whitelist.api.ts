@@ -135,5 +135,3 @@ export const iaWhiteListApi = {
     await axiosInstance.patch(`${ENDPOINTS.desactivate}?id=${id}`);
   },
 };
-
-export default iaWhiteListApi;

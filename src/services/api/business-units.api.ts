@@ -71,5 +71,3 @@ export const businessUnitsApi = {
     });
   },
 };
-
-export default businessUnitsApi;

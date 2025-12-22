@@ -12,6 +12,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Separator } from "@/components/ui/separator"
 import {
   Dialog,
   DialogContent,
@@ -598,10 +599,33 @@ export default function Dashboard() {
   }, [movements, rangeStart]);
 
   // Cálculos de Resumen
-  const totalLiters = useMemo(
+  const totalLitersIngresos = useMemo(
     () => loadsInRange.reduce((sum, l) => sum + (l.totalLiters || 0), 0),
     [loadsInRange]
   );
+
+  const totalLitersEgresos = useMemo(
+    () => movementsInRange.reduce((sum, m) => sum + (m.liters || 0), 0),
+    [movementsInRange]
+  );
+
+  const totalLiters = useMemo(
+    () => totalLitersIngresos - totalLitersEgresos,
+    [totalLitersIngresos, totalLitersEgresos]
+  );
+
+  // Debug logs
+  console.log("🔍 Debug Dashboard:");
+  console.log("- loads:", loads.length, "loadsInRange:", loadsInRange.length);
+  console.log(
+    "- movements:",
+    movements.length,
+    "movementsInRange:",
+    movementsInRange.length
+  );
+  console.log("- totalLitersIngresos:", totalLitersIngresos);
+  console.log("- totalLitersEgresos:", totalLitersEgresos);
+  console.log("- totalLiters (neto):", totalLiters);
 
   const totalCostLoads = useMemo(() => {
     return loadsInRange.reduce((sum, l) => {
@@ -638,14 +662,63 @@ export default function Dashboard() {
 
   const consumoPorTipo = useMemo(() => {
     const map: Record<string, number> = {};
+    // Usar solo ingresos (loads) para mostrar consumo por tipo
+    console.log("🔍 Debug - loadsInRange:", loadsInRange.length, "items");
+    console.log("🔍 Debug - loadsInRange data:", loadsInRange.slice(0, 2));
+
     loadsInRange.forEach((l) => {
-      const tipo = l.resource?.resourceType?.name || "Otros";
+      // Intentar obtener el tipo de recurso desde diferentes fuentes
+      const tipo =
+        l.resource?.resourceType?.name ||
+        l.resource?.type?.[0] || // Si type es un array de strings
+        l.nameResource ||
+        "Otros";
       map[tipo] = (map[tipo] || 0) + (l.totalLiters || 0);
     });
-    return Object.entries(map)
+
+    const result = Object.entries(map)
       .map(([tipo, litros]) => ({ tipo, litros }))
       .sort((a, b) => b.litros - a.litros);
+
+    console.log("🔍 Debug - consumoPorTipo result:", result);
+    return result;
   }, [loadsInRange]);
+
+  const consumoPorTipoMovimientos = useMemo(() => {
+    const map: Record<string, number> = {};
+    // Usar solo egresos (movements) para mostrar consumo por tipo
+    console.log(
+      "🔍 Debug - movementsInRange:",
+      movementsInRange.length,
+      "items"
+    );
+    console.log(
+      "🔍 Debug - movementsInRange data:",
+      movementsInRange.slice(0, 2)
+    );
+
+    movementsInRange.forEach((m) => {
+      // Debug detallado de cada movimiento
+      console.log("🔍 Movement item:", {
+        id: m.id,
+        resource: m.resource,
+        resourceType: m.resource?.resourceType,
+        type: m.resource?.type,
+        liters: m.liters,
+      });
+
+      // CORRECCIÓN: Los movimientos vienen con resource como string directo
+      const tipo = typeof m.resource === "string" ? m.resource : "Otros";
+      map[tipo] = (map[tipo] || 0) + (m.liters || 0);
+    });
+
+    const result = Object.entries(map)
+      .map(([tipo, litros]) => ({ tipo, litros }))
+      .sort((a, b) => b.litros - a.litros);
+
+    console.log("🔍 Debug - consumoPorTipoMovimientos result:", result);
+    return result;
+  }, [movementsInRange]);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: loadLitersKeys.all });
@@ -695,13 +768,22 @@ export default function Dashboard() {
         {/* KPIs Principales - Estilo Figma */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           <KPICard
-            label="Litros Totales"
-            value={`${totalLiters.toLocaleString()} L`}
+            label="Litros Carga"
+            value={`${totalLitersIngresos.toLocaleString()} L`}
             change="12%"
             trend="up"
             icon={Fuel}
             color="#1E2C56"
             loading={loadingLoads}
+          />
+          <KPICard
+            label="Litros Consumidos"
+            value={`${totalLitersEgresos.toLocaleString()} L`}
+            change="8%"
+            trend="down"
+            icon={Fuel}
+            color="#ef4444"
+            loading={loadingMovements}
           />
           <KPICard
             label="Costo Total"
@@ -724,17 +806,19 @@ export default function Dashboard() {
         </div>
 
         {/* Gráficos - Estilo Figma */}
+        {/* Gráficos - Estilo Figma */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <FuelPricesCard />
 
-          {/* Consumo por Tipo - Donut Chart */}
+          {/* Consumo por Tipo - Donut Chart (Carga y Consumo) */}
           <Card className="lg:col-span-4 h-fit">
+            {/* Primera sección: Distribución de Carga */}
             <CardHeader className="pb-2">
               <CardTitle className="text-lg font-semibold">
-                Distribución
+                Distribución de Carga
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Consumo por tipo de recurso
+                Litros cargados por tipo de recurso
               </p>
             </CardHeader>
             <CardContent>
@@ -770,6 +854,69 @@ export default function Dashboard() {
               </div>
               <div className="mt-4 space-y-3">
                 {consumoPorTipo.slice(0, 4).map((item, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-3 w-3 rounded-full"
+                        style={{ backgroundColor: COLORS[i] }}
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        {item.tipo}
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold">
+                      {item.litros.toLocaleString()} L
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+
+            {/* Separador entre secciones */}
+            <Separator className="my-6" />
+
+            {/* Segunda sección: Distribución de Consumo */}
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-semibold">
+                Distribución de Consumo
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Litros consumidos por tipo de recurso
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={consumoPorTipoMovimientos}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={4}
+                      dataKey="litros"
+                    >
+                      {consumoPorTipoMovimientos.map((_, index) => (
+                        <Cell
+                          key={`cell-mov-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                          stroke="none"
+                        />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 space-y-3">
+                {consumoPorTipoMovimientos.slice(0, 4).map((item, i) => (
                   <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div

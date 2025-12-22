@@ -73,5 +73,3 @@ export const driversApi = {
     });
   },
 };
-
-export default driversApi;

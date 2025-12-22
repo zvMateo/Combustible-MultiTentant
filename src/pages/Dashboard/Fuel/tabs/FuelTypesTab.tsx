@@ -2,7 +2,7 @@
  * FuelTypesTab - Gestión de Tipos de Combustible
  * Implementa patrón CRUD con useCrudPage
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,12 @@ import {
 } from "@/components/ui/table";
 import { Layers, Pencil, Plus, TriangleAlert } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import {
   useFuelTypes,
   useCreateFuelType,
@@ -373,14 +379,6 @@ export default function FuelTypesTab() {
     return () => window.clearTimeout(t);
   }, [citySearch, createMode, crud.isDialogOpen, crud.isEditing]);
 
-  const filteredFuelPrices = useMemo(() => {
-    const q = (form.watch("name") ?? "").toLowerCase();
-    if (!q) return fuelPrices;
-    return fuelPrices.filter((p) =>
-      `${p.company} ${p.name}`.toLowerCase().includes(q)
-    );
-  }, [fuelPrices, form]);
-
   const handleToggleActive = async (id: number) => {
     try {
       await deactivateMutation.mutateAsync(id);
@@ -538,98 +536,125 @@ export default function FuelTypesTab() {
             className="grid gap-4"
           >
             {!crud.isEditing ? (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Origen</label>
-                <Select
-                  value={createMode}
-                  onValueChange={(value) => {
-                    const next = value as FuelTypeCreateMode;
-                    setCreateMode(next);
-                    setSelectedFuelPriceKey("");
-                    if (next === "manual") {
-                      form.setValue("fuelCompany", "");
-                      form.setValue("price", 0);
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 shadow-xl z-120">
-                    <SelectItem value="from_api">Desde API de precios</SelectItem>
-                    <SelectItem value="manual">Manual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
+              <Tabs
+                value={createMode}
+                onValueChange={(value) => {
+                  const next = value as FuelTypeCreateMode;
+                  setCreateMode(next);
+                  setSelectedFuelPriceKey("");
+                  if (next === "manual") {
+                    form.setValue("fuelCompany", "");
+                    form.setValue("price", 0);
+                  }
+                }}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="from_api">Precios Generales</TabsTrigger>
+                  <TabsTrigger value="manual">Manual</TabsTrigger>
+                </TabsList>
 
-            {createMode === "from_api" && !crud.isEditing ? (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Ciudad</label>
-                <Select
-                  value={selectedCity}
-                  onValueChange={(val) => {
-                    setSelectedCity(val);
-                    setSelectedFuelPriceKey("");
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 shadow-xl z-120">
-                    <SelectItem value={selectedCity}>{selectedCity}</SelectItem>
-                    {cities.slice(0, 20).map((c) => (
-                      <SelectItem key={c.nombre} value={c.nombre}>
-                        {c.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  value={citySearch}
-                  onChange={(e) => setCitySearch(e.target.value)}
-                  placeholder="Buscar otra ciudad..."
-                />
-                {cityLoading ? (
-                  <p className="text-muted-foreground text-xs">Buscando...</p>
-                ) : null}
-                {cityError ? (
-                  <p className="text-destructive text-xs">{cityError}</p>
-                ) : null}
-              </div>
-            ) : null}
+                <TabsContent value="from_api" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Ciudad</label>
+                    <Select
+                      value={selectedCity}
+                      onValueChange={(val) => {
+                        setSelectedCity(val);
+                        setSelectedFuelPriceKey("");
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200 shadow-xl z-120">
+                        <SelectItem value={selectedCity}>{selectedCity}</SelectItem>
+                        {cities.slice(0, 20).map((c) => (
+                          <SelectItem key={c.nombre} value={c.nombre}>
+                            {c.nombre}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      value={citySearch}
+                      onChange={(e) => setCitySearch(e.target.value)}
+                      placeholder="Buscar otra ciudad..."
+                    />
+                    {cityLoading ? (
+                      <p className="text-muted-foreground text-xs">Buscando...</p>
+                    ) : null}
+                    {cityError ? (
+                      <p className="text-destructive text-xs">{cityError}</p>
+                    ) : null}
+                  </div>
 
-            {createMode === "from_api" && !crud.isEditing ? (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Seleccionar combustible (empresa + tipo)
-                </label>
-                {fuelPricesLoading ? (
-                  <p className="text-muted-foreground text-xs">Cargando...</p>
-                ) : null}
-                {fuelPricesError ? (
-                  <p className="text-destructive text-xs">{fuelPricesError}</p>
-                ) : null}
-                <Select
-                  value={selectedFuelPriceKey}
-                  onValueChange={(val) => setSelectedFuelPriceKey(val)}
-                  disabled={fuelPricesLoading || fuelPrices.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 shadow-xl z-120">
-                    {filteredFuelPrices.slice(0, 150).map((p) => (
-                      <SelectItem
-                        key={`${p.company}::${p.name}`}
-                        value={`${p.company}::${p.name}`}
-                      >
-                        {p.company} - {p.name} (${p.price.toLocaleString("es-AR")})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Seleccionar combustible (empresa + tipo)
+                    </label>
+                    {fuelPricesLoading ? (
+                      <p className="text-muted-foreground text-xs">Cargando...</p>
+                    ) : null}
+                    {fuelPricesError ? (
+                      <p className="text-destructive text-xs">{fuelPricesError}</p>
+                    ) : null}
+                    <Select
+                      value={selectedFuelPriceKey}
+                      onValueChange={(key) => {
+                        setSelectedFuelPriceKey(key);
+                        const price = fuelPrices.find(p => `${p.company}-${p.name}` === key);
+                        if (price) {
+                          form.setValue("fuelCompany", price.company);
+                          form.setValue("price", Number(price.price));
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar combustible" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200 shadow-xl z-120 max-h-60 overflow-y-auto">
+                        {fuelPricesLoading ? (
+                          <div className="p-2 text-center text-muted-foreground text-sm">
+                            Cargando precios...
+                          </div>
+                        ) : fuelPricesError ? (
+                          <div className="p-2 text-center text-destructive text-sm">
+                            Error al cargar precios
+                          </div>
+                        ) : (
+                          fuelPrices.map((price) => {
+                            const key = `${price.company}-${price.name}`;
+                            return (
+                              <SelectItem key={key} value={key}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {price.company} - {price.name}
+                                  </span>
+                                  <span className="text-sm text-muted-foreground">
+                                    ${Number(price.price).toFixed(2)}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="manual" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Ingresa los datos manualmente
+                    </label>
+                    <p className="text-sm text-muted-foreground">
+                      Completa los campos below para agregar un tipo de combustible manualmente.
+                    </p>
+                  </div>
+                </TabsContent>
+              </Tabs>
             ) : null}
 
             <div className="space-y-2">

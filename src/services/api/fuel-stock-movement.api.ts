@@ -88,5 +88,3 @@ export const fuelStockMovementApi = {
   },
 };
 
-export default fuelStockMovementApi;
-

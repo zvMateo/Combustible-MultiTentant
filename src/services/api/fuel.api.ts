@@ -233,10 +233,3 @@ export const loadLitersApi = {
     return data;
   },
 };
-
-export default {
-  fuelTypes: fuelTypesApi,
-  movementTypes: movementTypesApi,
-  fuelStock: fuelStockApi,
-  loadLiters: loadLitersApi,
-};

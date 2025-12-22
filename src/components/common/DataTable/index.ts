@@ -5,5 +5,4 @@
  */
 export { default as DataTable } from "./DataTable";
 export type { DataTableColumn, DataTableProps } from "./types";
-export { CrudTable } from "./CrudTable";
 export { SearchInput } from "./SearchInput";

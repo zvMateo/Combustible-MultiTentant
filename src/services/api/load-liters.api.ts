@@ -136,5 +136,3 @@ export const loadLitersApi = {
     return data;
   },
 };
-
-export default loadLitersApi;
