@@ -7,6 +7,7 @@ import {
   User,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
+import { useTenantContext } from "@/stores/auth.store";
 import { useUnidadStore } from "@/stores/unidad.store";
 import { useNavigate } from "react-router-dom";
 import type { UserRole } from "@/types";
@@ -29,6 +30,7 @@ import { Separator } from "@/components/ui/separator";
 
 export default function Header() {
   const { user, logout } = useAuthStore();
+  const tenant = useTenantContext();
   const { unidades, unidadActiva, setUnidadActiva } = useUnidadStore();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -47,6 +49,10 @@ export default function Header() {
   const canSwitchUnidad =
     (isSuperAdmin || (isAdmin && !isAdminAssigned)) && unidades.length > 1;
 
+  const companyGeneralLabel = `${
+    tenant.name || user?.empresaNombre || "Empresa"
+  } (General)`;
+
   const unidadNombre = (() => {
     if (isCompanyAdmin) {
       if (isAdminAssigned) {
@@ -57,6 +63,7 @@ export default function Header() {
           "Mi Unidad"
         );
       }
+      if (!unidadActiva && isSuperAdmin) return companyGeneralLabel;
       return unidadActiva?.nombre || "Todas las Unidades";
     }
     if (unidadActiva?.nombre) return unidadActiva.nombre;
@@ -135,7 +142,9 @@ export default function Header() {
                 <SelectValue placeholder="Cambiar Unidad" />
               </SelectTrigger>
               <SelectContent className="bg-white border-slate-200 shadow-xl z-60">
-                <SelectItem value="all" className="text-sm font-medium">Todas las Unidades</SelectItem>
+                <SelectItem value="all" className="text-sm font-medium">
+                  {isSuperAdmin ? companyGeneralLabel : "Todas las Unidades"}
+                </SelectItem>
                 {unidades.map((u) => (
                   <SelectItem key={u.id} value={String(u.id)} className="text-sm">
                     {u.nombre}
