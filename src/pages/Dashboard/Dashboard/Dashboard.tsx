@@ -42,8 +42,6 @@ import {
   Fuel,
   MapPin,
   RefreshCw,
-  TrendingDown,
-  TrendingUp,
   User,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -327,41 +325,6 @@ function FuelPricesCard() {
     });
   }, [precioData]);
 
-  const priceScoreByEmpresa = useMemo(() => {
-    if (empresas.length === 0) return new Map<string, number>();
-    const avgs = empresas.map((e) => e.avgPrice);
-    const min = Math.min(...avgs);
-    const max = Math.max(...avgs);
-    const map = new Map<string, number>();
-    for (const e of empresas) {
-      const score =
-        max === min
-          ? 50
-          : Math.round(100 - ((e.avgPrice - min) / (max - min)) * 100);
-      map.set(e.empresa, Math.max(0, Math.min(100, score)));
-    }
-    return map;
-  }, [empresas]);
-
-  const getScoreUI = (score: number) => {
-    if (score >= 60) {
-      return {
-        icon: <TrendingUp className="size-3" />,
-        className: "bg-emerald-50 text-emerald-700",
-      };
-    }
-    if (score >= 40) {
-      return {
-        icon: <TrendingDown className="size-3" />,
-        className: "bg-amber-50 text-amber-700",
-      };
-    }
-    return {
-      icon: <TrendingDown className="size-3" />,
-      className: "bg-red-50 text-red-700",
-    };
-  };
-
   const getUnit = (fuelName: string) => {
     return fuelName.toUpperCase().includes("GNC") ? "m³" : "l";
   };
@@ -517,12 +480,10 @@ function FuelPricesCard() {
                   text: "text-foreground",
                   label: e.empresa,
                 };
-                const score = priceScoreByEmpresa.get(e.empresa) ?? 50;
-                const scoreUI = getScoreUI(score);
                 return (
                   <Card key={e.empresa} className="border-border">
                     <CardContent className="pt-6">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
                         <div className="flex items-center gap-3">
                           <div
                             className={`${brand.bg} ${brand.text} flex h-11 w-11 items-center justify-center rounded-lg text-xs font-bold`}
@@ -539,13 +500,6 @@ function FuelPricesCard() {
                               {selectedCity}
                             </div>
                           </div>
-                        </div>
-
-                        <div
-                          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${scoreUI.className}`}
-                        >
-                          {scoreUI.icon}
-                          {score}
                         </div>
                       </div>
 
